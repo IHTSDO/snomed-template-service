@@ -17,7 +17,6 @@ Download the ANTLR java program from http://www.antlr.org/download/antlr-4.5.3-c
 
 Use the program to generate the Expression Template parser:
 ```
-
 java -jar antlr-4.5.3-complete.jar ExpressionTemplate.txt -o parser-files
 ```
 
