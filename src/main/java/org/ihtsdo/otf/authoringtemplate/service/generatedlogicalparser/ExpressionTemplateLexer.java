@@ -1,5 +1,5 @@
 // Generated from ExpressionTemplate.txt by ANTLR 4.5.3
-package org.ihtsdo.otf.authoringtemplate.generatedparser;
+package org.ihtsdo.otf.authoringtemplate.service.generatedlogicalparser;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.atn.ATN;

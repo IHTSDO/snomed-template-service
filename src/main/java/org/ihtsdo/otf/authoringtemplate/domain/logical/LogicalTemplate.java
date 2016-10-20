@@ -1,14 +1,14 @@
-package org.ihtsdo.otf.authoringtemplate.domain;
+package org.ihtsdo.otf.authoringtemplate.domain.logical;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Template {
+public class LogicalTemplate {
 
 	private List<String> focusConcepts;
 	private List<AttributeGroup> attributeGroups;
 
-	public Template() {
+	public LogicalTemplate() {
 		focusConcepts = new ArrayList<>();
 		attributeGroups = new ArrayList<>();
 	}

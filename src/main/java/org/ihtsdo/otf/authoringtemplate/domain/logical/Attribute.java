@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.domain;
+package org.ihtsdo.otf.authoringtemplate.domain.logical;
 
 public class Attribute implements HasCardinality {
 

@@ -1,8 +1,8 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import org.ihtsdo.otf.authoringtemplate.domain.Attribute;
-import org.ihtsdo.otf.authoringtemplate.domain.AttributeGroup;
-import org.ihtsdo.otf.authoringtemplate.domain.Template;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -10,20 +10,20 @@ import org.junit.Test;
 import java.io.InputStream;
 import java.util.List;
 
-public class TemplateParserServiceTest {
+public class LogicalLogicalTemplateParserServiceTest {
 
-	private TemplateParserService service;
+	private LogicalTemplateParserService service;
 
 	@Before
 	public void setUp() throws Exception {
-		service = new TemplateParserService();
+		service = new LogicalTemplateParserService();
 	}
 
 	@Test
 	public void testParseTemplateCtOfX() throws Exception {
 		final InputStream templateStream = getClass().getResourceAsStream("/templates/ct-of-x_template.txt");
 		Assert.assertNotNull("Found template stream resource", templateStream);
-		final Template template = service.parseTemplate(templateStream);
+		final LogicalTemplate template = service.parseTemplate(templateStream);
 		Assert.assertNotNull(template);
 
 		Assert.assertEquals(1, template.getFocusConcepts().size());
@@ -53,7 +53,7 @@ public class TemplateParserServiceTest {
 	public void testParseTemplateGuidedCtOfX() throws Exception {
 		final InputStream templateStream = getClass().getResourceAsStream("/templates/guided-ct-of-x_template.txt");
 		Assert.assertNotNull("Found template stream resource", templateStream);
-		final Template template = service.parseTemplate(templateStream);
+		final LogicalTemplate template = service.parseTemplate(templateStream);
 		Assert.assertNotNull(template);
 
 		Assert.assertEquals(1, template.getFocusConcepts().size());

@@ -2,41 +2,26 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ihtsdo.otf.authoringtemplate.App;
+import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.util.FileSystemUtils;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Set;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = App.class)
+@ContextConfiguration(classes = {App.class, TestConfig.class})
 public class JsonStoreTest {
 
-	private Path tempDirectory;
+	@Autowired
 	private JsonStore jsonStore;
 
 	@Autowired
 	private ObjectMapper objectMapper;
-
-	@Before
-	public void setUp() throws Exception {
-		tempDirectory = Files.createTempDirectory(JsonStoreTest.class.getCanonicalName());
-		jsonStore = new JsonStore(tempDirectory.toFile(), objectMapper);
-	}
-
-	@After
-	public void tearDown() throws Exception {
-		FileSystemUtils.deleteRecursively(tempDirectory.toFile());
-	}
 
 	@Test
 	public void testSaveLoad() throws Exception {

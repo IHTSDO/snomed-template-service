@@ -2,27 +2,37 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.ihtsdo.otf.authoringtemplate.domain.Attribute;
-import org.ihtsdo.otf.authoringtemplate.domain.AttributeGroup;
-import org.ihtsdo.otf.authoringtemplate.domain.HasCardinality;
-import org.ihtsdo.otf.authoringtemplate.domain.Template;
-import org.ihtsdo.otf.authoringtemplate.generatedparser.ExpressionTemplateBaseListener;
-import org.ihtsdo.otf.authoringtemplate.generatedparser.ExpressionTemplateLexer;
-import org.ihtsdo.otf.authoringtemplate.generatedparser.ExpressionTemplateParser;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.HasCardinality;
+import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.service.generatedlogicalparser.ExpressionTemplateBaseListener;
+import org.ihtsdo.otf.authoringtemplate.service.generatedlogicalparser.ExpressionTemplateLexer;
+import org.ihtsdo.otf.authoringtemplate.service.generatedlogicalparser.ExpressionTemplateParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TemplateParserService {
+@Service
+public class LogicalTemplateParserService {
 
-	private static final Logger logger = LoggerFactory.getLogger(TemplateParserService.class);
+	private static final Logger logger = LoggerFactory.getLogger(LogicalTemplateParserService.class);
 
-	public Template parseTemplate(InputStream templateStream) throws IOException {
-		final ExpressionTemplateLexer lexer = new ExpressionTemplateLexer(new ANTLRInputStream(templateStream));
+	public LogicalTemplate parseTemplate(String templateString) throws IOException {
+		return doParseTemplate(new ANTLRInputStream(templateString));
+	}
+
+	public LogicalTemplate parseTemplate(InputStream templateStream) throws IOException {
+		return doParseTemplate(new ANTLRInputStream(templateStream));
+	}
+
+	private LogicalTemplate doParseTemplate(ANTLRInputStream input) throws IOException {
+		final ExpressionTemplateLexer lexer = new ExpressionTemplateLexer(input);
 		final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
 		final ExpressionTemplateParser parser = new ExpressionTemplateParser(tokenStream);
 		final List<RecognitionException> exceptions = new ArrayList<>();
@@ -43,18 +53,20 @@ public class TemplateParserService {
 
 	protected static final class ExpressionTemplateListener extends ExpressionTemplateBaseListener {
 
-		private Template template;
+		private LogicalTemplate template;
 		private AttributeGroup currentAttributeGroup;
 		private Attribute currentAttribute;
 
 		@Override
 		public void enterExpressiontemplate(ExpressionTemplateParser.ExpressiontemplateContext ctx) {
-			template = new Template();
+			template = new LogicalTemplate();
 		}
 
 		@Override
 		public void enterFocusconcept(ExpressionTemplateParser.FocusconceptContext ctx) {
-			ctx.conceptreference().forEach(conceptRef -> template.addFocusConcept(conceptRef.conceptid().getText()));
+			for (ExpressionTemplateParser.ConceptreferenceContext conceptRef : ctx.conceptreference()) {
+				template.addFocusConcept(conceptRef.conceptid().getText());
+			}
 		}
 
 		@Override
@@ -126,7 +138,7 @@ public class TemplateParserService {
 			return new UnsupportedOperationException(message + " is not supported at the moment.");
 		}
 
-		public Template getTemplate() {
+		public LogicalTemplate getTemplate() {
 			return template;
 		}
 	}

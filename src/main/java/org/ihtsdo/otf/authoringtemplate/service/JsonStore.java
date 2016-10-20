@@ -17,7 +17,7 @@ public class JsonStore {
 		}
 	};
 
-	private final File storeDirectory;
+	private File storeDirectory;
 
 	private final ObjectMapper objectMapper;
 
@@ -63,4 +63,9 @@ public class JsonStore {
 		classDir.mkdirs();
 		return classDir;
 	}
+
+	public File getStoreDirectory() {
+		return storeDirectory;
+	}
+
 }

@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.domain;
+package org.ihtsdo.otf.authoringtemplate.domain.logical;
 
 import java.util.ArrayList;
 import java.util.List;
