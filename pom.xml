@@ -33,6 +33,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>4.5.1</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -40,7 +45,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>org.ihtsdo.otf.scttemplate.App</mainClass>
+					<mainClass>org.ihtsdo.otf.authoringtemplate.App</mainClass>
 				</configuration>
 			</plugin>
 		</plugins>

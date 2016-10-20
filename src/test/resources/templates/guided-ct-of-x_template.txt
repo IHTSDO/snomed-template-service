@@ -1,0 +1,10 @@
+71388002 |Procedure|:
+	[[~1..1]] {
+		260686004 |Method| = 312251004 |Computed tomography imaging action|,
+		[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],
+		363703001 |Has intent| = 429892002 |Guidance intent|
+	},
+	{
+		260686004 |Method| = 312251004 |Action|,
+		[[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]
+	}
