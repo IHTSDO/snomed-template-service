@@ -8,6 +8,7 @@ public class Attribute implements HasCardinality {
 	private String cardinalityMin;
 	private String cardinalityMax;
 	private String slotName;
+	private String slotReference;
 
 	public void setType(String type) {
 		this.type = type;
@@ -57,5 +58,13 @@ public class Attribute implements HasCardinality {
 
 	public String getSlotName() {
 		return slotName;
+	}
+
+	public void setSlotReference(String slotReference) {
+		this.slotReference = slotReference;
+	}
+
+	public String getSlotReference() {
+		return slotReference;
 	}
 }

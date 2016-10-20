@@ -91,12 +91,17 @@ public class TemplateParserService {
 						throw new UnsupportedOperationException("Replace flag of type '" + replaceFlag + "' are not supported. Only replacement flags of type 'id' are supported.");
 					}
 					final ExpressionTemplateParser.ExpressionconstrainttemplateContext ecl = replaceSlot.replaceinfo().expressionconstrainttemplate();
-					currentAttribute.setAllowableRangeECL(ecl.getText());
+					if (ecl != null) {
+						currentAttribute.setAllowableRangeECL(ecl.getText());
+					}
 
 					final ExpressionTemplateParser.TemplateslotinfoContext slotInfo = replaceSlot.templateslotinfo();
 					if (slotInfo != null) {
 						if (slotInfo.templateslotname() != null) {
 							currentAttribute.setSlotName(slotInfo.templateslotname().templatestring().getText());
+						}
+						if (slotInfo.templateslotreference() != null) {
+							currentAttribute.setSlotReference(slotInfo.templateslotreference().templatestring().getText());
 						}
 					}
 				}
