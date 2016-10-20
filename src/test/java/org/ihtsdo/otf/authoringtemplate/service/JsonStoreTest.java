@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.ihtsdo.otf.authoringtemplate.App;
+import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
 import org.junit.Assert;
@@ -14,7 +14,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import java.util.Set;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {App.class, TestConfig.class})
+@ContextConfiguration(classes = {Config.class, TestConfig.class})
 public class JsonStoreTest {
 
 	@Autowired

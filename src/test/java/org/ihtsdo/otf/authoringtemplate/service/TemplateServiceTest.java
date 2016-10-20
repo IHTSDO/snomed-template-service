@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import org.assertj.core.util.Lists;
-import org.ihtsdo.otf.authoringtemplate.App;
+import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.junit.After;
@@ -16,7 +16,7 @@ import org.springframework.util.FileSystemUtils;
 import java.util.List;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {App.class, TestConfig.class})
+@ContextConfiguration(classes = {Config.class, TestConfig.class})
 public class TemplateServiceTest {
 
 	@Autowired
@@ -102,6 +102,7 @@ public class TemplateServiceTest {
 
 	@After
 	public void after() {
+		System.out.println(templateService.getJsonStore().getStoreDirectory().getAbsolutePath());
 		FileSystemUtils.deleteRecursively(templateService.getJsonStore().getStoreDirectory());
 	}
 

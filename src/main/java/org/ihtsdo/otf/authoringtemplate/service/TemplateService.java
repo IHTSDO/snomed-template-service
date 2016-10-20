@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TemplateService {
@@ -97,8 +98,8 @@ public class TemplateService {
 		return value == null ? null : new ConceptMini(value);
 	}
 
-	public List<ConceptTemplate> listAll() {
-		return null;
+	public Set<ConceptTemplate> listAll() throws IOException {
+		return jsonStore.loadAll(ConceptTemplate.class);
 	}
 
 	public JsonStore getJsonStore() {

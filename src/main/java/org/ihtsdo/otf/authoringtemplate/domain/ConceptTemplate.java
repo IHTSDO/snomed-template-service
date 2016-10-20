@@ -1,8 +1,11 @@
 package org.ihtsdo.otf.authoringtemplate.domain;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonPropertyOrder({"name", "focusConcept", "version", "logicalTemplate", "lexicalTemplate", "conceptOutline"})
 public class ConceptTemplate {
 
 	private String name;

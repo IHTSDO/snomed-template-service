@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 @RestController
 public class TemplateController {
@@ -24,14 +24,13 @@ public class TemplateController {
 
 	@ResponseBody
 	@RequestMapping(value = "/templates/{name}", method = RequestMethod.PUT, produces = "application/json")
-	public ResponseEntity<Object> updateTemplate(@PathVariable String name, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
-		templateService.update(name, conceptTemplate);
-		return ControllerHelper.getCreatedResponse(name);
+	public ConceptTemplate updateTemplate(@PathVariable String name, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
+		return templateService.update(name, conceptTemplate);
 	}
 
 	@ResponseBody
 	@RequestMapping(value = "/templates", method = RequestMethod.GET, produces = "application/json")
-	public List<ConceptTemplate> listTemplates() {
+	public Set<ConceptTemplate> listTemplates() throws IOException {
 		return templateService.listAll();
 	}
 
