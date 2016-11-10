@@ -7,7 +7,8 @@ public class Description {
 
 	private DescriptionType type;
 	private String lang;
-	private String term;
+	private String termTemplate;
+	private String initialTerm;
 	private CaseSignificance caseSignificance;
 	private Map<String, String> acceptabilityMap;
 
@@ -15,8 +16,8 @@ public class Description {
 		acceptabilityMap = new HashMap<>();
 	}
 
-	public Description(String term) {
-		this.term = term;
+	public Description(String termTemplate) {
+		this.termTemplate = termTemplate;
 	}
 
 	public DescriptionType getType() {
@@ -35,12 +36,20 @@ public class Description {
 		this.lang = lang;
 	}
 
-	public String getTerm() {
-		return term;
+	public String getTermTemplate() {
+		return termTemplate;
 	}
 
-	public void setTerm(String term) {
-		this.term = term;
+	public void setTermTemplate(String termTemplate) {
+		this.termTemplate = termTemplate;
+	}
+
+	public String getInitialTerm() {
+		return initialTerm;
+	}
+
+	public void setInitialTerm(String initialTerm) {
+		this.initialTerm = initialTerm;
 	}
 
 	public CaseSignificance getCaseSignificance() {

@@ -31,8 +31,8 @@ public class TemplateServiceTest {
 				"\t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]]\n" +
 				"\t}\n");
 
-		templateRequest.addLexicalTemplate(new LexicalTemplate("slotX", "proc", Lists.newArrayList("entire")));
-		templateRequest.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX")));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
+		templateRequest.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX$")));
 		final String name = templateService.create("one", templateRequest);
 
 		final ConceptTemplate template = templateService.load(name);
@@ -51,6 +51,11 @@ public class TemplateServiceTest {
 		Assert.assertEquals(3, relationships.size());
 		final Relationship relationship = relationships.get(0);
 		Assert.assertEquals(Concepts.ISA, relationship.getType().getConceptId());
+
+		Assert.assertEquals(1, conceptOutline.getDescriptions().size());
+		final Description actualDescription = conceptOutline.getDescriptions().get(0);
+		Assert.assertEquals("CT of $slotX$", actualDescription.getTermTemplate());
+		Assert.assertEquals("CT of [Procedure]", actualDescription.getInitialTerm());
 	}
 
 	@Test
@@ -62,8 +67,8 @@ public class TemplateServiceTest {
 				"\t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]]\n" +
 				"\t}\n");
 
-		templateRequest1.addLexicalTemplate(new LexicalTemplate("slotX", "proc", Lists.newArrayList("entire")));
-		templateRequest1.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX")));
+		templateRequest1.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
+		templateRequest1.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX$")));
 		final String name = templateService.create("one", templateRequest1);
 
 		final ConceptTemplate templateRequest2 = new ConceptTemplate();
@@ -73,8 +78,8 @@ public class TemplateServiceTest {
 				"\t\t363703001 |Has intent| = 429892002 |Guidance intent|\n" +
 				"\t}\n");
 
-		templateRequest2.addLexicalTemplate(new LexicalTemplate("proc", "proc", Lists.newArrayList("entire")));
-		templateRequest2.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $proc")));
+		templateRequest2.addLexicalTemplate(new LexicalTemplate("proc", "Procedure", "proc", Lists.newArrayList("entire")));
+		templateRequest2.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $proc$")));
 
 		final ConceptTemplate updated = templateService.update("one", templateRequest2);
 
@@ -93,7 +98,8 @@ public class TemplateServiceTest {
 
 		final List<Description> desc = updated.getConceptOutline().getDescriptions();
 		Assert.assertEquals(1, desc.size());
-		Assert.assertEquals("CT of $proc", desc.get(0).getTerm());
+		Assert.assertEquals("CT of $proc$", desc.get(0).getTermTemplate());
+		Assert.assertEquals("CT of [Procedure]", desc.get(0).getInitialTerm());
 
 		final List<LexicalTemplate> lex = updated.getLexicalTemplates();
 		Assert.assertEquals(1, lex.size());

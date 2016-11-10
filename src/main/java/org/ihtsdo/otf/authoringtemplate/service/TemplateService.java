@@ -8,8 +8,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class TemplateService {
@@ -58,6 +62,7 @@ public class TemplateService {
 		conceptTemplate.setName(name);
 		conceptTemplate.setFocusConcept(logicalTemplate.getFocusConcepts().isEmpty() ? null : logicalTemplate.getFocusConcepts().get(0));
 		updateRelationships(conceptTemplate.getConceptOutline().getRelationships(), logicalTemplate);
+		updateDescriptions(conceptTemplate.getLexicalTemplates(), conceptTemplate.getConceptOutline().getDescriptions());
 	}
 
 	private void updateRelationships(List<Relationship> relationships, LogicalTemplate logicalTemplate) {
@@ -91,6 +96,30 @@ public class TemplateService {
 				}
 				relationships.add(relationship);
 			}
+		}
+	}
+
+	private void updateDescriptions(List<LexicalTemplate> lexicalTemplates, List<Description> descriptions) {
+		Map<String, String> nameToDisplayNameMap = new HashMap<>();
+		for (LexicalTemplate lexicalTemplate : lexicalTemplates) {
+			nameToDisplayNameMap.put(lexicalTemplate.getName(),
+					lexicalTemplate.getDisplayName() != null ? lexicalTemplate.getDisplayName() : lexicalTemplate.getName());
+		}
+
+		for (Description description : descriptions) {
+			final String termTemplate = description.getTermTemplate();
+			String initialTerm = termTemplate;
+			final Pattern termSlotPattern = Pattern.compile("\\$([^\\$]*)\\$");
+			final Matcher matcher = termSlotPattern.matcher(termTemplate);
+			while (matcher.find()) {
+				final String group = matcher.group(1);
+				final String replacement = nameToDisplayNameMap.get(group);
+				if (replacement == null) {
+					throw new IllegalArgumentException("Term template contains lexical template name which does not exist:" + group);
+				}
+				initialTerm = initialTerm.replace("$" + group + "$", "[" + replacement + "]");
+			}
+			description.setInitialTerm(initialTerm);
 		}
 	}
 
