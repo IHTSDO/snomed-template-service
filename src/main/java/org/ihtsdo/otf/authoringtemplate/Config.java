@@ -3,6 +3,7 @@ package org.ihtsdo.otf.authoringtemplate;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
@@ -27,8 +28,8 @@ public class Config {
 	}
 
 	@Bean
-	public JsonStore getTemplateJsonStore() {
-		return new JsonStore(new File("template-store"), getGeneralMapper());
+	public JsonStore getTemplateJsonStore(@Value("${templateStorePath}") String templateStorePath) {
+		return new JsonStore(new File(templateStorePath), getGeneralMapper());
 	}
 
 	@Bean
