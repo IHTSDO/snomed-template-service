@@ -5,7 +5,7 @@
 
 	<groupId>org.ihtsdo.otf</groupId>
 	<artifactId>snomed-template-service</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2-SNAPSHOT</version>
 
 	<name>Snomed Template Service</name>
 	<description>A service to support Snomed CT authoring driven by Expression Templates</description>
