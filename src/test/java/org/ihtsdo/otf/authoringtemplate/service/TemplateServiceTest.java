@@ -120,14 +120,21 @@ public class TemplateServiceTest {
 		String focusConcept = "302509004";
 		createTemplateWithFocusConcept("one", focusConcept);
 
-		templateService.listAll("MAIN/task", "123037004", null);
-		assertEclExpressionCreated("((302509004) AND <<123037004)");
+		templateService.listAll("MAIN/task", new String[] {"123037004"}, null);
+		assertEclExpressionCreated("(302509004) AND (<<123037004)");
 
-		templateService.listAll("MAIN/task", null, "123037004");
-		assertEclExpressionCreated("((302509004) AND >>123037004)");
+		templateService.listAll("MAIN/task", null, new String[]{"123037004"});
+		assertEclExpressionCreated("(302509004) AND (>>123037004)");
 
-		templateService.listAll("MAIN/task", "123037004", "123037004");
-		assertEclExpressionCreated("((302509004) AND <<123037004) OR ((302509004) AND >>123037004)");
+		templateService.listAll("MAIN/task", new String[] {"123037004"}, new String[] {"123037004"});
+		assertEclExpressionCreated("(302509004) AND (<<123037004 OR >>123037004)");
+
+		templateService.listAll("MAIN/task", new String[] {"123037004", "123037004"}, null);
+		assertEclExpressionCreated("(302509004) AND (<<123037004 OR <<123037004)");
+
+		templateService.listAll("MAIN/task", new String[] {"123037004", "123037004"}, new String[] {"123037004", "123037004"});
+		assertEclExpressionCreated("(302509004) AND (<<123037004 OR <<123037004 OR >>123037004 OR >>123037004)");
+
 	}
 
 	private void assertEclExpressionCreated(String expected) {

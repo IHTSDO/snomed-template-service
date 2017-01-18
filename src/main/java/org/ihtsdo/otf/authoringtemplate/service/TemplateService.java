@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import com.google.common.base.Strings;
+import org.assertj.core.util.Arrays;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
@@ -133,23 +134,21 @@ public class TemplateService {
 		return value == null ? null : new ConceptMini(value);
 	}
 
-	public Set<ConceptTemplate> listAll(String branchPath, String descendantOf, String ancestorOf) throws IOException {
+	public Set<ConceptTemplate> listAll(String branchPath, String[] descendantOf, String[] ancestorOf) throws IOException {
 		Set<ConceptTemplate> templates = listAll();
-		if (!Strings.isNullOrEmpty(descendantOf) || !Strings.isNullOrEmpty(ancestorOf)) {
+		if (!Arrays.isNullOrEmpty(descendantOf) || !Arrays.isNullOrEmpty(ancestorOf)) {
 			return templates.stream().parallel().filter(conceptTemplate -> {
 				String focusConcept = conceptTemplate.getFocusConcept();
-
-				String ecl = "";
-				if (!Strings.isNullOrEmpty(descendantOf)) {
-					ecl += "((" + focusConcept + ") AND <<" + descendantOf + ")";
+				String ecl = "(" + focusConcept + ") AND (";
+				for (int i = 0; descendantOf != null && i < descendantOf.length; i++) {
+					if (i > 0) ecl += " OR ";
+					ecl += "<<" + descendantOf[i];
 				}
-				if (!Strings.isNullOrEmpty(ancestorOf)) {
-					if (!ecl.isEmpty()) {
-						ecl += " OR ";
-					}
-					ecl += "((" + focusConcept + ") AND >>" + ancestorOf + ")";
+				for (int i = 0; ancestorOf != null && i < ancestorOf.length; i++) {
+					if (!Arrays.isNullOrEmpty(descendantOf) || i > 0) ecl += " OR ";
+					ecl += ">>" + ancestorOf[i];
 				}
-
+				ecl += ")";
 				return terminology.eclQueryHasAnyMatches(branchPath, ecl);
 			}).collect(Collectors.toSet());
 		}

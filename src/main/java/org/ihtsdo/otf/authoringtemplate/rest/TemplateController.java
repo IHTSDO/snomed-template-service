@@ -40,8 +40,8 @@ public class TemplateController {
 	@ResponseBody
 	@RequestMapping(value = "/{branchPath}/templates", method = RequestMethod.GET, produces = "application/json")
 	public Set<ConceptTemplate> listTemplates(@PathVariable String branchPath,
-											  @RequestParam(required = false) String descendantOf,
-											  @RequestParam(required = false) String ancestorOf) throws IOException {
+											  @RequestParam(required = false) String[] descendantOf,
+											  @RequestParam(required = false) String[] ancestorOf) throws IOException {
 		return templateService.listAll(BranchPathUriUtil.parseBranchPath(branchPath),
 				descendantOf, ancestorOf);
 	}
