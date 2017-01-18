@@ -69,6 +69,18 @@
 	</build>
 	<repositories>
 		<repository>
+			<id>ihtsdo-releases</id>
+			<releases><enabled>true</enabled></releases>
+			<snapshots><enabled>false</enabled></snapshots>
+			<url>https://maven.ihtsdotools.org/content/repositories/releases/</url>
+		</repository>
+		<repository>
+			<id>ihtsdo-snapshots</id>
+			<releases><enabled>false</enabled></releases>
+			<snapshots><enabled>true</enabled></snapshots>
+			<url>https://maven.ihtsdotools.org/content/repositories/snapshots/</url>
+		</repository>
+		<repository>
 			<id>spring-milestones</id>
 			<url>http://repo.spring.io/milestone</url>
 		</repository>
