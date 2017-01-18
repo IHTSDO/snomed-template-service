@@ -1,6 +1,8 @@
 package org.ihtsdo.otf.authoringtemplate.rest;
 
+import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
+import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import java.io.IOException;
 import java.util.Set;
 
 @RestController
+@SuppressWarnings("unused")
 public class TemplateController {
 
 	@Autowired
@@ -32,6 +35,15 @@ public class TemplateController {
 	@RequestMapping(value = "/templates", method = RequestMethod.GET, produces = "application/json")
 	public Set<ConceptTemplate> listTemplates() throws IOException {
 		return templateService.listAll();
+	}
+
+	@ResponseBody
+	@RequestMapping(value = "/{branchPath}/templates", method = RequestMethod.GET, produces = "application/json")
+	public Set<ConceptTemplate> listTemplates(@PathVariable String branchPath,
+											  @RequestParam(required = false) String descendantOf,
+											  @RequestParam(required = false) String ancestorOf) throws IOException {
+		return templateService.listAll(BranchPathUriUtil.parseBranchPath(branchPath),
+				descendantOf, ancestorOf);
 	}
 
 	@ResponseBody

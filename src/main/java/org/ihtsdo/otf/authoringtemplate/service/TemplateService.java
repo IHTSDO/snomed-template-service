@@ -1,9 +1,11 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import com.google.common.base.Strings;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class TemplateService {
@@ -23,6 +26,9 @@ public class TemplateService {
 
 	@Autowired
 	private JsonStore jsonStore;
+
+	@Autowired
+	private TerminologyServerAdapter terminology;
 
 	public String create(String name, ConceptTemplate conceptTemplate) throws IOException {
 		if (jsonStore.load(name, ConceptTemplate.class) != null) {
@@ -125,6 +131,29 @@ public class TemplateService {
 
 	private ConceptMini getConceptMiniOrNull(String value) {
 		return value == null ? null : new ConceptMini(value);
+	}
+
+	public Set<ConceptTemplate> listAll(String branchPath, String descendantOf, String ancestorOf) throws IOException {
+		Set<ConceptTemplate> templates = listAll();
+		if (!Strings.isNullOrEmpty(descendantOf) || !Strings.isNullOrEmpty(ancestorOf)) {
+			return templates.stream().parallel().filter(conceptTemplate -> {
+				String focusConcept = conceptTemplate.getFocusConcept();
+
+				String ecl = "";
+				if (!Strings.isNullOrEmpty(descendantOf)) {
+					ecl += "((" + focusConcept + ") AND <<" + descendantOf + ")";
+				}
+				if (!Strings.isNullOrEmpty(ancestorOf)) {
+					if (!ecl.isEmpty()) {
+						ecl += " OR ";
+					}
+					ecl += "((" + focusConcept + ") AND >>" + ancestorOf + ")";
+				}
+
+				return terminology.eclQueryHasAnyMatches(branchPath, ecl);
+			}).collect(Collectors.toSet());
+		}
+		return templates;
 	}
 
 	public Set<ConceptTemplate> listAll() throws IOException {

@@ -2,10 +2,14 @@ package org.ihtsdo.otf.authoringtemplate;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
+import org.ihtsdo.otf.authoringtemplate.service.termserver.SnowOwlTerminologyServerAdapter;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -15,6 +19,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.client.RestTemplate;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
@@ -40,6 +45,25 @@ public class Config {
 		return new JsonStore(new File(templateStorePath), getGeneralMapper());
 	}
 
+	@Bean
+	public SnowOwlTerminologyServerAdapter getSnowOwlTerminologyServerAdapter(@Value("${terminologyserver.url}") String terminologyServerUrl) {
+		return new SnowOwlTerminologyServerAdapter(terminologyServerUrl);
+	}
+
+	@Bean
+	public RestTemplate restTemplate(RestTemplateBuilder builder) {
+		return builder.build();
+	}
+
+	@Bean
+	public FilterRegistrationBean getUrlRewriteFilter() {
+		// Encode branch paths in uri to allow request mapping to work
+		return new FilterRegistrationBean(new BranchPathUriRewriteFilter(
+				"/(.*)/templates"
+		));
+	}
+
+	// Swagger Config
 	@Bean
 	public Docket api() {
 		return new Docket(DocumentationType.SWAGGER_2)
