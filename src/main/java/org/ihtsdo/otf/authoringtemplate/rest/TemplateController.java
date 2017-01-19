@@ -4,10 +4,13 @@ import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Set;
 
@@ -26,9 +29,9 @@ public class TemplateController {
 	}
 
 	@ResponseBody
-	@RequestMapping(value = "/templates/{name}", method = RequestMethod.PUT, produces = "application/json")
-	public ConceptTemplate updateTemplate(@PathVariable String name, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
-		return templateService.update(name, conceptTemplate);
+	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.PUT, produces = "application/json")
+	public ConceptTemplate updateTemplate(@PathVariable String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
+		return templateService.update(templateName, conceptTemplate);
 	}
 
 	@ResponseBody
@@ -47,9 +50,19 @@ public class TemplateController {
 	}
 
 	@ResponseBody
-	@RequestMapping(value = "/templates/{name}", method = RequestMethod.GET, produces = "application/json")
-	public ConceptTemplate getTemplate(@PathVariable String name) throws IOException {
-		return templateService.load(name);
+	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.GET, produces = "application/json")
+	public ConceptTemplate getTemplate(@PathVariable String templateName) throws IOException {
+		return templateService.load(templateName);
+	}
+
+	@ResponseBody
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET, produces = "application/json")
+	public void getEmptyInputFile(@PathVariable String branchPath,
+								  @PathVariable String templateName,
+								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
+		ServletOutputStream outputStream = response.getOutputStream();
+		response.setContentType("text/csv");
+		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, outputStream);
 	}
 
 }

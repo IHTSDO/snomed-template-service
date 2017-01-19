@@ -1,16 +1,16 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import com.google.common.base.Strings;
 import org.assertj.core.util.Arrays;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +48,14 @@ public class TemplateService {
 
 	public ConceptTemplate load(String name) throws IOException {
 		return jsonStore.load(name, ConceptTemplate.class);
+	}
+
+	private ConceptTemplate loadOrThrow(String templateName) throws IOException, ResourceNotFoundException {
+		ConceptTemplate template = load(templateName);
+		if (template == null) {
+			throw new ResourceNotFoundException("template", templateName);
+		}
+		return template;
 	}
 
 	// TODO Keep old versions of the template
@@ -161,5 +169,24 @@ public class TemplateService {
 
 	public JsonStore getJsonStore() {
 		return jsonStore;
+	}
+
+	public void writeEmptyInputFile(String branchPath, String templateName, OutputStream outputStream) throws IOException, ResourceNotFoundException {
+		ConceptTemplate template = loadOrThrow(templateName);
+		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, Constants.UTF_8))) {
+			String header = "";
+			for (Relationship relationship : template.getConceptOutline().getRelationships()) {
+				SimpleSlot targetSlot = relationship.getTargetSlot();
+				if (targetSlot != null && targetSlot.getSlotReference() == null) {
+					String slotName = targetSlot.getSlotName();
+					String range = targetSlot.getAllowableRangeECL();
+					if (!header.isEmpty()) header += "\t";
+					if (slotName != null) header += slotName + " ";
+					header += "(" + range + ")";
+				}
+			}
+			writer.write(header);
+			writer.newLine();
+		}
 	}
 }

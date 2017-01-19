@@ -4,6 +4,7 @@ import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.junit.After;
 import org.junit.Test;
@@ -15,6 +16,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.FileSystemUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -135,6 +137,25 @@ public class TemplateServiceTest {
 		templateService.listAll("MAIN/task", new String[] {"123037004", "123037004"}, new String[] {"123037004", "123037004"});
 		assertEclExpressionCreated("(302509004) AND (<<123037004 OR <<123037004 OR >>123037004 OR >>123037004)");
 
+	}
+
+	@Test
+	public void testWriteEmptyInputFile() throws IOException, ResourceNotFoundException {
+		createCtGuidedProcedureOfX();
+
+		ByteArrayOutputStream stream = new ByteArrayOutputStream();
+		templateService.writeEmptyInputFile("", "CT Guided Procedure of X", stream);
+		assertEquals("procSite (<< 442083009 |Anatomical or acquired body structure|)\taction (<< 129264002 |Action|)\n", new String(stream.toByteArray()));
+	}
+
+	private void createCtGuidedProcedureOfX() throws IOException {
+		final ConceptTemplate templateRequest = new ConceptTemplate();
+		templateRequest.setLogicalTemplate("71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|,      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],      363703001 |Has intent| = 429892002 |Guidance intent|   },   {      260686004 |Method| = [[+id (<< 129264002 |Action|) @action]],      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]   }");
+
+		templateRequest.addLexicalTemplate(new LexicalTemplate("procSiteTerm", "X", "procSite", Lists.newArrayList("structure of", "structure", "part of")));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("actionTerm", "Procedure", "action", Lists.newArrayList(" - action")));
+		templateRequest.setConceptOutline(new ConceptOutline().addDescription(new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)")));
+		templateService.create("CT Guided Procedure of X", templateRequest);
 	}
 
 	private void assertEclExpressionCreated(String expected) {
