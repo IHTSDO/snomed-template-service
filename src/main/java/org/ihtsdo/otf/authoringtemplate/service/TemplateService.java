@@ -9,15 +9,14 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundExcept
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 @Service
 public class TemplateService {
@@ -30,6 +29,8 @@ public class TemplateService {
 
 	@Autowired
 	private TerminologyServerAdapter terminology;
+
+	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 
 	public String create(String name, ConceptTemplate conceptTemplate) throws IOException {
 		if (jsonStore.load(name, ConceptTemplate.class) != null) {
@@ -177,7 +178,7 @@ public class TemplateService {
 			String header = "";
 			for (Relationship relationship : template.getConceptOutline().getRelationships()) {
 				SimpleSlot targetSlot = relationship.getTargetSlot();
-				if (targetSlot != null && targetSlot.getSlotReference() == null) {
+				if (isSlotRequiringInput(targetSlot)) {
 					String slotName = targetSlot.getSlotName();
 					String range = targetSlot.getAllowableRangeECL();
 					if (!header.isEmpty()) header += "\t";
@@ -188,5 +189,114 @@ public class TemplateService {
 			writer.write(header);
 			writer.newLine();
 		}
+	}
+
+	private boolean isSlotRequiringInput(SimpleSlot targetSlot) {
+		return targetSlot != null && targetSlot.getSlotReference() == null;
+	}
+
+	public void generateConcepts(String branchPath, String templateName, InputStream inputStream) throws IOException, ResourceNotFoundException {
+		ConceptTemplate template = loadOrThrow(templateName);
+		ConceptOutline conceptOutline = template.getConceptOutline();
+		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(conceptOutline.getRelationships());
+		List<String> errorMessages = new ArrayList<>();
+		List<List<String>> columnValues = new ArrayList<>();
+
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+			// Validate header
+			validateHeader(reader.readLine(), slotsRequiringInput);
+
+			// Collect values with basic validation
+			LongStream.range(0, slotsRequiringInput.size()).forEach(v -> columnValues.add(new ArrayList<>()));
+			String line;
+			int lineNum = 1;
+			while ((line = reader.readLine()) != null) {
+				lineNum++;
+				if (line.isEmpty()) {
+					continue;
+				}
+				String[] values = line.split("\\t");
+				if (values.length != slotsRequiringInput.size()) {
+					errorMessages.add(String.format("Line %s has %s columns, expecting %s", lineNum, values.length, slotsRequiringInput.size()));
+				}
+				for (int column = 0; column < values.length; column++) {
+					String conceptId = values[column];
+					if (isValidConceptId(conceptId)) {
+						errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
+					}
+					columnValues.get(column).add(conceptId);
+				}
+			}
+		}
+
+		// Validate values against slot constraints, column at a time
+		if (errorMessages.isEmpty() && !columnValues.get(0).isEmpty()) {
+			int slotIndex = -1;
+			for (SimpleSlot simpleSlot : slotsRequiringInput) {
+				slotIndex++;
+				List<String> slotValues = columnValues.get(slotIndex);
+				String slotEcl = simpleSlot.getAllowableRangeECL();
+				StringBuilder validationEcl = new StringBuilder(slotEcl)
+						.append(" AND (");
+				for (String slotValue : slotValues) {
+					validationEcl.append(slotValue)
+							.append(" OR ");
+				}
+				// Remove last OR
+				validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
+				validationEcl.append(")");
+
+				Set<String> validSlotValues = terminology.eclQuery(branchPath, validationEcl.toString(), slotValues.size());
+				Set<String> invalidSlotValues = new HashSet<>(slotValues);
+				invalidSlotValues.removeAll(validSlotValues);
+				if (!invalidSlotValues.isEmpty()) {
+					errorMessages.add(String.format("Column %s has the constraint %s. " +
+									"The following given values do not match this constraint: %s",
+							slotIndex + 1,
+							slotEcl,
+							invalidSlotValues));
+				}
+			}
+		}
+
+		// Generate unsaved concepts
+		Map<String, SimpleSlot> slotNameMap = createSlotNameMap(slotsRequiringInput);
+		List<SimpleSlot> slotsFilledByReference = getSlotsFilledByReference(conceptOutline.getRelationships());
+
+	}
+
+	private String getError(String value, String message, int lineNum, int column) {
+		return "Value '" + value + "' on line " + lineNum + " column " + (column + 1) + " " + message + ".";
+	}
+
+	private boolean isValidConceptId(String conceptId) {
+		if (SIX_TO_EIGHTEEN_DIGITS.matcher(conceptId).matches()) {
+			String partitionIdentifier = conceptId.substring(conceptId.length() - 3, conceptId.length() - 5);
+			return partitionIdentifier.equals("00") || partitionIdentifier.equals("10");
+		}
+		return false;
+	}
+
+	private void validateHeader(String header, List<SimpleSlot> slotsRequiringInput) throws IOException {
+		int expectedColumnCount = slotsRequiringInput.size();
+		String[] columns = header.split("\\t");
+		int columnCount = columns.length;
+		Assert.isTrue(columnCount == expectedColumnCount, "Slots requiring input is " + expectedColumnCount + " but first line of file has " + columnCount + " columns.");
+	}
+
+	private List<SimpleSlot> getSlotsRequiringInput(List<Relationship> relationships) {
+		return relationships.stream().filter(r -> isSlotRequiringInput(r.getTargetSlot()))
+				.map(Relationship::getTargetSlot).collect(Collectors.toList());
+	}
+
+	private List<SimpleSlot> getSlotsFilledByReference(List<Relationship> relationships) {
+		return relationships.stream().filter(r -> r.getTargetSlot() != null && r.getTargetSlot().getSlotReference() != null)
+				.map(Relationship::getTargetSlot).collect(Collectors.toList());
+	}
+
+	private Map<String, SimpleSlot> createSlotNameMap(List<SimpleSlot> slots) {
+		Map<String, SimpleSlot> map = new HashMap<>();
+		slots.forEach(slot -> {if (slot.getSlotName() != null) map.put(slot.getSlotName(), slot);});
+		return map;
 	}
 }

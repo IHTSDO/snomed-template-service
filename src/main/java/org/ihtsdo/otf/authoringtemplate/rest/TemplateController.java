@@ -8,6 +8,7 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundExcept
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
@@ -62,6 +63,13 @@ public class TemplateController {
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
 		ServletOutputStream outputStream = response.getOutputStream();
 		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, outputStream);
+	}
+
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "application/csv")
+	public void generateConcepts(@PathVariable String branchPath,
+								 @PathVariable String templateName,
+								 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ResourceNotFoundException {
+		templateService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
 }
