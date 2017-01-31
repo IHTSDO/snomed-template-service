@@ -56,12 +56,11 @@ public class TemplateController {
 	}
 
 	@ResponseBody
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET, produces = "application/json")
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET, produces = "text/csv")
 	public void getEmptyInputFile(@PathVariable String branchPath,
 								  @PathVariable String templateName,
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
 		ServletOutputStream outputStream = response.getOutputStream();
-		response.setContentType("text/csv");
 		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, outputStream);
 	}
 
