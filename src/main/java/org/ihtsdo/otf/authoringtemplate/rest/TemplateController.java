@@ -5,12 +5,15 @@ import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Set;
@@ -21,6 +24,7 @@ public class TemplateController {
 
 	@Autowired
 	private TemplateService templateService;
+	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	@ResponseBody
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
@@ -37,7 +41,9 @@ public class TemplateController {
 
 	@ResponseBody
 	@RequestMapping(value = "/templates", method = RequestMethod.GET, produces = "application/json")
-	public Set<ConceptTemplate> listTemplates() throws IOException {
+	public Set<ConceptTemplate> listTemplates(HttpServletRequest request) throws IOException {
+		// TODO: Remove after debugging
+		logger.info("Request X-AUTH-token: {}", request.getHeader("X-AUTH-token"));
 		return templateService.listAll();
 	}
 
