@@ -10,7 +10,7 @@ public class ResourceNotFoundException extends ServiceException {
 		this(resourceType, resourceIdentifier, null);
 	}
 	public ResourceNotFoundException(String resourceType, String resourceIdentifier, Throwable cause) {
-		super("Resource of type " + resourceType + " and ID " + resourceIdentifier + " was not found.", cause);
+		super(String.format("Resource of type %s and ID '%s' was not found.", resourceType, resourceIdentifier), cause);
 	}
 
 	@Override

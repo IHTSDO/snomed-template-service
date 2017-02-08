@@ -5,6 +5,7 @@ import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,9 +203,10 @@ public class TemplateService {
 		List<String> errorMessages = new ArrayList<>();
 		List<List<String>> columnValues = new ArrayList<>();
 
+		// Read input file
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 			// Validate header
-			validateHeader(reader.readLine(), slotsRequiringInput);
+			validateHeader(reader.readLine(), slotsRequiringInput.size());
 
 			// Collect values with basic validation
 			LongStream.range(0, slotsRequiringInput.size()).forEach(v -> columnValues.add(new ArrayList<>()));
@@ -221,13 +223,14 @@ public class TemplateService {
 				}
 				for (int column = 0; column < values.length; column++) {
 					String conceptId = values[column];
-					if (isValidConceptId(conceptId)) {
+					if (!isValidConceptId(conceptId)) {
 						errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
 					}
 					columnValues.get(column).add(conceptId);
 				}
 			}
 		}
+		throwAnyInputErrors(errorMessages);
 
 		// Validate values against slot constraints, column at a time
 		if (errorMessages.isEmpty() && !columnValues.get(0).isEmpty()) {
@@ -265,6 +268,12 @@ public class TemplateService {
 
 	}
 
+	private void throwAnyInputErrors(List<String> errorMessages) {
+		if (!errorMessages.isEmpty()) {
+			throw new InputError(errorMessages);
+		}
+	}
+
 	private String getError(String value, String message, int lineNum, int column) {
 		return "Value '" + value + "' on line " + lineNum + " column " + (column + 1) + " " + message + ".";
 	}
@@ -277,11 +286,11 @@ public class TemplateService {
 		return false;
 	}
 
-	private void validateHeader(String header, List<SimpleSlot> slotsRequiringInput) throws IOException {
-		int expectedColumnCount = slotsRequiringInput.size();
+	private void validateHeader(String header, int expectedColumnCount) throws IOException {
+		Assert.notNull(header, "Input file is empty.");
 		String[] columns = header.split("\\t");
 		int columnCount = columns.length;
-		Assert.isTrue(columnCount == expectedColumnCount, "Slots requiring input is " + expectedColumnCount + " but first line of file has " + columnCount + " columns.");
+		Assert.isTrue(columnCount == expectedColumnCount, String.format("There are %s slots requiring input in the selected template is but the header line of the input file has %s columns.", expectedColumnCount, columnCount));
 	}
 
 	private List<SimpleSlot> getSlotsRequiringInput(List<Relationship> relationships) {

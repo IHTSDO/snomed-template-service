@@ -4,6 +4,7 @@ import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
+import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.junit.After;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -146,6 +148,64 @@ public class TemplateServiceTest {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		templateService.writeEmptyInputFile("", "CT Guided Procedure of X", stream);
 		assertEquals("procSite (<< 442083009 |Anatomical or acquired body structure|)\taction (<< 129264002 |Action|)\n", new String(stream.toByteArray()));
+	}
+
+	@Test
+	public void testGenerateConcepts_templateNotFound() throws IOException, ResourceNotFoundException {
+		try {
+			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("empty.txt"));
+			fail("Should have thrown exception.");
+		} catch (ResourceNotFoundException e) {
+			assertEquals("Resource of type template and ID 'CT Guided Procedure of X' was not found.", e.getMessage());
+		}
+	}
+
+	@Test
+	public void testGenerateConcepts_emptyFile() throws IOException, ResourceNotFoundException {
+		try {
+			createCtGuidedProcedureOfX();
+			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("empty.txt"));
+			fail("Should have thrown exception.");
+		} catch (IllegalArgumentException e) {
+			assertEquals("Input file is empty.", e.getMessage());
+		}
+	}
+
+	@Test
+	public void testGenerateConcepts_notEnoughColumns() throws IOException, ResourceNotFoundException {
+		try {
+			createCtGuidedProcedureOfX();
+			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("1-col.txt"));
+			fail("Should have thrown exception.");
+		} catch (IllegalArgumentException e) {
+			assertEquals("There are 2 slots requiring input in the selected template is but the header line of the input file has 1 columns.", e.getMessage());
+		}
+	}
+
+	@Test
+	public void testGenerateConcepts_notEnoughValues() throws IOException, ResourceNotFoundException {
+		try {
+			createCtGuidedProcedureOfX();
+			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-col-value-missing.txt"));
+			fail("Should have thrown exception.");
+		} catch (InputError e) {
+			assertEquals("Line 2 has 1 columns, expecting 2\n" +
+					"Value '123' on line 2 column 1 is not a valid concept identifier.\n" +
+					"Line 3 has 1 columns, expecting 2\n" +
+					"Value '234' on line 3 column 1 is not a valid concept identifier.", e.getMessage());
+		}
+	}
+
+	@Test
+	public void testGenerateConcepts_badConceptIdFormat() throws IOException, ResourceNotFoundException {
+		try {
+			createCtGuidedProcedureOfX();
+			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-col-bad-conceptId.txt"));
+			fail("Should have thrown exception.");
+		} catch (InputError e) {
+			assertEquals("Value '123' on line 2 column 1 is not a valid concept identifier.\n" +
+					"Value '456' on line 2 column 2 is not a valid concept identifier.", e.getMessage());
+		}
 	}
 
 	private void createCtGuidedProcedureOfX() throws IOException {
