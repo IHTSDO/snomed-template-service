@@ -61,7 +61,7 @@ public class SnowOwlTerminologyServerAdapter implements TerminologyServerAdapter
 		if (authenticationToken != null) {
 			int length = authenticationToken.length();
 			int maskLength = length / 4;
-			Strings.padEnd(authenticationToken.substring(0, length - maskLength), length, '*');
+			return Strings.padEnd(authenticationToken.substring(0, length - maskLength), length, '*');
 		}
 		return null;
 	}
