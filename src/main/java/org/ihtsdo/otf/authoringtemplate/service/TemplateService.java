@@ -14,9 +14,11 @@ import org.springframework.util.Assert;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 @Service
@@ -196,7 +198,9 @@ public class TemplateService {
 		return targetSlot != null && targetSlot.getSlotReference() == null;
 	}
 
-	public void generateConcepts(String branchPath, String templateName, InputStream inputStream) throws IOException, ResourceNotFoundException {
+	public List<ConceptOutline> generateConcepts(String branchPath, String templateName, InputStream inputStream) throws IOException, ResourceNotFoundException {
+		Assert.notNull(inputStream, "Batch file is required.");
+
 		ConceptTemplate template = loadOrThrow(templateName);
 		ConceptOutline conceptOutline = template.getConceptOutline();
 		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(conceptOutline.getRelationships());
@@ -232,40 +236,76 @@ public class TemplateService {
 		}
 		throwAnyInputErrors(errorMessages);
 
-		// Validate values against slot constraints, column at a time
-		if (errorMessages.isEmpty() && !columnValues.get(0).isEmpty()) {
-			int slotIndex = -1;
-			for (SimpleSlot simpleSlot : slotsRequiringInput) {
-				slotIndex++;
-				List<String> slotValues = columnValues.get(slotIndex);
-				String slotEcl = simpleSlot.getAllowableRangeECL();
-				StringBuilder validationEcl = new StringBuilder(slotEcl)
-						.append(" AND (");
-				for (String slotValue : slotValues) {
-					validationEcl.append(slotValue)
-							.append(" OR ");
-				}
-				// Remove last OR
-				validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
-				validationEcl.append(")");
+		if (columnValues.get(0).isEmpty()) {
+			throw new InputError("Batch input file doesn't contain any rows.");
+		}
 
-				Set<String> validSlotValues = terminology.eclQuery(branchPath, validationEcl.toString(), slotValues.size());
-				Set<String> invalidSlotValues = new HashSet<>(slotValues);
-				invalidSlotValues.removeAll(validSlotValues);
-				if (!invalidSlotValues.isEmpty()) {
-					errorMessages.add(String.format("Column %s has the constraint %s. " +
-									"The following given values do not match this constraint: %s",
-							slotIndex + 1,
-							slotEcl,
-							invalidSlotValues));
-				}
+		// Validate values against slot constraints, column at a time
+		int slotIndex = -1;
+		for (SimpleSlot simpleSlot : slotsRequiringInput) {
+			slotIndex++;
+			List<String> slotValues = columnValues.get(slotIndex);
+			String slotEcl = simpleSlot.getAllowableRangeECL();
+			StringBuilder validationEcl = new StringBuilder(slotEcl)
+					.append(" AND (");
+			for (String slotValue : slotValues) {
+				validationEcl.append(slotValue)
+						.append(" OR ");
+			}
+			// Remove last OR
+			validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
+			validationEcl.append(")");
+
+			Set<String> validSlotValues = terminology.eclQuery(branchPath, validationEcl.toString(), slotValues.size());
+			Set<String> invalidSlotValues = new HashSet<>(slotValues);
+			invalidSlotValues.removeAll(validSlotValues);
+			if (!invalidSlotValues.isEmpty()) {
+				errorMessages.add(String.format("Column %s has the constraint %s. " +
+								"The following given values do not match this constraint: %s",
+						slotIndex + 1,
+						slotEcl,
+						invalidSlotValues));
 			}
 		}
 
 		// Generate unsaved concepts
-		Map<String, SimpleSlot> slotNameMap = createSlotNameMap(slotsRequiringInput);
-		List<SimpleSlot> slotsFilledByReference = getSlotsFilledByReference(conceptOutline.getRelationships());
+		List<String> slotNames = slotsRequiringInput.stream().filter(slot -> slot.getSlotName() != null).map(SimpleSlot::getSlotName).collect(Collectors.toList());
 
+		List<ConceptOutline> generatedConcepts = new ArrayList<>();
+
+		// Create x blank concepts
+		IntStream.range(0, columnValues.get(0).size()).forEach(i -> generatedConcepts.add(new ConceptOutline()));
+
+		// Push each template relationship into all concepts
+		AtomicInteger column = new AtomicInteger(0);
+		template.getConceptOutline().getRelationships().forEach(relationship -> {
+			SimpleSlot targetSlot = relationship.getTargetSlot();
+			if (targetSlot == null) {
+				generatedConcepts.forEach(concept -> concept.addRelationship(relationship));
+			}
+			if (targetSlot != null) {
+				String slotName = targetSlot.getSlotName();
+				if (slotName != null) {
+					int slotColumn = column.getAndIncrement();
+					addRelationshipToAllConcepts(relationship, slotColumn, columnValues, generatedConcepts);
+				} else {
+					addRelationshipToAllConcepts(relationship, slotNames.indexOf(targetSlot.getSlotReference()), columnValues, generatedConcepts);
+				}
+			}
+		});
+
+		// Push each template description into all concepts
+		template.getConceptOutline().getDescriptions().forEach(description ->
+				generatedConcepts.forEach(concept -> concept.addDescription(description)));
+
+		return generatedConcepts;
+	}
+
+	private void addRelationshipToAllConcepts(Relationship relationship, int slotColumn, List<List<String>> columnValues, List<ConceptOutline> generatedConcepts) {
+		List<String> values = columnValues.get(slotColumn);
+		for (int i = 0; i < values.size(); i++) {
+			generatedConcepts.get(i).addRelationship(relationship.clone().setTarget(new ConceptMini(values.get(i))));
+		}
 	}
 
 	private void throwAnyInputErrors(List<String> errorMessages) {
@@ -279,9 +319,13 @@ public class TemplateService {
 	}
 
 	private boolean isValidConceptId(String conceptId) {
-		if (SIX_TO_EIGHTEEN_DIGITS.matcher(conceptId).matches()) {
-			String partitionIdentifier = conceptId.substring(conceptId.length() - 3, conceptId.length() - 5);
-			return partitionIdentifier.equals("00") || partitionIdentifier.equals("10");
+		try {
+			if (SIX_TO_EIGHTEEN_DIGITS.matcher(conceptId).matches()) {
+				String partitionIdentifier = conceptId.substring(conceptId.length() - 3, conceptId.length() - 1);
+				return partitionIdentifier.equals("00") || partitionIdentifier.equals("10");
+			}
+		} catch (StringIndexOutOfBoundsException e) {
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -298,14 +342,4 @@ public class TemplateService {
 				.map(Relationship::getTargetSlot).collect(Collectors.toList());
 	}
 
-	private List<SimpleSlot> getSlotsFilledByReference(List<Relationship> relationships) {
-		return relationships.stream().filter(r -> r.getTargetSlot() != null && r.getTargetSlot().getSlotReference() != null)
-				.map(Relationship::getTargetSlot).collect(Collectors.toList());
-	}
-
-	private Map<String, SimpleSlot> createSlotNameMap(List<SimpleSlot> slots) {
-		Map<String, SimpleSlot> map = new HashMap<>();
-		slots.forEach(slot -> {if (slot.getSlotName() != null) map.put(slot.getSlotName(), slot);});
-		return map;
-	}
 }

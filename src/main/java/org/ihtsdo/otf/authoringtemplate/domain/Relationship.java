@@ -1,5 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.domain;
 
+import org.springframework.beans.BeanUtils;
+
 public class Relationship {
 
 	private String characteristicType = "STATED_RELATIONSHIP";
@@ -37,8 +39,9 @@ public class Relationship {
 		return target;
 	}
 
-	public void setTarget(ConceptMini target) {
+	public Relationship setTarget(ConceptMini target) {
 		this.target = target;
+		return this;
 	}
 
 	public SimpleSlot getTargetSlot() {
@@ -63,6 +66,12 @@ public class Relationship {
 
 	public String getCardinalityMax() {
 		return cardinalityMax;
+	}
+
+	public Relationship clone() {
+		Relationship clone = new Relationship();
+		BeanUtils.copyProperties(this, clone);
+		return clone;
 	}
 
 	@Override

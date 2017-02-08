@@ -208,6 +208,34 @@ public class TemplateServiceTest {
 		}
 	}
 
+	@Test
+	public void testGenerateConcepts() throws IOException, ResourceNotFoundException {
+		createCtGuidedProcedureOfX();
+		List<ConceptOutline> conceptOutlines = templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-cols-5-values.txt"));
+		assertEquals(5, conceptOutlines.size());
+
+		ConceptOutline concept = conceptOutlines.get(0);
+		assertEquals(1, concept.getDescriptions().size());
+		assertEquals(6, concept.getRelationships().size());
+		assertEquals("12656001", concept.getRelationships().get(2).getTarget().getConceptId());
+		assertEquals("419988009", concept.getRelationships().get(4).getTarget().getConceptId());
+		assertEquals("12656001", concept.getRelationships().get(5).getTarget().getConceptId());
+
+		concept = conceptOutlines.get(1);
+		assertEquals(1, concept.getDescriptions().size());
+		assertEquals(6, concept.getRelationships().size());
+		assertEquals("63303001", concept.getRelationships().get(2).getTarget().getConceptId());
+		assertEquals("415186003", concept.getRelationships().get(4).getTarget().getConceptId());
+		assertEquals("63303001", concept.getRelationships().get(5).getTarget().getConceptId());
+
+		concept = conceptOutlines.get(2);
+		assertEquals(1, concept.getDescriptions().size());
+		assertEquals(6, concept.getRelationships().size());
+		assertEquals("63124001", concept.getRelationships().get(2).getTarget().getConceptId());
+		assertEquals("426865009", concept.getRelationships().get(4).getTarget().getConceptId());
+		assertEquals("63124001", concept.getRelationships().get(5).getTarget().getConceptId());
+	}
+
 	private void createCtGuidedProcedureOfX() throws IOException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
 		templateRequest.setLogicalTemplate("71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|,      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],      363703001 |Has intent| = 429892002 |Guidance intent|   },   {      260686004 |Method| = [[+id (<< 129264002 |Action|) @action]],      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]   }");

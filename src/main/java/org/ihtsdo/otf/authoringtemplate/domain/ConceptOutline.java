@@ -18,6 +18,10 @@ public class ConceptOutline {
 		return this;
 	}
 
+	public void addRelationship(Relationship relationship) {
+		relationships.add(relationship);
+	}
+
 	public List<Relationship> getRelationships() {
 		return relationships;
 	}

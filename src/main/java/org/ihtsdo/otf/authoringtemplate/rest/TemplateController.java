@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.rest;
 
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -22,27 +24,27 @@ public class TemplateController {
 	@Autowired
 	private TemplateService templateService;
 
-	@ResponseBody
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
+	@ResponseBody
 	public ResponseEntity<Object> createTemplate(@RequestParam String name, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
 		templateService.create(name, conceptTemplate);
 		return ControllerHelper.getCreatedResponse(name);
 	}
 
-	@ResponseBody
 	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.PUT, produces = "application/json")
+	@ResponseBody
 	public ConceptTemplate updateTemplate(@PathVariable String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
 		return templateService.update(templateName, conceptTemplate);
 	}
 
-	@ResponseBody
 	@RequestMapping(value = "/templates", method = RequestMethod.GET, produces = "application/json")
+	@ResponseBody
 	public Set<ConceptTemplate> listTemplates() throws IOException {
 		return templateService.listAll();
 	}
 
-	@ResponseBody
 	@RequestMapping(value = "/{branchPath}/templates", method = RequestMethod.GET, produces = "application/json")
+	@ResponseBody
 	public Set<ConceptTemplate> listTemplates(@PathVariable String branchPath,
 											  @RequestParam(required = false) String[] descendantOf,
 											  @RequestParam(required = false) String[] ancestorOf) throws IOException {
@@ -50,14 +52,14 @@ public class TemplateController {
 				descendantOf, ancestorOf);
 	}
 
-	@ResponseBody
 	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.GET, produces = "application/json")
+	@ResponseBody
 	public ConceptTemplate getTemplate(@PathVariable String templateName) throws IOException {
 		return templateService.load(templateName);
 	}
 
-	@ResponseBody
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET, produces = "text/csv")
+	@ResponseBody
 	public void getEmptyInputFile(@PathVariable String branchPath,
 								  @PathVariable String templateName,
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
@@ -65,11 +67,12 @@ public class TemplateController {
 		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, outputStream);
 	}
 
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "application/csv")
-	public void generateConcepts(@PathVariable String branchPath,
-								 @PathVariable String templateName,
-								 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ResourceNotFoundException {
-		templateService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "multipart/form-data")
+	@ResponseBody
+	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
+												 @PathVariable String templateName,
+												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ResourceNotFoundException {
+		return templateService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
 }
