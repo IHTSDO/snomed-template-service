@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -30,16 +32,32 @@ public class SnowOwlTerminologyServerAdapter implements TerminologyServerAdapter
 	@Override
 	public Set<String> eclQuery(String branchPath, String ecl, int limit) {
 		RequestEntity<Void> countRequest = createEclRequest(branchPath, ecl, limit);
-		ResponseEntity<ConceptIdsResponse> response = restTemplate.exchange(countRequest, ConceptIdsResponse.class);
-		return response.getBody().getConceptIds();
+		try {
+			ResponseEntity<ConceptIdsResponse> response = restTemplate.exchange(countRequest, ConceptIdsResponse.class);
+			return response.getBody().getConceptIds();
+		} catch (HttpServerErrorException e) {
+			logTermserverError(countRequest, e);
+			throw e;
+		}
 	}
 
 	@Override
 	public boolean eclQueryHasAnyMatches(String branchPath, String ecl) {
 		RequestEntity<Void> countRequest = createEclRequest(branchPath, ecl, 1);
-		ResponseEntity<EntityCountResponse> response = restTemplate.exchange(countRequest, EntityCountResponse.class);
-		Long count = response.getBody().getTotal();
-		return count > 0;
+		try {
+			ResponseEntity<EntityCountResponse> response = restTemplate.exchange(countRequest, EntityCountResponse.class);
+			Long count = response.getBody().getTotal();
+			return count > 0;
+		} catch (HttpServerErrorException e) {
+			logTermserverError(countRequest, e);
+			throw e;
+		}
+	}
+
+	private void logTermserverError(RequestEntity<Void> countRequest, HttpServerErrorException e) {
+		if (e.getStatusCode().is5xxServerError()) {
+			logger.error("{} response from termserver. Request was {}. Response was {}", e.getRawStatusCode(), countRequest.getUrl(), e.getResponseBodyAsString());
+		}
 	}
 
 	private RequestEntity<Void> createEclRequest(final String branchPath, String ecl, int limit) {
