@@ -59,7 +59,8 @@ public class Config {
 	public FilterRegistrationBean getUrlRewriteFilter() {
 		// Encode branch paths in uri to allow request mapping to work
 		return new FilterRegistrationBean(new BranchPathUriRewriteFilter(
-				"/(.*)/templates"
+				"/(.*)/templates",
+				"/(.*)/templates/.*"
 		));
 	}
 
