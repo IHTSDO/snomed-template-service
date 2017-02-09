@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
@@ -58,13 +57,13 @@ public class TemplateController {
 		return templateService.load(templateName);
 	}
 
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET, produces = "text/csv")
-	@ResponseBody
-	public void getEmptyInputFile(@PathVariable String branchPath,
-								  @PathVariable String templateName,
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET,
+			produces = "text/tsv; charset=utf-8")
+	public void getEmptyInputFile(@PathVariable String branchPath, @PathVariable String templateName,
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
-		ServletOutputStream outputStream = response.getOutputStream();
-		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, outputStream);
+
+		response.setContentType("text/tsv; charset=utf-8");
+		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, response.getOutputStream());
 	}
 
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "multipart/form-data")
