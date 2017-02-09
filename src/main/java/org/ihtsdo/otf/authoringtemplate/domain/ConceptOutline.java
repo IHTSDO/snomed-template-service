@@ -5,12 +5,18 @@ import java.util.List;
 
 public class ConceptOutline {
 
+	private DefinitionStatus definitionStatus;
 	private List<Relationship> relationships;
 	private List<Description> descriptions;
 
 	public ConceptOutline() {
 		relationships = new ArrayList<>();
 		descriptions = new ArrayList<>();
+	}
+
+	public ConceptOutline(DefinitionStatus definitionStatus) {
+		this();
+		this.definitionStatus = definitionStatus;
 	}
 
 	public ConceptOutline addDescription(Description description) {
@@ -20,6 +26,14 @@ public class ConceptOutline {
 
 	public void addRelationship(Relationship relationship) {
 		relationships.add(relationship);
+	}
+
+	public DefinitionStatus getDefinitionStatus() {
+		return definitionStatus;
+	}
+
+	public void setDefinitionStatus(DefinitionStatus definitionStatus) {
+		this.definitionStatus = definitionStatus;
 	}
 
 	public List<Relationship> getRelationships() {

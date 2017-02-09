@@ -45,7 +45,7 @@ public class TemplateServiceTest {
 				"\t}\n");
 
 		templateRequest.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
-		templateRequest.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX$")));
+		templateRequest.setConceptOutline(new ConceptOutline(DefinitionStatus.FULLY_DEFINED).addDescription(new Description("CT of $slotX$")));
 		final String name = templateService.create("one", templateRequest);
 
 		final ConceptTemplate template = templateService.load(name);
@@ -60,6 +60,9 @@ public class TemplateServiceTest {
 		assertEquals("[entire]", lexicalTemplates.get(0).getRemoveParts().toString());
 
 		final ConceptOutline conceptOutline = template.getConceptOutline();
+
+		assertEquals(DefinitionStatus.FULLY_DEFINED, conceptOutline.getDefinitionStatus());
+
 		final List<Relationship> relationships = conceptOutline.getRelationships();
 		assertEquals(3, relationships.size());
 		final Relationship relationship = relationships.get(0);
