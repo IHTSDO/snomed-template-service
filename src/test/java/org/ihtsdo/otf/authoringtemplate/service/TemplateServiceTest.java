@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import com.google.common.collect.Sets;
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
@@ -11,6 +12,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.OngoingStubbing;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
@@ -19,7 +21,9 @@ import org.springframework.util.FileSystemUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -212,8 +216,25 @@ public class TemplateServiceTest {
 	}
 
 	@Test
+	public void testGenerateConcepts_conceptNotWithinRange() throws IOException, ResourceNotFoundException {
+		try {
+			createCtGuidedProcedureOfX();
+			mockEclQueryResponse(Collections.singleton("12656001"));
+			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("batch-ct-of-x-error-outside-of-range.txt"));
+			fail("Should have thrown exception.");
+		} catch (InputError e) {
+			assertEquals("Column 1 has the constraint << 442083009 |Anatomical or acquired body structure|. The following given values do not match this constraint: [138875005]\n" +
+					"Column 2 has the constraint << 129264002 |Action|. The following given values do not match this constraint: [419988009, 415186003]", e.getMessage());
+		}
+	}
+
+	@Test
 	public void testGenerateConcepts() throws IOException, ResourceNotFoundException {
 		createCtGuidedProcedureOfX();
+		mockEclQueryResponse(
+				Sets.newHashSet("12656001", "63303001", "63124001", "63125000", "24626005"),
+				Sets.newHashSet("419988009", "415186003", "426865009", "426530000", "426413004"));
+
 		List<ConceptOutline> conceptOutlines = templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-cols-5-values.txt"));
 		assertEquals(5, conceptOutlines.size());
 
@@ -254,6 +275,13 @@ public class TemplateServiceTest {
 		verify(terminologyServerAdapter).eclQueryHasAnyMatches(anyString(), stringArgumentCaptor.capture());
 		assertEquals(expected, stringArgumentCaptor.getValue());
 		reset(terminologyServerAdapter);
+	}
+
+	private void mockEclQueryResponse(Set<String>... conceptIdResults) {
+		OngoingStubbing<Set<String>> when = when(terminologyServerAdapter.eclQuery(anyString(), anyString(), anyInt()));
+		for (Set<String> conceptIdResult : conceptIdResults) {
+			when = when.thenReturn(conceptIdResult);
+		}
 	}
 
 	private void createTemplateWithFocusConcept(String name, String focusConcept) throws IOException {

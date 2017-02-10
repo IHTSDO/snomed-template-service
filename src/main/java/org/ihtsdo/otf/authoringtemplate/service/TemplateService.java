@@ -267,6 +267,7 @@ public class TemplateService {
 						invalidSlotValues));
 			}
 		}
+		throwAnyInputErrors(errorMessages);
 
 		// Generate unsaved concepts
 		List<String> slotNames = slotsRequiringInput.stream().filter(slot -> slot.getSlotName() != null).map(SimpleSlot::getSlotName).collect(Collectors.toList());
