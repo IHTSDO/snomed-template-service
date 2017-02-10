@@ -58,11 +58,11 @@ public class TemplateController {
 	}
 
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET,
-			produces = "text/tsv; charset=utf-8")
+			produces = "text/tab-separated-values; charset=utf-8")
 	public void getEmptyInputFile(@PathVariable String branchPath, @PathVariable String templateName,
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
 
-		response.setContentType("text/tsv; charset=utf-8");
+		response.setContentType("text/tab-separated-values; charset=utf-8");
 		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, response.getOutputStream());
 	}
 
