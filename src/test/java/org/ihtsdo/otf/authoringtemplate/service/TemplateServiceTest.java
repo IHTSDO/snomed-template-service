@@ -294,7 +294,9 @@ public class TemplateServiceTest {
 
 	@After
 	public void after() {
+		// Recreate empty template store
 		FileSystemUtils.deleteRecursively(templateService.getJsonStore().getStoreDirectory());
+		templateService.getJsonStore().getStoreDirectory().mkdirs();
 	}
 
 }
