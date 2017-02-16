@@ -1,5 +1,5 @@
 .*
 target
 *.iml
-template-store
+snomed-templates
 application-*.properties
