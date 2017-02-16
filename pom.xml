@@ -3,9 +3,9 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.ihtsdo.otf</groupId>
+	<groupId>org.snomed.otf</groupId>
 	<artifactId>snomed-template-service</artifactId>
-	<version>1.0.2-SNAPSHOT</version>
+	<version>1.1.0</version>
 
 	<name>Snomed Template Service</name>
 	<description>A service to support SNOMED CT authoring driven by Expression Template Language</description>
