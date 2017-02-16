@@ -7,6 +7,7 @@ public class Description {
 
 	private DescriptionType type;
 	private String lang;
+	private String term;
 	private String termTemplate;
 	private String initialTerm;
 	private CaseSignificance caseSignificance;
@@ -34,6 +35,14 @@ public class Description {
 
 	public void setLang(String lang) {
 		this.lang = lang;
+	}
+
+	public String getTerm() {
+		return term;
+	}
+
+	public void setTerm(String term) {
+		this.term = term;
 	}
 
 	public String getTermTemplate() {

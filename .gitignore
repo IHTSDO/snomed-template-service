@@ -1,3 +1,5 @@
 .*
 target
 *.iml
+template-store
+application-*.properties

@@ -1,0 +1,3 @@
+Anatomical or acquired body structure	Action
+12656001	419988009
+138875005	415186003
