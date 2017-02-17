@@ -10,6 +10,7 @@ public class ConceptOutline {
 	private List<Description> descriptions;
 
 	public ConceptOutline() {
+		definitionStatus = DefinitionStatus.FULLY_DEFINED;
 		relationships = new ArrayList<>();
 		descriptions = new ArrayList<>();
 	}
