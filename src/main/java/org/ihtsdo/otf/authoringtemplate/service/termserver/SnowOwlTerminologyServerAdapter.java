@@ -7,8 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -35,7 +34,7 @@ public class SnowOwlTerminologyServerAdapter implements TerminologyServerAdapter
 		try {
 			ResponseEntity<ConceptIdsResponse> response = restTemplate.exchange(countRequest, ConceptIdsResponse.class);
 			return response.getBody().getConceptIds();
-		} catch (HttpServerErrorException e) {
+		} catch (HttpStatusCodeException e) {
 			logTermserverError(countRequest, e);
 			throw e;
 		}
@@ -48,13 +47,13 @@ public class SnowOwlTerminologyServerAdapter implements TerminologyServerAdapter
 			ResponseEntity<EntityCountResponse> response = restTemplate.exchange(countRequest, EntityCountResponse.class);
 			Long count = response.getBody().getTotal();
 			return count > 0;
-		} catch (HttpServerErrorException e) {
+		} catch (HttpStatusCodeException e) {
 			logTermserverError(countRequest, e);
 			throw e;
 		}
 	}
 
-	private void logTermserverError(RequestEntity<Void> countRequest, HttpServerErrorException e) {
+	private void logTermserverError(RequestEntity<Void> countRequest, HttpStatusCodeException e) {
 		if (e.getStatusCode().is5xxServerError()) {
 			logger.error("{} response from termserver. Request was {}. Response was {}", e.getRawStatusCode(), countRequest.getUrl(), e.getResponseBodyAsString());
 		}
