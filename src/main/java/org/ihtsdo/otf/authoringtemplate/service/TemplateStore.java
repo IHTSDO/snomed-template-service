@@ -7,26 +7,29 @@ import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Service
 public class TemplateStore {
 
 	private Map<String, ConceptTemplate> templateCache;
 
+	@Autowired
 	private LogicalTemplateParserService logicalParserService;
 
+	@Autowired
 	private JsonStore jsonStore;
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
 
-	public TemplateStore(JsonStore jsonStore, LogicalTemplateParserService logicalParserService) {
+	public TemplateStore() throws IOException {
 		templateCache = new HashMap<>();
-		this.jsonStore = jsonStore;
-		this.logicalParserService = logicalParserService;
 	}
 
 	/**
@@ -34,6 +37,7 @@ public class TemplateStore {
 	 * Call again if the templates on disk are changed from outside this application.
 	 * @throws IOException
 	 */
+	@PostConstruct
 	public void init() throws IOException {
 		logger.info("Loading templates into cache.");
 		Set<ConceptTemplate> conceptTemplates = jsonStore.loadAll(ConceptTemplate.class);

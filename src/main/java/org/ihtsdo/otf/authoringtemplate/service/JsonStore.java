@@ -22,7 +22,7 @@ public class JsonStore {
 	public JsonStore(File storeDirectory, ObjectMapper objectMapper) {
 		this.storeDirectory = storeDirectory;
 		this.objectMapper = objectMapper;
-		if (!storeDirectory.isDirectory()) {
+		if (!storeDirectory.exists()) {
 			if (!storeDirectory.mkdirs()) {
 				throw new RuntimeException("storeDirectory " + storeDirectory.getAbsolutePath() + " could not be created.");
 			}

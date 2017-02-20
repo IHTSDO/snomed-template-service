@@ -35,9 +35,6 @@ import static springfox.documentation.builders.PathSelectors.regex;
 @SpringBootApplication
 public class Config {
 
-	@Autowired
-	private LogicalTemplateParserService logicalParserService;
-
 	@Bean
 	public ObjectMapper getGeneralMapper() {
 		return Jackson2ObjectMapperBuilder
@@ -47,11 +44,8 @@ public class Config {
 	}
 
 	@Bean
-	public TemplateStore getTemplateStore(@Value("${templateStorePath}") String templateStorePath) throws IOException {
-		TemplateStore templateStore = new TemplateStore(new JsonStore(new File(templateStorePath), getGeneralMapper()),
-				logicalParserService);
-		templateStore.init();
-		return templateStore;
+	public JsonStore getTemplateJsonStore(@Value("${templateStorePath}") String templateStorePath) {
+		return new JsonStore(new File(templateStorePath), getGeneralMapper());
 	}
 
 	@Bean
