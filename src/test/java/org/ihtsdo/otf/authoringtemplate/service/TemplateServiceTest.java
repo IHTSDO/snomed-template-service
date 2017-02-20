@@ -9,6 +9,7 @@ import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +36,9 @@ public class TemplateServiceTest {
 
 	@Autowired
 	private TemplateService templateService;
+
+	@Autowired
+	private TemplateStore templateStore;
 
 	@MockBean
 	private TerminologyServerAdapter terminologyServerAdapter;
@@ -292,11 +296,16 @@ public class TemplateServiceTest {
 		templateService.create(name, template);
 	}
 
+	@Before
+	public void before() {
+		templateStore.clear();
+	}
+
 	@After
 	public void after() {
 		// Recreate empty template store
-		FileSystemUtils.deleteRecursively(templateService.getJsonStore().getStoreDirectory());
-		templateService.getJsonStore().getStoreDirectory().mkdirs();
+		FileSystemUtils.deleteRecursively(templateStore.getJsonStore().getStoreDirectory());
+		templateStore.getJsonStore().getStoreDirectory().mkdirs();
 	}
 
 }
