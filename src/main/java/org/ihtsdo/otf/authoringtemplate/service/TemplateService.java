@@ -9,6 +9,8 @@ import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -149,7 +151,9 @@ public class TemplateService {
 	public Set<ConceptTemplate> listAll(String branchPath, String[] descendantOf, String[] ancestorOf) throws IOException {
 		Set<ConceptTemplate> templates = listAll();
 		if (!Arrays.isNullOrEmpty(descendantOf) || !Arrays.isNullOrEmpty(ancestorOf)) {
+			SecurityContext securityContext = SecurityContextHolder.getContext();
 			return templates.stream().parallel().filter(conceptTemplate -> {
+				SecurityContextHolder.setContext(securityContext);
 				String focusConcept = conceptTemplate.getFocusConcept();
 				String ecl = "(" + focusConcept + ") AND (";
 				for (int i = 0; descendantOf != null && i < descendantOf.length; i++) {
