@@ -1,0 +1,42 @@
+{
+  "name": "LOINC Template - Quality Observable",
+  "version": 1,
+  "logicalTemplate": "363787002 |Observable entity (observable entity)|:\n\t{246093002 |Component (attribute)| = [[+id(<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|) @Component]],\n\t704318007 |Property type (attribute)| = [[+id(<<118598001 |Measurement property|) @PropertyType]],\n\t370134009 |Time aspect (attribute)| = [[+id(<7389001 |Time frame|) @TimeAspect]],\n\t704327008 |Direct site (attribute)| = [[+id(<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|) @DirectSite]],\n\t704319004 |Inheres in (attribute)| = [[+id(<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|) @InheresIn]],\n\t370132008 |Scale type (attribute)| = [[+id(<<30766002 |Quantitative| OR <<26716007 |Qualitative| OR  <<117363000 |Ordinal value| OR <<117365007 |Ordinal or quantitative value| OR <<117362005 |Nominal value| OR <<117364006 |Narrative value| OR <<117444000 |Text value|) @ScaleType]]}\n",
+  "additionalSlots": ["LOINC_FSN", "LOINC_Unique_ID"],
+  "conceptOutline": {
+    "definitionStatus": "FULLY_DEFINED",
+    "descriptions": [
+      {
+        "type": "FSN",
+        "lang": "en",
+        "termTemplate": "$LOINC_FSN$ (procedure)",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      },
+      {
+        "type": "SYNONYM",
+        "lang": "en",
+        "termTemplate": "$LOINC_FSN$",
+        "caseSignificance": "ENTIRE_TERM_CASE_SENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      },
+      {
+        "type": "SYNONYM",
+        "lang": "en",
+        "termTemplate": "$LOINC_Unique_ID$",
+        "caseSignificance": "ENTIRE_TERM_CASE_SENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "ACCEPTABLE",
+          "900000000000509007": "ACCEPTABLE"
+        }
+      }
+    ]
+  },
+  "lexicalTemplates": []
+}
