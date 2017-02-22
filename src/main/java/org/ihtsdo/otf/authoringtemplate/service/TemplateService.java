@@ -179,8 +179,10 @@ public class TemplateService {
 			slotIndex++;
 			List<String> slotValues = columnValues.get(slotIndex);
 			String slotEcl = simpleSlot.getAllowableRangeECL();
-			StringBuilder validationEcl = new StringBuilder(slotEcl)
-					.append(" AND (");
+			StringBuilder validationEcl = new StringBuilder()
+					.append("(")
+					.append(slotEcl)
+					.append(") AND (");
 			for (String slotValue : slotValues) {
 				validationEcl.append(slotValue)
 						.append(" OR ");
