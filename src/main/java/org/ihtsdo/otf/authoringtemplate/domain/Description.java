@@ -1,5 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.domain;
 
+import org.springframework.beans.BeanUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -75,5 +77,11 @@ public class Description {
 
 	public void setAcceptabilityMap(Map<String, String> acceptabilityMap) {
 		this.acceptabilityMap = acceptabilityMap;
+	}
+
+	public Description clone() {
+		Description descriptionClone = new Description();
+		BeanUtils.copyProperties(this, descriptionClone);
+		return descriptionClone;
 	}
 }

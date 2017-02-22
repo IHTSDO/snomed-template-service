@@ -13,7 +13,6 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class TemplateStore {
@@ -81,7 +80,7 @@ public class TemplateStore {
 		final LogicalTemplate logicalTemplate = logicalParserService.parseTemplate(conceptTemplate.getLogicalTemplate());
 		conceptTemplate.setFocusConcept(logicalTemplate.getFocusConcepts().isEmpty() ? null : logicalTemplate.getFocusConcepts().get(0));
 		updateRelationships(conceptTemplate.getConceptOutline().getRelationships(), logicalTemplate);
-		updateDescriptions(conceptTemplate.getLexicalTemplates(), conceptTemplate.getConceptOutline().getDescriptions());
+		updateDescriptions(conceptTemplate.getLexicalTemplates(), conceptTemplate.getConceptOutline().getDescriptions(), conceptTemplate.getAdditionalSlots());
 	}
 
 	private void updateRelationships(List<Relationship> relationships, LogicalTemplate logicalTemplate) {
@@ -118,7 +117,7 @@ public class TemplateStore {
 		}
 	}
 
-	private void updateDescriptions(List<LexicalTemplate> lexicalTemplates, List<Description> descriptions) {
+	private void updateDescriptions(List<LexicalTemplate> lexicalTemplates, List<Description> descriptions, List<String> additionalSlots) {
 		Map<String, String> nameToDisplayNameMap = new HashMap<>();
 		for (LexicalTemplate lexicalTemplate : lexicalTemplates) {
 			nameToDisplayNameMap.put(lexicalTemplate.getName(),
@@ -128,13 +127,16 @@ public class TemplateStore {
 		for (Description description : descriptions) {
 			final String termTemplate = description.getTermTemplate();
 			String initialTerm = termTemplate;
-			final Pattern termSlotPattern = Pattern.compile("\\$([^\\$]*)\\$");
-			final Matcher matcher = termSlotPattern.matcher(termTemplate);
+			final Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
 			while (matcher.find()) {
 				final String group = matcher.group(1);
-				final String replacement = nameToDisplayNameMap.get(group);
+				String replacement = nameToDisplayNameMap.get(group);
 				if (replacement == null) {
-					throw new IllegalArgumentException("Term template contains lexical template name which does not exist:" + group);
+					if (additionalSlots.contains(group)) {
+						replacement = group;
+					} else {
+						throw new IllegalArgumentException("Term template contains lexical template name which does not exist:" + group);
+					}
 				}
 				initialTerm = initialTerm.replace("$" + group + "$", "[" + replacement + "]");
 			}

@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
@@ -20,13 +21,13 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.FileSystemUtils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
@@ -262,6 +263,50 @@ public class TemplateServiceTest {
 		assertEquals("63124001", concept.getRelationships().get(2).getTarget().getConceptId());
 		assertEquals("426865009", concept.getRelationships().get(4).getTarget().getConceptId());
 		assertEquals("63124001", concept.getRelationships().get(5).getTarget().getConceptId());
+	}
+
+	@Test
+	public void testGenerateLoincConcepts() throws IOException, ResourceNotFoundException {
+		String templateName = "LOINC Template - Quality Observable";
+
+		// Load test resource into template store
+		InputStream resourceAsStream = getClass().getResourceAsStream("/templates/" + templateName + ".json");
+		assertNotNull(resourceAsStream);
+		templateService.create(templateName, new ObjectMapper().readValue(resourceAsStream, ConceptTemplate.class));
+
+		ByteArrayOutputStream emptyInputFile = new ByteArrayOutputStream();
+		templateService.writeEmptyInputFile("MAIN", templateName, emptyInputFile);
+		String header = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(emptyInputFile.toByteArray()))).readLine();
+		assertEquals("Component (<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|)\t" +
+						"PropertyType (<<118598001 |Measurement property|)\t" +
+						"TimeAspect (<7389001 |Time frame|)\t" +
+						"DirectSite (<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|)\t" +
+						"InheresIn (<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|)\t" +
+						"ScaleType (<<30766002 |Quantitative| OR <<26716007 |Qualitative| OR  <<117363000 |Ordinal value| OR <<117365007 |Ordinal or quantitative value| OR <<117362005 |Nominal value| OR <<117364006 |Narrative value| OR <<117444000 |Text value|)\t" +
+						"LOINC_FSN\t" +
+						"LOINC_Unique_ID",
+				header);
+
+		// Generate concepts using template
+		String lines =
+				header + "\n" + // Header
+				"123037004\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
+				"123037004\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 2\tID 2\n"; // Line 2
+		mockEclQueryResponse(
+				Sets.newHashSet("123037004"),
+				Sets.newHashSet("118598001"),
+				Sets.newHashSet("7389001"),
+				Sets.newHashSet("123037004"),
+				Sets.newHashSet("123037004"),
+				Sets.newHashSet("30766002"));
+		List<ConceptOutline> generatedConcepts = templateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
+		assertEquals(2, generatedConcepts.size());
+		assertEquals("LOINC FSN 1 (procedure)", generatedConcepts.get(0).getDescriptions().get(0).getTerm());
+		assertEquals("LOINC FSN 1", generatedConcepts.get(0).getDescriptions().get(1).getTerm());
+		assertEquals("ID 1", generatedConcepts.get(0).getDescriptions().get(2).getTerm());
+		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
+		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
+		assertEquals("ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
 	}
 
 	private void createCtGuidedProcedureOfX() throws IOException {

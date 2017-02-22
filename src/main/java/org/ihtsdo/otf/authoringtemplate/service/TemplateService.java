@@ -8,6 +8,7 @@ import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +26,8 @@ import java.util.stream.LongStream;
 
 @Service
 public class TemplateService {
+
+	public static final Pattern TERM_SLOT_PATTERN = Pattern.compile("\\$([^\\$]*)\\$");
 
 	@Autowired
 	private TemplateStore templateStore;
@@ -113,6 +116,10 @@ public class TemplateService {
 					header += "(" + range + ")";
 				}
 			}
+			for (String additionalSlot : template.getAdditionalSlots()) {
+				if (!header.isEmpty()) header += "\t";
+				header += additionalSlot;
+			}
 			writer.write(header);
 			writer.newLine();
 		}
@@ -128,16 +135,18 @@ public class TemplateService {
 		ConceptTemplate template = loadOrThrow(templateName);
 		ConceptOutline conceptOutline = template.getConceptOutline();
 		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(conceptOutline.getRelationships());
+		List<String> additionalSlots = template.getAdditionalSlots();
 		List<String> errorMessages = new ArrayList<>();
 		List<List<String>> columnValues = new ArrayList<>();
 
 		// Read input file
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 			// Validate header
-			validateHeader(reader.readLine(), slotsRequiringInput.size());
+			int expectedColumnCount = slotsRequiringInput.size() + additionalSlots.size();
+			validateHeader(reader.readLine(), expectedColumnCount);
 
 			// Collect values with basic validation
-			LongStream.range(0, slotsRequiringInput.size()).forEach(v -> columnValues.add(new ArrayList<>()));
+			LongStream.range(0, expectedColumnCount).forEach(v -> columnValues.add(new ArrayList<>()));
 			String line;
 			int lineNum = 1;
 			while ((line = reader.readLine()) != null) {
@@ -146,12 +155,12 @@ public class TemplateService {
 					continue;
 				}
 				String[] values = line.split("\\t");
-				if (values.length != slotsRequiringInput.size()) {
-					errorMessages.add(String.format("Line %s has %s columns, expecting %s", lineNum, values.length, slotsRequiringInput.size()));
+				if (values.length != expectedColumnCount) {
+					errorMessages.add(String.format("Line %s has %s columns, expecting %s", lineNum, values.length, expectedColumnCount));
 				}
 				for (int column = 0; column < values.length; column++) {
 					String conceptId = values[column];
-					if (!isValidConceptId(conceptId)) {
+					if (column < slotsRequiringInput.size() && !isValidConceptId(conceptId)) {
 						errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
 					}
 					columnValues.get(column).add(conceptId);
@@ -195,6 +204,7 @@ public class TemplateService {
 
 		// Generate unsaved concepts
 		List<String> slotNames = slotsRequiringInput.stream().filter(slot -> slot.getSlotName() != null).map(SimpleSlot::getSlotName).collect(Collectors.toList());
+		slotNames.addAll(additionalSlots);
 
 		List<ConceptOutline> generatedConcepts = new ArrayList<>();
 
@@ -220,8 +230,34 @@ public class TemplateService {
 		});
 
 		// Push each template description into all concepts
-		template.getConceptOutline().getDescriptions().forEach(description ->
-				generatedConcepts.forEach(concept -> concept.addDescription(description)));
+		AtomicInteger descriptionIndex = new AtomicInteger(0);
+		template.getConceptOutline().getDescriptions().forEach(description -> {
+			generatedConcepts.forEach(concept -> concept.addDescription(description.clone()));
+
+			Set<String> additionalSlotsToProcess = new HashSet<>();
+			String termTemplate = description.getTermTemplate();
+			if (termTemplate != null) {
+				Matcher matcher = TERM_SLOT_PATTERN.matcher(termTemplate);
+				while (matcher.find()) {
+					String termSlot = matcher.group(1);
+					if (additionalSlots.contains(termSlot)) {
+						additionalSlotsToProcess.add(termSlot);
+					}
+				}
+			}
+			for (String additionalSlotToProcess : additionalSlotsToProcess) {
+				int index = additionalSlots.indexOf(additionalSlotToProcess);
+				List<String> additionalSlotValues = columnValues.get(slotsRequiringInput.size() + index);
+				for (int i = 0; i < generatedConcepts.size(); i++) {
+					Description generatedDescription = generatedConcepts.get(i).getDescriptions().get(descriptionIndex.get());
+					if (generatedDescription.getTerm() == null) {
+						generatedDescription.setTerm(generatedDescription.getTermTemplate());
+					}
+					generatedDescription.setTerm(generatedDescription.getTerm().replace("$" + additionalSlotToProcess + "$", additionalSlotValues.get(i)));
+				}
+			}
+			descriptionIndex.incrementAndGet();
+		});
 
 		return generatedConcepts;
 	}

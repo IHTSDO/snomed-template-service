@@ -14,11 +14,13 @@ public class ConceptTemplate {
 
 	private String logicalTemplate;
 	private List<LexicalTemplate> lexicalTemplates;
+	private List<String> additionalSlots;
 
 	private ConceptOutline conceptOutline;
 
 	public ConceptTemplate() {
 		lexicalTemplates = new ArrayList<>();
+		additionalSlots = new ArrayList<>();
 	}
 
 	public void bumpVersion() {
@@ -67,6 +69,14 @@ public class ConceptTemplate {
 
 	public void setLexicalTemplates(List<LexicalTemplate> lexicalTemplates) {
 		this.lexicalTemplates = lexicalTemplates;
+	}
+
+	public List<String> getAdditionalSlots() {
+		return additionalSlots;
+	}
+
+	public void setAdditionalSlots(List<String> additionalSlots) {
+		this.additionalSlots = additionalSlots;
 	}
 
 	public ConceptOutline getConceptOutline() {
