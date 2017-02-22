@@ -74,4 +74,9 @@ public class TemplateController {
 		return templateService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
+	@RequestMapping(value = "/templates/reload", method = RequestMethod.POST)
+	public void reloadCache() throws IOException {
+		templateService.reloadCache();
+	}
+
 }

@@ -303,4 +303,7 @@ public class TemplateService {
 				.map(Relationship::getTargetSlot).collect(Collectors.toList());
 	}
 
+	public void reloadCache() throws IOException {
+		templateStore.init();
+	}
 }
