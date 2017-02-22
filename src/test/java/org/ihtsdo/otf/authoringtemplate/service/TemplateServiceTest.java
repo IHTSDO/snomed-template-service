@@ -303,10 +303,10 @@ public class TemplateServiceTest {
 		assertEquals(2, generatedConcepts.size());
 		assertEquals("LOINC FSN 1 (procedure)", generatedConcepts.get(0).getDescriptions().get(0).getTerm());
 		assertEquals("LOINC FSN 1", generatedConcepts.get(0).getDescriptions().get(1).getTerm());
-		assertEquals("ID 1", generatedConcepts.get(0).getDescriptions().get(2).getTerm());
+		assertEquals("LOINC Unique ID:ID 1", generatedConcepts.get(0).getDescriptions().get(2).getTerm());
 		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
 		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
-		assertEquals("ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
+		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
 	}
 
 	private void createCtGuidedProcedureOfX() throws IOException {

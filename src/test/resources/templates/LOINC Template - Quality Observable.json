@@ -29,7 +29,7 @@
       {
         "type": "SYNONYM",
         "lang": "en",
-        "termTemplate": "$LOINC_Unique_ID$",
+        "termTemplate": "LOINC Unique ID:$LOINC_Unique_ID$",
         "caseSignificance": "ENTIRE_TERM_CASE_SENSITIVE",
         "acceptabilityMap": {
           "900000000000508004": "ACCEPTABLE",
