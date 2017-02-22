@@ -42,14 +42,18 @@ public class TemplateStore {
 		logger.info("Loading templates into cache.");
 		Set<ConceptTemplate> conceptTemplates = jsonStore.loadAll(ConceptTemplate.class);
 		conceptTemplates.forEach(template -> {
-			try {
-				generateTemporalParts(template);
-				templateCache.put(template.getName(), template);
-			} catch (IOException e) {
-				logger.error("Failed to load template {}", template.getName(), e);
-			}
+			generateAndCache(template);
 		});
 		logger.info("{} templates loaded into cache.", templateCache.size());
+	}
+
+	private void generateAndCache(ConceptTemplate template) {
+		try {
+			generateTemporalParts(template);
+			templateCache.put(template.getName(), template);
+		} catch (IOException | IllegalArgumentException e) {
+			logger.error("Failed to load template {}", template.getName(), e);
+		}
 	}
 
 	public ConceptTemplate load(String name) throws IOException {
@@ -64,8 +68,7 @@ public class TemplateStore {
 		conceptTemplate.setName(name);
 		stripTemporalParts(conceptTemplate);
 		jsonStore.save(name, conceptTemplate);
-		generateTemporalParts(conceptTemplate);
-		templateCache.put(name, conceptTemplate);
+		generateAndCache(conceptTemplate);
 	}
 
 	private void stripTemporalParts(ConceptTemplate conceptTemplate) {

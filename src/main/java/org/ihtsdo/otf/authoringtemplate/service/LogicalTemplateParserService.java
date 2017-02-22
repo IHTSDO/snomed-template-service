@@ -12,6 +12,7 @@ import org.ihtsdo.otf.authoringtemplate.service.generatedlogicalparser.Expressio
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -118,6 +119,7 @@ public class LogicalTemplateParserService {
 					}
 				}
 			}
+			Assert.notNull(currentAttributeGroup, "All attributes should be within a group.");
 			currentAttributeGroup.addAttribute(currentAttribute);
 		}
 
