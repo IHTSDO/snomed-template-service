@@ -39,7 +39,12 @@ public class LogicalTemplateParserService {
 		final List<RecognitionException> exceptions = new ArrayList<>();
 		parser.setErrorHandler(getErrorHandler(exceptions));
 
-		final ParserRuleContext tree = parser.expressiontemplate();
+		ParserRuleContext tree;
+		try {
+			tree = parser.expressiontemplate();
+		} catch (NullPointerException e) {
+			throw new IOException("Failed to parse template", e);
+		}
 		final ParseTreeWalker walker = new ParseTreeWalker();
 		final ExpressionTemplateListener listener = new ExpressionTemplateListener();
 		walker.walk(listener, tree);
