@@ -124,8 +124,11 @@ public class LogicalTemplateParserService {
 					}
 				}
 			}
-			Assert.notNull(currentAttributeGroup, "All attributes should be within a group.");
-			currentAttributeGroup.addAttribute(currentAttribute);
+			if (currentAttributeGroup == null) {
+				template.addUngroupedAttribute(currentAttribute);
+			} else {
+				currentAttributeGroup.addAttribute(currentAttribute);
+			}
 		}
 
 		private void setSlotInfo(HasCardinality hasCardinality, ExpressionTemplateParser.TemplateremoveslotContext templateremoveslot) {

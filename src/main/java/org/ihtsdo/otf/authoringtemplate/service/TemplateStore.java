@@ -95,6 +95,10 @@ public class TemplateStore {
 			relationships.add(relationship);
 		}
 
+		// Add Ungrouped Attributes
+		List<Attribute> ungroupedAttributes = logicalTemplate.getUngroupedAttributes();
+		ungroupedAttributes.forEach(a -> relationships.add(setRelationshipTypeAndTarget(a, new Relationship())));
+
 		// Add Attribute Groups
 		final List<AttributeGroup> attributeGroups = logicalTemplate.getAttributeGroups();
 		for (int i = 0; i < attributeGroups.size(); i++) {
@@ -104,17 +108,22 @@ public class TemplateStore {
 				relationship.setCardinalityMin(attribute.getCardinalityMin());
 				relationship.setCardinalityMax(attribute.getCardinalityMax());
 				relationship.setGroupId(i + 1);
-				relationship.setType(new ConceptMini(attribute.getType()));
-				relationship.setTarget(getConceptMiniOrNull(attribute.getValue()));
-				if (attribute.getAllowableRangeECL() != null) {
-					relationship.setTargetSlot(new SimpleSlot(attribute.getSlotName(), attribute.getAllowableRangeECL()));
-				}
-				if (attribute.getSlotReference() != null) {
-					relationship.setTargetSlot(new SimpleSlot(attribute.getSlotReference()));
-				}
+				setRelationshipTypeAndTarget(attribute, relationship);
 				relationships.add(relationship);
 			}
 		}
+	}
+
+	private Relationship setRelationshipTypeAndTarget(Attribute attribute, Relationship relationship) {
+		relationship.setType(new ConceptMini(attribute.getType()));
+		relationship.setTarget(getConceptMiniOrNull(attribute.getValue()));
+		if (attribute.getAllowableRangeECL() != null) {
+			relationship.setTargetSlot(new SimpleSlot(attribute.getSlotName(), attribute.getAllowableRangeECL()));
+		}
+		if (attribute.getSlotReference() != null) {
+			relationship.setTargetSlot(new SimpleSlot(attribute.getSlotReference()));
+		}
+		return relationship;
 	}
 
 	private void updateDescriptions(List<LexicalTemplate> lexicalTemplates, List<Description> descriptions, List<String> additionalSlots) {

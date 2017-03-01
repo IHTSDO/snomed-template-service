@@ -301,9 +301,22 @@ public class TemplateServiceTest {
 				Sets.newHashSet("30766002"));
 		List<ConceptOutline> generatedConcepts = templateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
 		assertEquals(2, generatedConcepts.size());
-		assertEquals("LOINC FSN 1 (procedure)", generatedConcepts.get(0).getDescriptions().get(0).getTerm());
-		assertEquals("LOINC FSN 1", generatedConcepts.get(0).getDescriptions().get(1).getTerm());
-		assertEquals("LOINC Unique ID:ID 1", generatedConcepts.get(0).getDescriptions().get(2).getTerm());
+		ConceptOutline c1 = generatedConcepts.get(0);
+
+		assertEquals(7, c1.getRelationships().size());
+		int relationship = 0;
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+
+		assertEquals("LOINC FSN 1 (procedure)", c1.getDescriptions().get(0).getTerm());
+		assertEquals("LOINC FSN 1", c1.getDescriptions().get(1).getTerm());
+		assertEquals("LOINC Unique ID:ID 1", c1.getDescriptions().get(2).getTerm());
+
 		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
 		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
 		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
