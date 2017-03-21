@@ -2,13 +2,14 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import org.assertj.core.util.Arrays;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
-import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
-import org.springframework.beans.BeanUtils;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.client.RestClientException;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,7 +37,9 @@ public class TemplateService {
 	private TemplateStore templateStore;
 
 	@Autowired
-	private TerminologyServerAdapter terminology;
+	private SnowOwlRestClientFactory terminologyClientFactory;
+
+	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 
@@ -77,6 +83,7 @@ public class TemplateService {
 
 	public Set<ConceptTemplate> listAll(String branchPath, String[] descendantOf, String[] ancestorOf) throws IOException {
 		Set<ConceptTemplate> templates = listAll();
+		SnowOwlRestClient terminologyClient = terminologyClientFactory.getClient();
 		if (!Arrays.isNullOrEmpty(descendantOf) || !Arrays.isNullOrEmpty(ancestorOf)) {
 			SecurityContext securityContext = SecurityContextHolder.getContext();
 			return templates.stream().parallel().filter(conceptTemplate -> {
@@ -92,7 +99,12 @@ public class TemplateService {
 					ecl += ">>" + ancestorOf[i];
 				}
 				ecl += ")";
-				return terminology.eclQueryHasAnyMatches(branchPath, ecl);
+				try {
+					return terminologyClient.eclQueryHasAnyMatches(branchPath, ecl);
+				} catch (RestClientException e) {
+					logger.error("Failed to filter templates using ECL", e);
+					return false;
+				}
 			}).collect(Collectors.toSet());
 		}
 		return templates;
@@ -129,7 +141,7 @@ public class TemplateService {
 		return targetSlot != null && targetSlot.getSlotReference() == null;
 	}
 
-	public List<ConceptOutline> generateConcepts(String branchPath, String templateName, InputStream inputStream) throws IOException, ResourceNotFoundException {
+	public List<ConceptOutline> generateConcepts(String branchPath, String templateName, InputStream inputStream) throws IOException, ServiceException {
 		Assert.notNull(inputStream, "Batch file is required.");
 
 		ConceptTemplate template = loadOrThrow(templateName);
@@ -175,32 +187,37 @@ public class TemplateService {
 
 		// Validate values against slot constraints, column at a time
 		int slotIndex = -1;
-		for (SimpleSlot simpleSlot : slotsRequiringInput) {
-			slotIndex++;
-			List<String> slotValues = columnValues.get(slotIndex);
-			String slotEcl = simpleSlot.getAllowableRangeECL();
-			StringBuilder validationEcl = new StringBuilder()
-					.append("(")
-					.append(slotEcl)
-					.append(") AND (");
-			for (String slotValue : slotValues) {
-				validationEcl.append(slotValue)
-						.append(" OR ");
-			}
-			// Remove last OR
-			validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
-			validationEcl.append(")");
+		try {
+			SnowOwlRestClient client = terminologyClientFactory.getClient();
+			for (SimpleSlot simpleSlot : slotsRequiringInput) {
+				slotIndex++;
+				List<String> slotValues = columnValues.get(slotIndex);
+				String slotEcl = simpleSlot.getAllowableRangeECL();
+				StringBuilder validationEcl = new StringBuilder()
+						.append("(")
+						.append(slotEcl)
+						.append(") AND (");
+				for (String slotValue : slotValues) {
+					validationEcl.append(slotValue)
+							.append(" OR ");
+				}
+				// Remove last OR
+				validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
+				validationEcl.append(")");
 
-			Set<String> validSlotValues = terminology.eclQuery(branchPath, validationEcl.toString(), slotValues.size());
-			Set<String> invalidSlotValues = new HashSet<>(slotValues);
-			invalidSlotValues.removeAll(validSlotValues);
-			if (!invalidSlotValues.isEmpty()) {
-				errorMessages.add(String.format("Column %s has the constraint %s. " +
-								"The following given values do not match this constraint: %s",
-						slotIndex + 1,
-						slotEcl,
-						invalidSlotValues));
+				Set<String> validSlotValues = client.eclQuery(branchPath, validationEcl.toString(), slotValues.size());
+				Set<String> invalidSlotValues = new HashSet<>(slotValues);
+				invalidSlotValues.removeAll(validSlotValues);
+				if (!invalidSlotValues.isEmpty()) {
+					errorMessages.add(String.format("Column %s has the constraint %s. " +
+									"The following given values do not match this constraint: %s",
+							slotIndex + 1,
+							slotEcl,
+							invalidSlotValues));
+				}
 			}
+		} catch (RestClientException e) {
+			throw new ServiceException("Error validating slots using terminologyClientFactory server.", e);
 		}
 		throwAnyInputErrors(errorMessages);
 

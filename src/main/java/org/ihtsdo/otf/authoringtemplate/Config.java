@@ -4,11 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
-import org.ihtsdo.otf.authoringtemplate.service.LogicalTemplateParserService;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateStore;
-import org.ihtsdo.otf.authoringtemplate.service.termserver.SnowOwlTerminologyServerAdapter;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -27,7 +24,6 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 
 import java.io.File;
-import java.io.IOException;
 
 import static com.google.common.base.Predicates.not;
 import static springfox.documentation.builders.PathSelectors.regex;
@@ -49,8 +45,9 @@ public class Config {
 	}
 
 	@Bean
-	public SnowOwlTerminologyServerAdapter getSnowOwlTerminologyServerAdapter(@Value("${terminologyserver.url}") String terminologyServerUrl) {
-		return new SnowOwlTerminologyServerAdapter(terminologyServerUrl);
+	public SnowOwlRestClientFactory snowOwlRestClientFactory(@Value("${terminologyserver.url}") String snowOwlUrl,
+															 @Value("${terminologyserver.reasonerId}") String snowOwlReasonerId) {
+		return new SnowOwlRestClientFactory(snowOwlUrl, snowOwlReasonerId);
 	}
 
 	@Bean
