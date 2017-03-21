@@ -6,6 +6,7 @@ import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -70,7 +71,7 @@ public class TemplateController {
 	@ResponseBody
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
 												 @PathVariable String templateName,
-												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ResourceNotFoundException {
+												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
 		return templateService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
