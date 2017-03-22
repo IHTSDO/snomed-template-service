@@ -8,7 +8,10 @@ import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
-import org.ihtsdo.otf.authoringtemplate.service.termserver.TerminologyServerAdapter;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.client.RestClientException;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +20,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.OngoingStubbing;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.FileSystemUtils;
@@ -42,7 +47,10 @@ public class TemplateServiceTest {
 	private TemplateStore templateStore;
 
 	@MockBean
-	private TerminologyServerAdapter terminologyServerAdapter;
+	private SnowOwlRestClientFactory clientFactory;
+
+	@MockBean
+	private SnowOwlRestClient terminologyServerClient;
 
 	@Test
 	public void testCreate() throws Exception {
@@ -135,6 +143,7 @@ public class TemplateServiceTest {
 	public void testListAll() throws IOException {
 		String focusConcept = "302509004";
 		createTemplateWithFocusConcept("one", focusConcept);
+		expectGetTerminologyServerClient();
 
 		templateService.listAll("MAIN/task", new String[] {"123037004"}, null);
 		assertEclExpressionCreated("(302509004) AND (<<123037004)");
@@ -163,7 +172,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts_templateNotFound() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts_templateNotFound() throws IOException, ServiceException {
 		try {
 			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("empty.txt"));
 			fail("Should have thrown exception.");
@@ -173,7 +182,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts_emptyFile() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts_emptyFile() throws IOException, ServiceException {
 		try {
 			createCtGuidedProcedureOfX();
 			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("empty.txt"));
@@ -184,7 +193,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts_notEnoughColumns() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts_notEnoughColumns() throws IOException, ServiceException {
 		try {
 			createCtGuidedProcedureOfX();
 			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("1-col.txt"));
@@ -195,7 +204,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts_notEnoughValues() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts_notEnoughValues() throws IOException, ServiceException {
 		try {
 			createCtGuidedProcedureOfX();
 			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-col-value-missing.txt"));
@@ -209,7 +218,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts_badConceptIdFormat() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts_badConceptIdFormat() throws IOException, ServiceException {
 		try {
 			createCtGuidedProcedureOfX();
 			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-col-bad-conceptId.txt"));
@@ -221,7 +230,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts_conceptNotWithinRange() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts_conceptNotWithinRange() throws IOException, ServiceException {
 		try {
 			createCtGuidedProcedureOfX();
 			mockEclQueryResponse(Collections.singleton("12656001"));
@@ -234,7 +243,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateConcepts() throws IOException, ResourceNotFoundException {
+	public void testGenerateConcepts() throws IOException, ServiceException {
 		createCtGuidedProcedureOfX();
 		mockEclQueryResponse(
 				Sets.newHashSet("12656001", "63303001", "63124001", "63125000", "24626005"),
@@ -266,7 +275,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testGenerateLoincConcepts() throws IOException, ResourceNotFoundException {
+	public void testGenerateLoincConcepts() throws IOException, ServiceException {
 		String templateName = "LOINC Template - Quality Observable";
 
 		// Load test resource into template store
@@ -322,6 +331,10 @@ public class TemplateServiceTest {
 		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
 	}
 
+	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
+		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
+	}
+
 	private void createCtGuidedProcedureOfX() throws IOException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
 		templateRequest.setLogicalTemplate("71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|,      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],      363703001 |Has intent| = 429892002 |Guidance intent|   },   {      260686004 |Method| = [[+id (<< 129264002 |Action|) @action]],      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]   }");
@@ -333,14 +346,25 @@ public class TemplateServiceTest {
 	}
 
 	private void assertEclExpressionCreated(String expected) {
+		expectGetTerminologyServerClient();
 		ArgumentCaptor<String> stringArgumentCaptor = ArgumentCaptor.forClass(String.class);
-		verify(terminologyServerAdapter).eclQueryHasAnyMatches(anyString(), stringArgumentCaptor.capture());
+		try {
+			verify(terminologyServerClient).eclQueryHasAnyMatches(anyString(), stringArgumentCaptor.capture());
+		} catch (RestClientException e) {
+			throw new RuntimeException(e);
+		}
 		assertEquals(expected, stringArgumentCaptor.getValue());
-		reset(terminologyServerAdapter);
+		reset(terminologyServerClient);
 	}
 
 	private void mockEclQueryResponse(Set<String>... conceptIdResults) {
-		OngoingStubbing<Set<String>> when = when(terminologyServerAdapter.eclQuery(anyString(), anyString(), anyInt()));
+		expectGetTerminologyServerClient();
+		OngoingStubbing<Set<String>> when = null;
+		try {
+			when = when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt()));
+		} catch (RestClientException e) {
+			throw new RuntimeException(e);
+		}
 		for (Set<String> conceptIdResult : conceptIdResults) {
 			when = when.thenReturn(conceptIdResult);
 		}
@@ -356,6 +380,7 @@ public class TemplateServiceTest {
 
 	@Before
 	public void before() {
+		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("", ""));
 		templateStore.clear();
 	}
 
