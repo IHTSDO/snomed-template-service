@@ -11,6 +11,7 @@ import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,9 @@ public class TemplateService {
 
 	@Autowired
 	private SnowOwlRestClientFactory terminologyClientFactory;
+
+	@Value("${batch.maxSize}")
+	private int batchMaxSize;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -179,9 +183,13 @@ public class TemplateService {
 				}
 			}
 		}
+		int batchSize = columnValues.get(0).size();
+		if (batchSize > batchMaxSize) {
+			errorMessages.add(String.format("Batch input file contains %s rows, the maximum permitted is %s.", batchSize, batchMaxSize));
+		}
 		throwAnyInputErrors(errorMessages);
 
-		if (columnValues.get(0).isEmpty()) {
+		if (batchSize == 0) {
 			throw new InputError("Batch input file doesn't contain any rows.");
 		}
 
@@ -228,7 +236,7 @@ public class TemplateService {
 		List<ConceptOutline> generatedConcepts = new ArrayList<>();
 
 		// Create x blank concepts
-		IntStream.range(0, columnValues.get(0).size()).forEach(i -> generatedConcepts.add(new ConceptOutline()));
+		IntStream.range(0, batchSize).forEach(i -> generatedConcepts.add(new ConceptOutline()));
 
 		// Push each template relationship into all concepts
 		AtomicInteger column = new AtomicInteger(0);
