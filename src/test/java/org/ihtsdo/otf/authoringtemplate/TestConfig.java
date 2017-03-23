@@ -15,7 +15,7 @@ import java.nio.file.Files;
 import java.util.UUID;
 
 @Configuration
-@PropertySource("application.properties")
+@PropertySource("classpath:application.properties")
 public class TestConfig {
 
 	@Autowired

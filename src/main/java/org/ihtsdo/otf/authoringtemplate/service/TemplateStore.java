@@ -49,10 +49,14 @@ public class TemplateStore {
 	private void generateAndCache(ConceptTemplate template) {
 		try {
 			generateTemporalParts(template);
-			templateCache.put(template.getName(), template);
+			templateCache.put(encodeSlash(template.getName()), template);
 		} catch (IOException | IllegalArgumentException e) {
 			logger.error("Failed to load template {}", template.getName(), e);
 		}
+	}
+
+	private String encodeSlash(String name) {
+		return name.replace("/", "%2F");
 	}
 
 	public ConceptTemplate load(String name) throws IOException {

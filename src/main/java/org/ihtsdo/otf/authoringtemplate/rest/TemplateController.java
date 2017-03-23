@@ -5,8 +5,8 @@ import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
-import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,9 +26,9 @@ public class TemplateController {
 
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
-	public ResponseEntity<Object> createTemplate(@RequestParam String name, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
-		templateService.create(name, conceptTemplate);
-		return ControllerHelper.getCreatedResponse(name);
+	public ResponseEntity<Object> createTemplate(@RequestParam String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
+		templateService.create(templateName, conceptTemplate);
+		return ControllerHelper.getCreatedResponse(templateName);
 	}
 
 	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.PUT, produces = "application/json")
@@ -54,8 +54,12 @@ public class TemplateController {
 
 	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public ConceptTemplate getTemplate(@PathVariable String templateName) throws IOException {
-		return templateService.load(templateName);
+	public ConceptTemplate getTemplate(@PathVariable String templateName) throws ResourceNotFoundException, IOException {
+		ConceptTemplate template = templateService.load(templateName);
+		if (template == null) {
+			throw new ResourceNotFoundException("Template", templateName);
+		}
+		return template;
 	}
 
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET,

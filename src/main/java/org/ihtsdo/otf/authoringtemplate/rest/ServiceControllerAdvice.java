@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.rest;
 
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +16,13 @@ public class ServiceControllerAdvice {
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	InputError illegalArgumentExceptionHandler(IllegalArgumentException e) {
 		return new InputError(e.getMessage());
+	}
+
+	@ResponseBody
+	@ExceptionHandler(ResourceNotFoundException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	ResourceNotFoundException notFoundExceptionHandler(ResourceNotFoundException e) {
+		return e;
 	}
 
 	@ResponseBody

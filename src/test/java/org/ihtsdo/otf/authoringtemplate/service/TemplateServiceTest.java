@@ -7,11 +7,11 @@ import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
-import org.ihtsdo.otf.authoringtemplate.service.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -177,7 +177,7 @@ public class TemplateServiceTest {
 			templateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("empty.txt"));
 			fail("Should have thrown exception.");
 		} catch (ResourceNotFoundException e) {
-			assertEquals("Resource of type template and ID 'CT Guided Procedure of X' was not found.", e.getMessage());
+			assertEquals("template with key CT Guided Procedure of X is not accessible.", e.getMessage());
 		}
 	}
 
