@@ -3,3 +3,4 @@ target
 *.iml
 snomed-templates
 application-*.properties
+*.sh
