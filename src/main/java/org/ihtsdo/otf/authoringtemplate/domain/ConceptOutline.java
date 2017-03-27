@@ -5,6 +5,7 @@ import java.util.List;
 
 public class ConceptOutline {
 
+	private String moduleId;
 	private DefinitionStatus definitionStatus;
 	private List<Relationship> relationships;
 	private List<Description> descriptions;
@@ -27,6 +28,15 @@ public class ConceptOutline {
 
 	public void addRelationship(Relationship relationship) {
 		relationships.add(relationship);
+	}
+
+	public String getModuleId() {
+		return moduleId;
+	}
+
+	public ConceptOutline setModuleId(String moduleId) {
+		this.moduleId = moduleId;
+		return this;
 	}
 
 	public DefinitionStatus getDefinitionStatus() {
