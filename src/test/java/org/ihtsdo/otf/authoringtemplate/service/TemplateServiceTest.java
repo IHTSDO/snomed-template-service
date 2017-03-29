@@ -169,7 +169,7 @@ public class TemplateServiceTest {
 
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		templateService.writeEmptyInputFile("", "CT Guided Procedure of X", stream);
-		assertEquals("procSite (<< 442083009 |Anatomical or acquired body structure|)\taction (<< 129264002 |Action|)\n", new String(stream.toByteArray()));
+		assertEquals("procSite\taction\n", new String(stream.toByteArray()));
 	}
 
 	@Test
@@ -287,12 +287,12 @@ public class TemplateServiceTest {
 		ByteArrayOutputStream emptyInputFile = new ByteArrayOutputStream();
 		templateService.writeEmptyInputFile("MAIN", templateName, emptyInputFile);
 		String header = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(emptyInputFile.toByteArray()))).readLine();
-		assertEquals("Component (<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|)\t" +
-						"PropertyType (<<118598001 |Measurement property|)\t" +
-						"TimeAspect (<7389001 |Time frame|)\t" +
-						"DirectSite (<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|)\t" +
-						"InheresIn (<<123037004 |Body structure| OR <<410607006 |Organism| OR <<105590001 |Substance| OR <<123038009 |Specimen| OR <<260787004 |Physical object| OR <<373873005 |Pharmaceutical / biologic product| OR <<419891008 |Record artifact|)\t" +
-						"ScaleType (<<30766002 |Quantitative| OR <<26716007 |Qualitative| OR  <<117363000 |Ordinal value| OR <<117365007 |Ordinal or quantitative value| OR <<117362005 |Nominal value| OR <<117364006 |Narrative value| OR <<117444000 |Text value|)\t" +
+		assertEquals("Component\t" +
+						"PropertyType\t" +
+						"TimeAspect\t" +
+						"DirectSite\t" +
+						"InheresIn\t" +
+						"ScaleType\t" +
 						"LOINC_FSN\t" +
 						"LOINC_Unique_ID",
 				header);

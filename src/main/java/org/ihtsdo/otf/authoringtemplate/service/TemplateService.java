@@ -126,10 +126,8 @@ public class TemplateService {
 				SimpleSlot targetSlot = relationship.getTargetSlot();
 				if (isSlotRequiringInput(targetSlot)) {
 					String slotName = targetSlot.getSlotName();
-					String range = targetSlot.getAllowableRangeECL();
 					if (!header.isEmpty()) header += "\t";
-					if (slotName != null) header += slotName + " ";
-					header += "(" + range + ")";
+					header += slotName != null ? slotName : "slot";
 				}
 			}
 			for (String additionalSlot : template.getAdditionalSlots()) {
