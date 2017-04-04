@@ -39,6 +39,7 @@ public class TemplateStore {
 	@PostConstruct
 	public void init() throws IOException {
 		logger.info("Loading templates into cache.");
+		templateCache.clear();
 		Set<ConceptTemplate> conceptTemplates = jsonStore.loadAll(ConceptTemplate.class);
 		conceptTemplates.forEach(template -> {
 			generateAndCache(template);
