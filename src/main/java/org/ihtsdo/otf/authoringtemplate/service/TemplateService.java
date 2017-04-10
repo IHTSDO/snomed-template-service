@@ -18,11 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -89,10 +87,12 @@ public class TemplateService {
 		Set<ConceptTemplate> templates = listAll();
 		SnowOwlRestClient terminologyClient = terminologyClientFactory.getClient();
 		if (!Arrays.isNullOrEmpty(descendantOf) || !Arrays.isNullOrEmpty(ancestorOf)) {
+			// Group templates by focus concept to reduce the number of ECL queries
+			Map<String, List<ConceptTemplate>> templatesByFocusConcept = templates.stream().collect(Collectors.groupingBy(ConceptTemplate::getFocusConcept));
 			SecurityContext securityContext = SecurityContextHolder.getContext();
-			return templates.stream().parallel().filter(conceptTemplate -> {
+			return templatesByFocusConcept.entrySet().stream().parallel().filter(entry -> {
 				SecurityContextHolder.setContext(securityContext);
-				String focusConcept = conceptTemplate.getFocusConcept();
+				String focusConcept = entry.getKey();
 				String ecl = "(" + focusConcept + ") AND (";
 				for (int i = 0; descendantOf != null && i < descendantOf.length; i++) {
 					if (i > 0) ecl += " OR ";
@@ -109,7 +109,7 @@ public class TemplateService {
 					logger.error("Failed to filter templates using ECL", e);
 					return false;
 				}
-			}).collect(Collectors.toSet());
+			}).map(Map.Entry::getValue).flatMap(List::stream).collect(Collectors.toSet());
 		}
 		return templates;
 	}
