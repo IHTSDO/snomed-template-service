@@ -90,7 +90,7 @@ public class TemplateService {
 			// Group templates by focus concept to reduce the number of ECL queries
 			Map<String, List<ConceptTemplate>> templatesByFocusConcept = templates.stream().collect(Collectors.groupingBy(ConceptTemplate::getFocusConcept));
 			SecurityContext securityContext = SecurityContextHolder.getContext();
-			return templatesByFocusConcept.entrySet().stream().parallel().filter(entry -> {
+			return templatesByFocusConcept.entrySet().stream().filter(entry -> {
 				SecurityContextHolder.setContext(securityContext);
 				String focusConcept = entry.getKey();
 				String ecl = "(" + focusConcept + ") AND (";
