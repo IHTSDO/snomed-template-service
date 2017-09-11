@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import com.google.common.collect.Iterables;
 import org.assertj.core.util.Arrays;
 import org.ihtsdo.otf.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
@@ -191,29 +192,33 @@ public class TemplateService {
 			throw new InputError("Batch input file doesn't contain any rows.");
 		}
 
+		logger.info("Generating batch of {} concepts on branch '{}' using template '{}'", batchSize, branchPath, templateName);
+
 		// Validate values against slot constraints, column at a time
 		int slotIndex = -1;
 		try {
 			SnowOwlRestClient client = terminologyClientFactory.getClient();
 			for (SimpleSlot simpleSlot : slotsRequiringInput) {
 				slotIndex++;
-				List<String> slotValues = columnValues.get(slotIndex);
-				String slotEcl = simpleSlot.getAllowableRangeECL();
-				StringBuilder validationEcl = new StringBuilder()
-						.append("(")
-						.append(slotEcl)
-						.append(") AND (");
-				for (String slotValue : slotValues) {
-					validationEcl.append(slotValue)
-							.append(" OR ");
-				}
-				// Remove last OR
-				validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
-				validationEcl.append(")");
-
-				Set<String> validSlotValues = client.eclQuery(branchPath, validationEcl.toString(), slotValues.size());
+				Set<String> slotValues = new HashSet<>(columnValues.get(slotIndex));
 				Set<String> invalidSlotValues = new HashSet<>(slotValues);
-				invalidSlotValues.removeAll(validSlotValues);
+				String slotEcl = simpleSlot.getAllowableRangeECL();
+				for (List<String> slotValuePartition : Iterables.partition(slotValues, 100)) {
+					StringBuilder validationEcl = new StringBuilder()
+							.append("(")
+							.append(slotEcl)
+							.append(") AND (");
+					for (String slotValue : slotValuePartition) {
+						validationEcl.append(slotValue)
+								.append(" OR ");
+					}
+					// Remove last OR
+					validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
+					validationEcl.append(")");
+
+					Set<String> validSlotValues = client.eclQuery(branchPath, validationEcl.toString(), slotValuePartition.size());
+					invalidSlotValues.removeAll(validSlotValues);
+				}
 				if (!invalidSlotValues.isEmpty()) {
 					errorMessages.add(String.format("Column %s has the constraint %s. " +
 									"The following given values do not match this constraint: %s",
