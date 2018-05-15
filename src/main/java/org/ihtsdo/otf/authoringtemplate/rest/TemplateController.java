@@ -1,21 +1,30 @@
 package org.ihtsdo.otf.authoringtemplate.rest;
 
-import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
+import java.io.IOException;
+import java.util.List;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletResponse;
+
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
+import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
+import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 
 @RestController
 @SuppressWarnings("unused")
@@ -23,6 +32,9 @@ public class TemplateController {
 
 	@Autowired
 	private TemplateService templateService;
+	
+	@Autowired
+	private ConceptTemplateSearchService searchService;
 
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
@@ -83,5 +95,15 @@ public class TemplateController {
 	public void reloadCache() throws IOException {
 		templateService.reloadCache();
 	}
-
+	
+	
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/concepts", method = RequestMethod.GET, produces = "application/json")
+	@ResponseBody
+	public Set<String> searchConcepts(@PathVariable String branchPath,
+											   @PathVariable String templateName,
+											   @RequestParam boolean isLogicalOnly,
+											   @RequestParam boolean conformToTemplate ) throws IOException, ServiceException {
+		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath),
+				isLogicalOnly, conformToTemplate);
+	}
 }

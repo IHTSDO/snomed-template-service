@@ -1,9 +1,9 @@
 package org.ihtsdo.otf.authoringtemplate.domain;
 
-import org.springframework.beans.BeanUtils;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.beans.BeanUtils;
 
 public class Description {
 
@@ -83,5 +83,23 @@ public class Description {
 		Description descriptionClone = new Description();
 		BeanUtils.copyProperties(this, descriptionClone);
 		return descriptionClone;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("Description [");
+		if (type != null)
+			builder.append("type=").append(type).append(", ");
+		if (lang != null)
+			builder.append("lang=").append(lang).append(", ");
+		if (term != null)
+			builder.append("term=").append(term).append(", ");
+		if (termTemplate != null)
+			builder.append("termTemplate=").append(termTemplate).append(", ");
+		if (initialTerm != null)
+			builder.append("initialTerm=").append(initialTerm);
+		builder.append("]");
+		return builder.toString();
 	}
 }

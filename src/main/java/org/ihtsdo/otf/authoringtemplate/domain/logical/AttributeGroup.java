@@ -38,4 +38,18 @@ public class AttributeGroup implements HasCardinality {
 	public String getCardinalityMax() {
 		return cardinalityMax;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("AttributeGroup [");
+		if (attributes != null)
+			builder.append("attributes=").append(attributes).append(", ");
+		if (cardinalityMin != null)
+			builder.append("cardinalityMin=").append(cardinalityMin).append(", ");
+		if (cardinalityMax != null)
+			builder.append("cardinalityMax=").append(cardinalityMax);
+		builder.append("]");
+		return builder.toString();
+	}
 }

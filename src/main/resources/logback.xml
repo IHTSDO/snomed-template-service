@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      	<pattern>%d{HH:mm:ss.SSS} | %-5level | %thread | %logger{1} | %m%n%rEx{full,
+          java.lang.reflect.Method,
+          org.apache.catalina,
+          org.springframework.aop,
+          org.springframework.security,
+          org.springframework.transaction,
+          org.springframework.web,
+          sun.reflect,
+          net.sf.cglib,
+          ByCGLIB
+        }
+        </pattern>
+    </encoder>
+  </appender>
+	
+	 <root level="INFO">
+		<appender-ref ref="STDOUT" />
+	</root>
+</configuration>

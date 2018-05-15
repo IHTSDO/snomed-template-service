@@ -50,4 +50,20 @@ public class LexicalTemplate {
 	public void setRemoveParts(List<String> removeParts) {
 		this.removeParts = removeParts;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("LexicalTemplate [");
+		if (name != null)
+			builder.append("name=").append(name).append(", ");
+		if (displayName != null)
+			builder.append("displayName=").append(displayName).append(", ");
+		if (takeFSNFromSlot != null)
+			builder.append("takeFSNFromSlot=").append(takeFSNFromSlot).append(", ");
+		if (removeParts != null)
+			builder.append("removeParts=").append(removeParts);
+		builder.append("]");
+		return builder.toString();
+	}
 }

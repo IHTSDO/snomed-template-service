@@ -1,8 +1,10 @@
 package org.ihtsdo.otf.authoringtemplate;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
+import static com.google.common.base.Predicates.not;
+import static springfox.documentation.builders.PathSelectors.regex;
+
+import java.io.File;
+
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
@@ -19,14 +21,14 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
-
-import java.io.File;
-
-import static com.google.common.base.Predicates.not;
-import static springfox.documentation.builders.PathSelectors.regex;
 
 @SpringBootApplication
 public class Config {
@@ -47,7 +49,7 @@ public class Config {
 	@Bean
 	public SnowOwlRestClientFactory snowOwlRestClientFactory(@Value("${terminologyserver.url}") String snowOwlUrl,
 															 @Value("${terminologyserver.reasonerId}") String snowOwlReasonerId) {
-		return new SnowOwlRestClientFactory(snowOwlUrl, snowOwlReasonerId);
+		return new SnowOwlRestClientFactory(snowOwlUrl, snowOwlReasonerId, false);
 	}
 
 	@Bean

@@ -1,13 +1,19 @@
 package org.ihtsdo.otf.authoringtemplate;
 
-import com.google.common.base.CaseFormat;
-import com.google.common.io.Files;
-import org.junit.Assert;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.junit.Assert;
+
+import com.google.common.base.CaseFormat;
+import com.google.common.io.Files;
 
 /**
  * This is not a unit test.
@@ -18,7 +24,7 @@ public class TemplateAuthoringHelper {
 	public static void main(String[] args) throws IOException {
 		readInput();
 //		compactScratch();
-//		expandScratch();
+		expandScratch();
 	}
 
 	// Helper code for converting template specification tables into template language!

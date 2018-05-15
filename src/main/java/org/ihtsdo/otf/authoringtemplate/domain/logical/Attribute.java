@@ -67,4 +67,26 @@ public class Attribute implements HasCardinality {
 	public String getSlotReference() {
 		return slotReference;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("Attribute [");
+		if (type != null)
+			builder.append("type=").append(type).append(", ");
+		if (value != null)
+			builder.append("value=").append(value).append(", ");
+		if (allowableRangeECL != null)
+			builder.append("allowableRangeECL=").append(allowableRangeECL).append(", ");
+		if (cardinalityMin != null)
+			builder.append("cardinalityMin=").append(cardinalityMin).append(", ");
+		if (cardinalityMax != null)
+			builder.append("cardinalityMax=").append(cardinalityMax).append(", ");
+		if (slotName != null)
+			builder.append("slotName=").append(slotName).append(", ");
+		if (slotReference != null)
+			builder.append("slotReference=").append(slotReference);
+		builder.append("]");
+		return builder.toString();
+	}
 }
