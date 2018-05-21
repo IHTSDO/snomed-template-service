@@ -1,15 +1,36 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.ihtsdo.otf.authoringtemplate.domain.*;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.domain.Concepts;
+import org.ihtsdo.otf.authoringtemplate.domain.DefinitionStatus;
+import org.ihtsdo.otf.authoringtemplate.domain.Description;
+import org.ihtsdo.otf.authoringtemplate.domain.LexicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.constants.*;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
@@ -28,13 +49,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.FileSystemUtils;
 
-import java.io.*;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
@@ -338,6 +354,7 @@ public class TemplateServiceTest {
 
 	private void createCtGuidedProcedureOfX() throws IOException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
+		templateRequest.setDomain("<<71388002 |Procedure|");
 		templateRequest.setLogicalTemplate("71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|,      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],      363703001 |Has intent| = 429892002 |Guidance intent|   },   {      260686004 |Method| = [[+id (<< 129264002 |Action|) @action]],      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]   }");
 
 		templateRequest.addLexicalTemplate(new LexicalTemplate("procSiteTerm", "X", "procSite", Lists.newArrayList("structure of", "structure", "part of")));

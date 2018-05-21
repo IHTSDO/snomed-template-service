@@ -1,17 +1,17 @@
 package org.ihtsdo.otf.authoringtemplate.domain;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import java.util.ArrayList;
 import java.util.List;
 
-@JsonPropertyOrder({"name", "focusConcept", "version", "logicalTemplate", "lexicalTemplate", "conceptOutline"})
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
+@JsonPropertyOrder({"name", "domain", "focusConcept", "version", "logicalTemplate", "lexicalTemplate", "conceptOutline"})
 public class ConceptTemplate {
 
 	private String name;
+	private String domain;
 	private String focusConcept;
 	private int version;
-
 	private String logicalTemplate;
 	private List<LexicalTemplate> lexicalTemplates;
 	private List<String> additionalSlots;
@@ -37,6 +37,14 @@ public class ConceptTemplate {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	public String getDomain() {
+		return domain;
+	}
+
+	public void setDomain(String domain) {
+		this.domain = domain;
 	}
 
 	public String getFocusConcept() {

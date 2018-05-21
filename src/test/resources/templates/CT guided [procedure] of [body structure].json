@@ -1,5 +1,6 @@
 {
   "name": "CT guided [procedure] of [body structure]",
+  "domain": "<<71388002 |Procedure|",
   "version": 4,
   "logicalTemplate": "71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|,      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],      363703001 |Has intent| = 429892002 |Guidance intent|   },   {      260686004 |Method| = [[+id (<< 129264002 |Action|) @action]],      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]   }",
   "conceptOutline": {

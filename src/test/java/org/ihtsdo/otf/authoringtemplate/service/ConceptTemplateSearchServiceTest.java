@@ -51,15 +51,15 @@ public class ConceptTemplateSearchServiceTest {
 	private JsonStore jsonStore;
 	
 	@Test
-	public void searchConceptsByLogicalAndLexical() throws ServiceException, IOException, URISyntaxException {
+	public void searchConceptsWithLogicalAndLexicalTemplate() throws ServiceException, IOException, URISyntaxException {
 		String templateName = "/templates/CT guided [procedure] of [body structure].json";
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(templateName).toURI()), jsonStore.getStoreDirectory());
 		ConceptTemplate template = jsonStore.load("CT guided [procedure] of [body structure]", ConceptTemplate.class);
+		assertEquals("<<71388002 |Procedure|", template.getDomain());
 		when(templateService.load(anyString()))
 		.thenReturn(template);
 		expectGetTerminologyServerClient();
-		
-		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "main", false, true);
+		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", false, true);
 		assertNotNull(concepts);
 	}
 	
@@ -74,7 +74,7 @@ public class ConceptTemplateSearchServiceTest {
 		.thenReturn(template);
 		expectGetTerminologyServerClient();
 		
-		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "main", true, true);
+		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, true);
 		assertNotNull(concepts);
 	}
 	
@@ -84,7 +84,7 @@ public class ConceptTemplateSearchServiceTest {
 	}
 		
 	@Test
-	public void testConstructEclQuery() throws IOException {
+	public void testConstructEclQuery() throws IOException, ServiceException {
 		LogicalTemplateParserService logicalTemplateParser = new LogicalTemplateParserService();
 		String logical = "420134006 |Propensity to adverse reactions (disorder)|:\n" + 
 				"	\n" + 
@@ -104,7 +104,7 @@ public class ConceptTemplateSearchServiceTest {
 	
 	
 	@Test
-	public void testConstructEclQueryWithCardinality() throws IOException {
+	public void testConstructEclQueryWithCardinality() throws IOException, ServiceException {
 		LogicalTemplateParserService logicalTemplateParser = new LogicalTemplateParserService();
 		String logical = "71388002 |Procedure|:\n\t[[~1..1]] {\n\t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,\n\t\t[[~1..1]] "
 				+ "405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]]\n\t}\n";
@@ -119,7 +119,7 @@ public class ConceptTemplateSearchServiceTest {
 	
 	
 	@Test
-	public void testConstructEclQueryWithSlotReference() throws IOException {
+	public void testConstructEclQueryWithSlotReference() throws IOException, ServiceException {
 		LogicalTemplateParserService logicalTemplateParser = new LogicalTemplateParserService();
 		String logical = "71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|, "
 				+ "     [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],"

@@ -1,6 +1,17 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import org.antlr.v4.runtime.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.antlr.v4.runtime.ANTLRErrorStrategy;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
@@ -12,12 +23,6 @@ import org.ihtsdo.otf.authoringtemplate.service.generatedlogicalparser.Expressio
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class LogicalTemplateParserService {
@@ -42,7 +47,7 @@ public class LogicalTemplateParserService {
 		ParserRuleContext tree;
 		try {
 			tree = parser.expressiontemplate();
-		} catch (NullPointerException e) {
+		} catch (Exception e) {
 			throw new IOException("Failed to parse template", e);
 		}
 		final ParseTreeWalker walker = new ParseTreeWalker();
