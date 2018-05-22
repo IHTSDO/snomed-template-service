@@ -59,7 +59,7 @@ public class ConceptTemplateSearchServiceTest {
 		when(templateService.load(anyString()))
 		.thenReturn(template);
 		expectGetTerminologyServerClient();
-		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", false, true);
+		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, true);
 		assertNotNull(concepts);
 	}
 	

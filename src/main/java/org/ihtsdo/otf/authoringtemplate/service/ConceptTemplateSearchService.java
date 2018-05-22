@@ -42,20 +42,28 @@ public class ConceptTemplateSearchService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateSearchService.class);
 
-	private static final int MAX = 1000;
+	private static final int MAX = 100000;
 	
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
-			boolean isLogicalOnly, boolean conformToTemplate) throws ServiceException {
+			Boolean logicalMatch, Boolean lexicalMatch) throws ServiceException {
 		
 		try {
 			LOGGER.info("Search concepts for temlate " + templateName);
-			ConceptTemplate conceptTemplate;
-			conceptTemplate = templateService.load(templateName);
-			if (!isLogicalOnly) {
+			if (logicalMatch == null) {
+				throw new IllegalArgumentException("logicalMatch parameter must be specified.");
+			}
+			
+			if (lexicalMatch != null) {
+				if (!logicalMatch.booleanValue()) {
+					throw new IllegalArgumentException("logicalMatch parameter must be true when lexicalMatch is set.");
+				}
+			}
+			ConceptTemplate conceptTemplate = templateService.load(templateName);
+			if (lexicalMatch != null) {
 				Set<String> logicalResult = performLogicalSearch(conceptTemplate, branchPath, true);
-				return performLexicalSearch(conceptTemplate, logicalResult, branchPath, conformToTemplate);
+				return performLexicalSearch(conceptTemplate, logicalResult, branchPath, lexicalMatch);
 			} else {
-				return performLogicalSearch(conceptTemplate, branchPath, conformToTemplate);
+				return performLogicalSearch(conceptTemplate, branchPath, logicalMatch);
 			}
 		} catch (IOException e) {
 			throw new ServiceException("Failed to load tempate " + templateName);
@@ -64,7 +72,7 @@ public class ConceptTemplateSearchService {
 	}
 	
 	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate, 
-			Set<String> logicalMatched, String branchPath, boolean conformToTemplate) throws ServiceException {
+			Set<String> logicalMatched, String branchPath, boolean lexicalMatch) throws ServiceException {
 		
 		Set<String> result = new HashSet<>();
 		// TODO search by lexical template
@@ -101,9 +109,9 @@ public class ConceptTemplateSearchService {
 					}
 				}
 				
-				if (conformToTemplate && isMatched) {
+				if (lexicalMatch && isMatched) {
 					result.add(conceptId);
-				} else if (!conformToTemplate && !isMatched){
+				} else if (!lexicalMatch && !isMatched){
 					result.add(conceptId);
 				}
 			}
@@ -115,7 +123,7 @@ public class ConceptTemplateSearchService {
 	}
 
 	private Set<String> performLogicalSearch(ConceptTemplate conceptTemplate,
-			String branchPath, boolean conformToTemplate) throws ServiceException {
+			String branchPath, boolean logicalMatch) throws ServiceException {
 		
 		try {
 			LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
@@ -125,8 +133,8 @@ public class ConceptTemplateSearchService {
 			String ecl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttriburtes);
 			LOGGER.info("ECL=" + ecl);
 			Set<String> logicalMatched = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX);
-			LOGGER.info("Query results up to {} found {}", MAX, logicalMatched.size());
-			if (conformToTemplate) {
+			LOGGER.info("Query results {}", logicalMatched.size());
+			if (logicalMatch) {
 				return logicalMatched;
 			} else {
 				String domainEcl = conceptTemplate.getDomain();
@@ -135,7 +143,7 @@ public class ConceptTemplateSearchService {
 				}
 				LOGGER.info("Domain ECL=" + domainEcl);
 				Set<String> domainResult = terminologyClientFactory.getClient().eclQuery(branchPath, domainEcl, MAX);
-				LOGGER.info("Domain query results up to {} found ", MAX, domainResult.size());
+				LOGGER.info("Domain query results ", domainResult.size());
 				domainResult.removeAll(logicalMatched);
 				return domainResult;
 			}

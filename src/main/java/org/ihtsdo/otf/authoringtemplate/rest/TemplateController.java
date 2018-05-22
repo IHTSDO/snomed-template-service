@@ -101,9 +101,8 @@ public class TemplateController {
 	@ResponseBody
 	public Set<String> searchConcepts(@PathVariable String branchPath,
 											   @PathVariable String templateName,
-											   @RequestParam boolean isLogicalOnly,
-											   @RequestParam boolean conformToTemplate ) throws IOException, ServiceException {
-		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath),
-				isLogicalOnly, conformToTemplate);
+											   @RequestParam Boolean logicalMatch,
+											   @RequestParam(required=false) Boolean lexicalMatch) throws IOException, ServiceException {
+		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch);
 	}
 }
