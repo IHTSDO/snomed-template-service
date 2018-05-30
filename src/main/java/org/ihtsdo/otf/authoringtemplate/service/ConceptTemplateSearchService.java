@@ -21,6 +21,7 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleDescriptionPojo;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,10 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ConceptTemplateSearchService {
+
+	private static final String AND = "AND";
+
+	private static final String OR = "OR";
 
 	private static final String CARDINALITY_SEPARATOR = "..";
 
@@ -42,12 +47,11 @@ public class ConceptTemplateSearchService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateSearchService.class);
 
-	private static final int MAX = 100000;
+	private static final int MAX = 200000;
 	
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
-			Boolean logicalMatch, Boolean lexicalMatch) throws ServiceException {
+			Boolean logicalMatch, Boolean lexicalMatch, boolean stated) throws ServiceException, ResourceNotFoundException {
 		
-		try {
 			LOGGER.info("Search concepts for temlate " + templateName);
 			if (logicalMatch == null) {
 				throw new IllegalArgumentException("logicalMatch parameter must be specified.");
@@ -58,13 +62,14 @@ public class ConceptTemplateSearchService {
 					throw new IllegalArgumentException("logicalMatch parameter must be true when lexicalMatch is set.");
 				}
 			}
-			ConceptTemplate conceptTemplate = templateService.load(templateName);
-			if (lexicalMatch != null) {
-				Set<String> logicalResult = performLogicalSearch(conceptTemplate, branchPath, true);
-				return performLexicalSearch(conceptTemplate, logicalResult, branchPath, lexicalMatch);
-			} else {
-				return performLogicalSearch(conceptTemplate, branchPath, logicalMatch);
-			}
+			try {
+				ConceptTemplate conceptTemplate = templateService.loadOrThrow(templateName);
+				if (lexicalMatch != null) {
+					Set<String> logicalResult = performLogicalSearch(conceptTemplate, branchPath, true, stated);
+					return performLexicalSearch(conceptTemplate, logicalResult, branchPath, lexicalMatch);
+				} else {
+					return performLogicalSearch(conceptTemplate, branchPath, logicalMatch, stated);
+				}
 		} catch (IOException e) {
 			throw new ServiceException("Failed to load tempate " + templateName);
 		}
@@ -87,7 +92,7 @@ public class ConceptTemplateSearchService {
 		
 		try {
 			Map<String, Set<SimpleDescriptionPojo>> descriptionsMap = terminologyClientFactory.getClient()
-					.getDescriptions(branchPath,logicalMatched);
+					.getDescriptions(branchPath, logicalMatched);
 			for (String conceptId : descriptionsMap.keySet()) {
 				List<SimpleDescriptionPojo> activeDescriptions = descriptionsMap.get(conceptId)
 						.stream()
@@ -123,7 +128,7 @@ public class ConceptTemplateSearchService {
 	}
 
 	private Set<String> performLogicalSearch(ConceptTemplate conceptTemplate,
-			String branchPath, boolean logicalMatch) throws ServiceException {
+			String branchPath, boolean logicalMatch, boolean stated) throws ServiceException {
 		
 		try {
 			LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
@@ -132,7 +137,7 @@ public class ConceptTemplateSearchService {
 			List<Attribute> unGroupedAttriburtes = logical.getUngroupedAttributes();
 			String ecl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttriburtes);
 			LOGGER.info("ECL=" + ecl);
-			Set<String> logicalMatched = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX);
+			Set<String> logicalMatched = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
 			LOGGER.info("Query results {}", logicalMatched.size());
 			if (logicalMatch) {
 				return logicalMatched;
@@ -142,7 +147,7 @@ public class ConceptTemplateSearchService {
 					domainEcl = constructEclQuery(focusConcepts, Collections.emptyList(), Collections.emptyList());
 				}
 				LOGGER.info("Domain ECL=" + domainEcl);
-				Set<String> domainResult = terminologyClientFactory.getClient().eclQuery(branchPath, domainEcl, MAX);
+				Set<String> domainResult = terminologyClientFactory.getClient().eclQuery(branchPath, domainEcl, MAX, stated);
 				LOGGER.info("Domain query results ", domainResult.size());
 				domainResult.removeAll(logicalMatched);
 				return domainResult;
@@ -213,7 +218,15 @@ public class ConceptTemplateSearchService {
 				queryBuilder.append(attribute.getValue());
 			}
 			else if (attribute.getAllowableRangeECL() != null) {
+				boolean isCompound = false;
+				if (attribute.getAllowableRangeECL().contains(OR) || attribute.getAllowableRangeECL().contains(AND)) {
+					isCompound = true;
+					queryBuilder.append("(");
+				}
 				queryBuilder.append(attribute.getAllowableRangeECL());
+				if (isCompound) {
+					queryBuilder.append(")");
+				}
 			} else if (attribute.getSlotReference() != null) {
 				queryBuilder.append(attribute.getSlotReference());
 			}

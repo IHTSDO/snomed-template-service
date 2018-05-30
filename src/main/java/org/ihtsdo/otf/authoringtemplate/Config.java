@@ -32,7 +32,7 @@ import springfox.documentation.spring.web.plugins.Docket;
 
 @SpringBootApplication
 public class Config {
-
+	
 	@Bean
 	public ObjectMapper getGeneralMapper() {
 		return Jackson2ObjectMapperBuilder

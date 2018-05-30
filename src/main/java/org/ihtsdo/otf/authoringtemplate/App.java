@@ -11,5 +11,4 @@ public class App extends Config {
 		System.setProperty("org.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH", "true"); 
 		SpringApplication.run(App.class, args);
 	}
-
 }

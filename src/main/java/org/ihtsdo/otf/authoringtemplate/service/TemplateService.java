@@ -1,8 +1,31 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import com.google.common.collect.Iterables;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
+
 import org.assertj.core.util.Arrays;
-import org.ihtsdo.otf.authoringtemplate.domain.*;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
+import org.ihtsdo.otf.authoringtemplate.domain.Description;
+import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.ihtsdo.otf.authoringtemplate.domain.SimpleSlot;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
@@ -18,15 +41,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.LongStream;
+import com.google.common.collect.Iterables;
 
 @Service
 public class TemplateService {
@@ -64,7 +79,7 @@ public class TemplateService {
 		return templateStore.load(name);
 	}
 
-	private ConceptTemplate loadOrThrow(String templateName) throws IOException, ResourceNotFoundException {
+	public ConceptTemplate loadOrThrow(String templateName) throws IOException, ResourceNotFoundException {
 		ConceptTemplate template = load(templateName);
 		if (template == null) {
 			throw new ResourceNotFoundException("template", templateName);

@@ -100,9 +100,10 @@ public class TemplateController {
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/concepts", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public Set<String> searchConcepts(@PathVariable String branchPath,
-											   @PathVariable String templateName,
-											   @RequestParam Boolean logicalMatch,
-											   @RequestParam(required=false) Boolean lexicalMatch) throws IOException, ServiceException {
-		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch);
+									  @PathVariable String templateName,
+									  @RequestParam Boolean logicalMatch,
+									  @RequestParam(required=false) Boolean lexicalMatch,
+									  @RequestParam(value="stated", defaultValue="true") boolean stated) throws IOException, ServiceException {
+		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 }
