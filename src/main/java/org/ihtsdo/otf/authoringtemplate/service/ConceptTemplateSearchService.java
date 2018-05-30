@@ -52,7 +52,8 @@ public class ConceptTemplateSearchService {
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
 			Boolean logicalMatch, Boolean lexicalMatch, boolean stated) throws ServiceException, ResourceNotFoundException {
 		
-			LOGGER.info("Search concepts for temlate " + templateName);
+			LOGGER.info("Search concepts for template {}, on branchPath {}, with logigicalMatch {}, lexicalMatch{} and stated {}",
+					templateName, branchPath, logicalMatch, lexicalMatch, stated);
 			if (logicalMatch == null) {
 				throw new IllegalArgumentException("logicalMatch parameter must be specified.");
 			}
@@ -81,7 +82,6 @@ public class ConceptTemplateSearchService {
 		
 		Set<String> result = new HashSet<>();
 		// TODO search by lexical template
-//		List<LexicalTemplate> lexicalTemplates = conceptTemplate.getLexicalTemplates();
 		List<Description> descriptions = conceptTemplate.getConceptOutline().getDescriptions();
 		List<Pattern> patterns = new ArrayList<>();
 		for (Description description : descriptions) {
@@ -113,13 +113,13 @@ public class ConceptTemplateSearchService {
 						break;
 					}
 				}
-				
 				if (lexicalMatch && isMatched) {
 					result.add(conceptId);
 				} else if (!lexicalMatch && !isMatched){
 					result.add(conceptId);
 				}
 			}
+			LOGGER.info("Logical search results={} and lexical search results={}", logicalMatched.size(), result.size());
 			return result;
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to complete lexical template search.", e);
@@ -129,33 +129,42 @@ public class ConceptTemplateSearchService {
 
 	private Set<String> performLogicalSearch(ConceptTemplate conceptTemplate,
 			String branchPath, boolean logicalMatch, boolean stated) throws ServiceException {
-		
 		try {
 			LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
 			List<String> focusConcepts = logical.getFocusConcepts();
+			String domainEcl = conceptTemplate.getDomain();
+			if (domainEcl == null || domainEcl.isEmpty()) {
+				domainEcl = constructEclQuery(focusConcepts, Collections.emptyList(), Collections.emptyList());
+			}
+			LOGGER.debug("Domain ECL=" + domainEcl);
 			List<AttributeGroup> attributeGroups = logical.getAttributeGroups();
 			List<Attribute> unGroupedAttriburtes = logical.getUngroupedAttributes();
-			String ecl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttriburtes);
-			LOGGER.info("ECL=" + ecl);
-			Set<String> logicalMatched = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
-			LOGGER.info("Query results {}", logicalMatched.size());
-			if (logicalMatch) {
-				return logicalMatched;
-			} else {
-				String domainEcl = conceptTemplate.getDomain();
-				if (domainEcl == null || domainEcl.isEmpty()) {
-					domainEcl = constructEclQuery(focusConcepts, Collections.emptyList(), Collections.emptyList());
-				}
-				LOGGER.info("Domain ECL=" + domainEcl);
-				Set<String> domainResult = terminologyClientFactory.getClient().eclQuery(branchPath, domainEcl, MAX, stated);
-				LOGGER.info("Domain query results ", domainResult.size());
-				domainResult.removeAll(logicalMatched);
-				return domainResult;
-			}
+			String logicalEcl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttriburtes);
+			String ecl = constructLogicalSearchEcl(domainEcl, logicalEcl, logicalMatch);
+			LOGGER.debug("Logic template ECL=" + logicalEcl);
+			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
+			LOGGER.info("Logical search ECL = {} stated = {}", ecl, stated);
+			LOGGER.info("Logical results {}", results.size());
+			return results;
 		} catch (Exception e) {
 			throw new ServiceException("Failed to complete logical template search for template " + conceptTemplate.getName(), e);
 		}
-		
+	}
+
+	private String constructLogicalSearchEcl(String domainEcl, String logicalEcl, boolean logicalMatch) {
+		StringBuilder builder = new StringBuilder();
+		builder.append("(");
+		builder.append(domainEcl);
+		builder.append(")");
+		if (logicalMatch) {
+			builder.append(" AND ");
+		} else {
+			builder.append(" MINUS ");
+		}
+		builder.append("(");
+		builder.append(logicalEcl);
+		builder.append(")");
+		return builder.toString();
 	}
 
 	private Pattern constructTermPattern(String termTemplate) {
@@ -163,10 +172,9 @@ public class ConceptTemplateSearchService {
 		//$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)
 		Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
 		while (matcher.find()) {
-				String termSlot = matcher.group();
-				result = result.replace(termSlot, ".*");
-			}
-		
+			String termSlot = matcher.group();
+			result = result.replace(termSlot, ".*");
+		}
 		result = result.replace("(", "\\(");
 		result = result.replace(")", "\\)");
 		LOGGER.info("term pattern regex=" + result);
@@ -269,6 +277,5 @@ public class ConceptTemplateSearchService {
 		}
 		 queryBuilder.toString();
 		 return replaceSlot( queryBuilder.toString(), attributes);
-		 
 	}
 }
