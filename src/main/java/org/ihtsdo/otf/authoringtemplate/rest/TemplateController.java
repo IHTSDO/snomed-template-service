@@ -96,7 +96,6 @@ public class TemplateController {
 		templateService.reloadCache();
 	}
 	
-	
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/concepts", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public Set<String> searchConcepts(@PathVariable String branchPath,

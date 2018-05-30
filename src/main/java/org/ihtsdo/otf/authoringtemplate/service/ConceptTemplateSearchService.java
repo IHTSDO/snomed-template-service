@@ -52,7 +52,7 @@ public class ConceptTemplateSearchService {
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
 			Boolean logicalMatch, Boolean lexicalMatch, boolean stated) throws ServiceException, ResourceNotFoundException {
 		
-			LOGGER.info("Search concepts for template {}, on branchPath {}, with logigicalMatch {}, lexicalMatch{} and stated {}",
+			LOGGER.info("Search concepts for template={}, on branchPath={}, with logigicalMatch={}, lexicalMatch={} and stated={}",
 					templateName, branchPath, logicalMatch, lexicalMatch, stated);
 			if (logicalMatch == null) {
 				throw new IllegalArgumentException("logicalMatch parameter must be specified.");
@@ -143,7 +143,7 @@ public class ConceptTemplateSearchService {
 			String ecl = constructLogicalSearchEcl(domainEcl, logicalEcl, logicalMatch);
 			LOGGER.debug("Logic template ECL=" + logicalEcl);
 			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
-			LOGGER.info("Logical search ECL = {} stated = {}", ecl, stated);
+			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
 			LOGGER.info("Logical results {}", results.size());
 			return results;
 		} catch (Exception e) {
@@ -173,7 +173,7 @@ public class ConceptTemplateSearchService {
 		Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
 		while (matcher.find()) {
 			String termSlot = matcher.group();
-			result = result.replace(termSlot, ".*");
+			result = result.replace(termSlot, ".+");
 		}
 		result = result.replace("(", "\\(");
 		result = result.replace(")", "\\)");
