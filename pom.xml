@@ -5,7 +5,7 @@
 
 	<groupId>org.snomed.otf</groupId>
 	<artifactId>snomed-template-service</artifactId>
-	<version>1.4.4-SNAPSHOT</version>
+	<version>1.5.0</version>
 
 	<name>Snomed Template Service</name>
 	<description>A service to support SNOMED CT authoring driven by Expression Template Language</description>
@@ -36,7 +36,7 @@
 		<dependency>
 			<groupId>org.ihtsdo.otf.common</groupId>
 			<artifactId>otf-common</artifactId>
-			<version>1.7.0-SNAPSHOT</version>
+			<version>1.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>io.kaicode</groupId>
