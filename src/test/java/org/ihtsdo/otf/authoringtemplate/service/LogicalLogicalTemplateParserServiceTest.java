@@ -1,14 +1,14 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import java.io.InputStream;
+import java.util.List;
+
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.InputStream;
-import java.util.List;
 
 public class LogicalLogicalTemplateParserServiceTest {
 
@@ -103,5 +103,17 @@ public class LogicalLogicalTemplateParserServiceTest {
 		Assert.assertEquals("1", attributes.get(1).getCardinalityMin());
 		Assert.assertEquals("1", attributes.get(1).getCardinalityMax());
 
+	}
+	
+	@Test
+	public void testParseTemplateWithMultipleFocusConcepts() throws Exception {
+		final InputStream templateStream = getClass().getResourceAsStream("/templates/multiple-focus-concepts-template.txt");
+		Assert.assertNotNull("Found template stream resource", templateStream);
+		final LogicalTemplate template = service.parseTemplate(templateStream);
+		Assert.assertNotNull(template);
+
+		Assert.assertEquals(2, template.getFocusConcepts().size());
+		Assert.assertEquals("420134006", template.getFocusConcepts().get(0));
+		Assert.assertEquals("473011001", template.getFocusConcepts().get(1));
 	}
 }

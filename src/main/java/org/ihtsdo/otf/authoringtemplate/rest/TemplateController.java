@@ -10,8 +10,10 @@ import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
+import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +37,9 @@ public class TemplateController {
 	
 	@Autowired
 	private ConceptTemplateSearchService searchService;
+	
+	@Autowired
+	private ConceptTemplateTransformService transformService;
 
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
@@ -104,5 +109,14 @@ public class TemplateController {
 									  @RequestParam(required=false) Boolean lexicalMatch,
 									  @RequestParam(value="stated", defaultValue="true") boolean stated) throws IOException, ServiceException {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
+	}
+	
+	@RequestMapping(value = "/{branchPath}/templates/{templateName}/transform", method = RequestMethod.POST)
+	@ResponseBody
+	public List<ConceptPojo> transformConcepts(@PathVariable String branchPath,
+											   @PathVariable String templateName,
+											   @RequestParam String sourceTemplate,
+											   @RequestParam Set<String> conceptsToTransform) throws ServiceException {
+		return transformService.transform(BranchPathUriUtil.parseBranchPath(branchPath), sourceTemplate, conceptsToTransform, templateName);
 	}
 }

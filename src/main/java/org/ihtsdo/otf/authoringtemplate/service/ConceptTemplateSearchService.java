@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -86,7 +85,7 @@ public class ConceptTemplateSearchService {
 		List<Pattern> patterns = new ArrayList<>();
 		for (Description description : descriptions) {
 			if (description.getTermTemplate() != null) {
-				patterns.add(constructTermPattern(description.getTermTemplate()));
+				patterns.add(TemplateUtil.constructTermPattern(description.getTermTemplate()));
 			}
 		}
 		
@@ -165,21 +164,6 @@ public class ConceptTemplateSearchService {
 		builder.append(logicalEcl);
 		builder.append(")");
 		return builder.toString();
-	}
-
-	private Pattern constructTermPattern(String termTemplate) {
-		String result = termTemplate;
-		//$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)
-		Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
-		while (matcher.find()) {
-			String termSlot = matcher.group();
-			result = result.replace(termSlot, ".+");
-		}
-		result = result.replace("(", "\\(");
-		result = result.replace(")", "\\)");
-		LOGGER.info("term pattern regex=" + result);
-		Pattern pattern = Pattern.compile(result);
-		return pattern;
 	}
 
 	private Map<String,String> mapSlots(List<Attribute> attributes) {

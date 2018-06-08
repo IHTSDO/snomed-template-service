@@ -1,0 +1,5 @@
+ 420134006 |Propensity to adverse reactions (finding)| + 473011001 |Allergic condition (finding)|:
+	{
+		719722006 |Has realization (attribute)| = 472964009 |Allergic process (qualifier value)|,
+		246075003 |Causative agent (attribute)| = [[+id(<105590001 |Substance (substance)|) @substance]]
+	}

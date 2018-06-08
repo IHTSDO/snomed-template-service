@@ -1,0 +1,40 @@
+{
+  "name": "Allergy to [substance] V2",
+  "domain": "<<419199007 |Allergy to substance (disorder)|",
+  "version": 1,
+  "logicalTemplate": "420134006 |Propensity to adverse reactions (finding)| + 473011001 |Allergic condition (finding)| :\n\t\n\t{\n\t\t719722006 |Has realization (attribute)| = 472964009 |Allergic process (qualifier value)|,\n\t\t246075003 |Causative agent (attribute)| = [[+id(<105590001 |Substance (substance)|) @substance]]\n\t}\n",
+  "conceptOutline": {
+    "definitionStatus": "FULLY_DEFINED",
+    "descriptions": [
+      {
+        "type": "FSN",
+        "lang": "en",
+        "termTemplate": "Allergy to $substance$ (finding)",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      },
+      {
+        "type": "SYNONYM",
+        "lang": "en",
+        "termTemplate": "Allergy to $substance$",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      }
+    ]
+  },
+  "lexicalTemplates": [
+    {
+      "name": "substance",
+      "displayName": "[substance]",
+      "takeFSNFromSlot": "substance",
+      "removeParts": [
+      ]
+    }
+  ]
+}
