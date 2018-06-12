@@ -50,15 +50,16 @@ public class ConceptTemplateTransformService {
 	/**
 	 * @param branchPath
 	 * @param conceptsToTransform
-	 * @param templateName
+	 * @param destinationTemplate
+	 * @param inactivationReason 
 	 * @return
 	 * @throws ServiceException
 	 */
-	public List<ConceptPojo> transform(String branchPath, String sourceTemplate, Set<String> conceptsToTransform, String templateName) throws ServiceException {
+	public List<ConceptPojo> transform(String branchPath, String destinationTemplate, Set<String> conceptsToTransform, String sourceTemplate, String inactivationReason) throws ServiceException {
 		List<ConceptPojo> result = new ArrayList<>();
 		try {
 			ConceptTemplate source = templateService.loadOrThrow(sourceTemplate);
-			ConceptTemplate destination = templateService.loadOrThrow(templateName);
+			ConceptTemplate destination = templateService.loadOrThrow(destinationTemplate);
 			validate(source, destination);
 			for (String conceptId : conceptsToTransform) {
 				try {
@@ -68,13 +69,13 @@ public class ConceptTemplateTransformService {
 					if (conceptPojo == null) {
 						throw new ServiceException(String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
 					}
-					result.add(performTransform(conceptPojo, destination, slotValueMap, attributeSlotMap));
+					result.add(performTransform(conceptPojo, destination, slotValueMap, attributeSlotMap, inactivationReason));
 				} catch (RestClientException e) {
-					new ServiceException(String.format("Failed to transform concept %s to template %s ", conceptId, templateName), e);
+					new ServiceException(String.format("Failed to transform concept %s to template %s ", conceptId, destinationTemplate), e);
 				}
 			}
 		} catch ( IOException e) {
-			throw new ServiceException("Failed to load template " + templateName, e);
+			throw new ServiceException("Failed to load template " + destinationTemplate, e);
 		}
 		return result;
 		
@@ -209,7 +210,11 @@ public class ConceptTemplateTransformService {
 		}
 	}
 
-	private ConceptPojo performTransform(ConceptPojo conceptPojo, ConceptTemplate conceptTemplate, Map<String, String> slotValueMap, Map<String, String> attributeSlotMap) {
+	private ConceptPojo performTransform(ConceptPojo conceptPojo,
+										 ConceptTemplate conceptTemplate, 
+										 Map<String, String> slotValueMap, 
+										 Map<String, String> attributeSlotMap, 
+										 String inactivationReason) {
 		ConceptPojo transformed = conceptPojo;
 		ConceptOutline conceptOutline = conceptTemplate.getConceptOutline();
 		org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus definitionStatus = org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.PRIMITIVE;
@@ -217,7 +222,7 @@ public class ConceptTemplateTransformService {
 			definitionStatus =  org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED;
 		}
 		transformed.setDefinitionStatus(definitionStatus);
-		transformDescriptions(transformed, conceptOutline, slotValueMap);
+		transformDescriptions(transformed, conceptOutline, slotValueMap, inactivationReason);
 		transformRelationships(transformed, conceptOutline, attributeSlotMap);
 		return transformed;
 	}
@@ -276,7 +281,10 @@ public class ConceptTemplateTransformService {
 		}
 	}
 
-	private void transformDescriptions(ConceptPojo transformed, ConceptOutline conceptOutline, Map<String, String> slotValueMap) {
+	private void transformDescriptions(ConceptPojo transformed,
+									   ConceptOutline conceptOutline,
+									   Map<String, String> slotValueMap,
+									   String inactivationReason) {
 		List<String> previousTerms = transformed.getDescriptions().stream()
 								 .filter(t -> t.isActive())
 								 .map(t -> t.getTerm())
@@ -285,7 +293,7 @@ public class ConceptTemplateTransformService {
 		if (conceptOutline.getDescriptions() != null) {
 			for (Description desc : conceptOutline.getDescriptions()) {
 				String term = desc.getTerm();
-				if (term == null && desc.getTermTemplate() != null) {
+				if (desc.getTermTemplate() != null) {
 					term = desc.getTermTemplate();
 					for (String slot : slotValueMap.keySet()) {
 						term = term.replace(slot, slotValueMap.get(slot));
@@ -301,9 +309,11 @@ public class ConceptTemplateTransformService {
 			}
 		}
 		//inactivation
+		//TODO need to clarify that we need to in-activate all active terms that don't exist in the new template
 		for (DescriptionPojo pojo : transformed.getDescriptions()) {
 			if (pojo.isActive() && !newTerms.contains(pojo.getTerm())) {
 				pojo.setActive(false);
+				pojo.setInactivationIndicator(inactivationReason);
 			}
 		}
 	}

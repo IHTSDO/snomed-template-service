@@ -22,11 +22,13 @@ import org.ihtsdo.otf.authoringtemplate.domain.DefinitionStatus;
 import org.ihtsdo.otf.authoringtemplate.domain.Description;
 import org.ihtsdo.otf.authoringtemplate.domain.DescriptionType;
 import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,6 +66,8 @@ public class ConceptTemplateTransformServiceTest {
 	
 	private String source;
 	private String destination;
+
+	private static final String CT_GUIDED_BODY_STRUCTURE_TEMPLATE = "CT guided [procedure] of [body structure]";
 	
 	@Before
 	public void setUp() throws Exception {
@@ -73,12 +77,28 @@ public class ConceptTemplateTransformServiceTest {
 		destination = "Allergy to [substance] V2";
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
 				jsonStore.getStoreDirectory());
+		
+		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
+				jsonStore.getStoreDirectory());
 		templateService.reloadCache();
 	}
 	
 	@Test
-	public void testValidate() throws Exception{
-		ConceptTemplate sourceTemplate = jsonStore.load(source, ConceptTemplate.class);
+	public void testValidateWithSuccess() {
+		
+		try {
+			ConceptTemplate sourceTemplate = jsonStore.load(source, ConceptTemplate.class);
+			ConceptTemplate destinationTemplate = jsonStore.load(destination, ConceptTemplate.class);
+			transformService.validate(sourceTemplate, destinationTemplate);
+		} catch (Exception e) {
+			Assert.fail("No exception is expected to be thrown");
+		}
+	}
+	
+	
+	@Test(expected=ServiceException.class)
+	public void testValidateWithFailure() throws Exception {
+		ConceptTemplate sourceTemplate = jsonStore.load(CT_GUIDED_BODY_STRUCTURE_TEMPLATE, ConceptTemplate.class);
 		ConceptTemplate destinationTemplate = jsonStore.load(destination, ConceptTemplate.class);
 		transformService.validate(sourceTemplate, destinationTemplate);
 	}
@@ -93,7 +113,7 @@ public class ConceptTemplateTransformServiceTest {
 		when(terminologyServerClient.getConcept(anyString(), anyString()))
 		.thenReturn(conceptPojo);
 		
-		List<ConceptPojo> transformedConcepts = transformService.transform("MAIN", source, concepts, destination);
+		List<ConceptPojo> transformedConcepts = transformService.transform("MAIN", destination, concepts, source, "NONCONFORMANCE_TO_EDITORIAL_POLICY");
 		assertNotNull(transformedConcepts);
 		assertEquals(concepts.size(), transformedConcepts.size());
 	}

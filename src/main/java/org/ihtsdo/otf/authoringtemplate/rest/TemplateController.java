@@ -107,7 +107,7 @@ public class TemplateController {
 									  @PathVariable String templateName,
 									  @RequestParam Boolean logicalMatch,
 									  @RequestParam(required=false) Boolean lexicalMatch,
-									  @RequestParam(value="stated", defaultValue="true") boolean stated) throws IOException, ServiceException {
+									  @RequestParam(defaultValue="true") boolean stated) throws IOException, ServiceException {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 	
@@ -115,8 +115,9 @@ public class TemplateController {
 	@ResponseBody
 	public List<ConceptPojo> transformConcepts(@PathVariable String branchPath,
 											   @PathVariable String templateName,
+											   @RequestParam Set<String> conceptsToTransform,
 											   @RequestParam String sourceTemplate,
-											   @RequestParam Set<String> conceptsToTransform) throws ServiceException {
-		return transformService.transform(BranchPathUriUtil.parseBranchPath(branchPath), sourceTemplate, conceptsToTransform, templateName);
+											   @RequestParam (defaultValue="NONCONFORMANCE_TO_EDITORIAL_POLICY") String inactivationReason) throws ServiceException {
+		return transformService.transform(BranchPathUriUtil.parseBranchPath(branchPath), templateName, conceptsToTransform, sourceTemplate, inactivationReason);
 	}
 }
