@@ -12,6 +12,7 @@ import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformRequest;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
@@ -111,13 +112,12 @@ public class TemplateController {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 	
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/transform", method = RequestMethod.POST)
+	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform", method = RequestMethod.POST)
 	@ResponseBody
 	public List<ConceptPojo> transformConcepts(@PathVariable String branchPath,
-											   @PathVariable String templateName,
-											   @RequestParam Set<String> conceptsToTransform,
-											   @RequestParam String sourceTemplate,
-											   @RequestParam (defaultValue="NONCONFORMANCE_TO_EDITORIAL_POLICY") String inactivationReason) throws ServiceException {
-		return transformService.transform(BranchPathUriUtil.parseBranchPath(branchPath), templateName, conceptsToTransform, sourceTemplate, inactivationReason);
+											   @PathVariable String destinationTemplate,
+											   @RequestBody TemplateTransformRequest transformRequest
+											   ) throws ServiceException {
+		return transformService.transform(BranchPathUriUtil.parseBranchPath(branchPath), destinationTemplate, transformRequest);
 	}
 }

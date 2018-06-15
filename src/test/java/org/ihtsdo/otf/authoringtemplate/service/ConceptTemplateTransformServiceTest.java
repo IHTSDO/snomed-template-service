@@ -113,7 +113,10 @@ public class ConceptTemplateTransformServiceTest {
 		when(terminologyServerClient.getConcept(anyString(), anyString()))
 		.thenReturn(conceptPojo);
 		
-		List<ConceptPojo> transformedConcepts = transformService.transform("MAIN", destination, concepts, source, "NONCONFORMANCE_TO_EDITORIAL_POLICY");
+		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
+		transformRequest.setConceptsToTransform(concepts);
+		transformRequest.setSourceTemplate(source);
+		List<ConceptPojo> transformedConcepts = transformService.transform("MAIN", destination, transformRequest);
 		assertNotNull(transformedConcepts);
 		assertEquals(concepts.size(), transformedConcepts.size());
 	}
