@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -31,6 +32,7 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 
 @SpringBootApplication
+@EnableAsync
 public class Config {
 	
 	@Bean
@@ -56,6 +58,17 @@ public class Config {
 	public RestTemplate restTemplate(RestTemplateBuilder builder) {
 		return builder.build();
 	}
+	
+//	@Bean
+//    public Executor asyncExecutor() {
+//        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+//        executor.setCorePoolSize(2);
+//        executor.setMaxPoolSize(2);
+//        executor.setQueueCapacity(500);
+//        executor.setThreadNamePrefix("TemplateService-");
+//        executor.initialize();
+//        return executor;
+//    }
 
 	@Bean
 	public FilterRegistrationBean getUrlRewriteFilter() {

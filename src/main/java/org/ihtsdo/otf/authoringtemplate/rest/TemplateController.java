@@ -8,12 +8,17 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
+import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformationResultService;
+import org.ihtsdo.otf.authoringtemplate.service.TransformationStatus;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 
@@ -41,7 +47,13 @@ public class TemplateController {
 	
 	@Autowired
 	private ConceptTemplateTransformService transformService;
-
+	
+	@Autowired
+	private SnowOwlRestClientFactory terminologyClientFactory;
+	
+	@Autowired
+	private TemplateTransformationResultService resultService;
+	
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
 	public ResponseEntity<Object> createTemplate(@RequestParam String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
@@ -112,12 +124,38 @@ public class TemplateController {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 	
+	
+	private SnowOwlRestClient getRestClient() {
+		return terminologyClientFactory.getClient();
+	}
+	
+	
+	@SuppressWarnings("rawtypes")
 	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform", method = RequestMethod.POST)
+	public ResponseEntity createTemplateTransformation(@PathVariable String branchPath,
+									@PathVariable String destinationTemplate,
+									@RequestBody TemplateTransformRequest transformRequest,
+									UriComponentsBuilder uriComponentsBuilder
+									) throws ServiceException {
+		TemplateTransformation transformation = transformService.createTemplateTransformation(
+				BranchPathUriUtil.parseBranchPath(branchPath), destinationTemplate, transformRequest);
+		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
+		transformService.transform(transformation, restClient);
+		transformation.setStatus(TransformationStatus.QUEUED);
+		resultService.update(transformation);
+		return ResponseEntity.created(uriComponentsBuilder.path("/templates/transform/{transformationId}")
+				.buildAndExpand(transformation.getTransformationId()).toUri()).build();
+	}
+	
+	@RequestMapping(value = "/templates/transform/{transformationId}", method = RequestMethod.GET)
 	@ResponseBody
-	public List<ConceptPojo> transformConcepts(@PathVariable String branchPath,
-											   @PathVariable String destinationTemplate,
-											   @RequestBody TemplateTransformRequest transformRequest
-											   ) throws ServiceException {
-		return transformService.transform(BranchPathUriUtil.parseBranchPath(branchPath), destinationTemplate, transformRequest);
+	public TemplateTransformation getTransformationStatus(@PathVariable String transformationId) throws ServiceException {
+		return resultService.getTemplateTransformation(transformationId);
+	}
+	
+	@RequestMapping(value = "/templates/transform/{transformationId}/results/", method = RequestMethod.GET)
+	@ResponseBody
+	public List<ConceptPojo> getTransformationResults(@PathVariable String transformationId) throws ServiceException {
+		return resultService.getTransformationResults(transformationId);
 	}
 }

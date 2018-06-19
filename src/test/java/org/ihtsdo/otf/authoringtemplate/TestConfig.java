@@ -1,6 +1,12 @@
 package org.ihtsdo.otf.authoringtemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.UUID;
+
+import javax.annotation.PreDestroy;
+
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -8,11 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.util.FileSystemUtils;
 
-import javax.annotation.PreDestroy;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
 @PropertySource("classpath:application.properties")

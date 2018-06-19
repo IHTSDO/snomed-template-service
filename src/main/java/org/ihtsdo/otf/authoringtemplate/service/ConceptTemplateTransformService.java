@@ -17,13 +17,13 @@ import org.ihtsdo.otf.authoringtemplate.domain.DefinitionStatus;
 import org.ihtsdo.otf.authoringtemplate.domain.Description;
 import org.ihtsdo.otf.authoringtemplate.domain.DescriptionType;
 import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
@@ -31,28 +31,100 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ConceptTemplateTransformService {
 
 	@Autowired
-	private SnowOwlRestClientFactory terminologyClientFactory;
-	
-	@Autowired
 	private TemplateService templateService;
 	
+	@Autowired
+	private TemplateTransformationResultService resultService;
+	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateTransformService.class);
+	
+	@Async
+	public void transform(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
+		transformation.setStatus(TransformationStatus.RUNNING);
+		resultService.update(transformation);
+		Map<Pattern, List<String>> synonymPatterns = null;
+		Map<Pattern, List<String>> fsnPatterns = null;
+		LogicalTemplate logical = null;
+		Map<String, String> conceptFsnMap = null;
+		ConceptTemplate destination = null;
+		try {
+			ConceptTemplate source = templateService.loadOrThrow(transformation.getTransformRequest().getSourceTemplate());
+			destination = templateService.loadOrThrow(transformation.getDestinationTemplate());
+			validate(source, destination);
+			Set<String> termTemplates = getTermTemplates(source, DescriptionType.SYNONYM);
+			Set<String> fsnTemplates = getTermTemplates(source, DescriptionType.FSN);
+			synonymPatterns = compilePatterns(termTemplates);
+			fsnPatterns = compilePatterns(fsnTemplates);
+			LogicalTemplateParserService parser = new LogicalTemplateParserService();
+			logical = parser.parseTemplate(source.getLogicalTemplate());
+			conceptFsnMap = getDestinationConceptFsnMap(transformation.getBranchPath(), restClient, destination);
+		} catch ( Throwable t) {
+			String errorMsg = getErrorMsg(t);
+			LOGGER.error(errorMsg, t);
+			transformation.setStatus(TransformationStatus.FAILED);
+			transformation.setErrorMsg(errorMsg);
+			resultService.update(transformation);
+			return;
+		}
+		StringBuilder errorMsgBuilder = new StringBuilder();	
+		String branchPath = transformation.getBranchPath();
+		List<ConceptPojo> results = new ArrayList<>();
+		String inactivationReason = transformation.getTransformRequest().getInactivationReason();
+		for (String conceptId : transformation.getTransformRequest().getConceptsToTransform()) {
+			ConceptPojo conceptPojo = null;
+			try {
+				conceptPojo = restClient.getConcept(branchPath, conceptId);
+			} catch (RestClientException e) {
+				LOGGER.error("Unexpected error when retrieving concept " + conceptId, e);
+			}
+			if (conceptPojo == null) {
+				errorMsgBuilder.append(String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
+				continue;
+			}
+			Map<String, String> slotValueMap = getSlotValueMap(fsnPatterns, synonymPatterns, conceptPojo);
+			Map<String, ConceptMiniPojo> attributeSlotMap = getAttributeValueMap(logical, conceptPojo);
+			results.add(performTransform(conceptPojo, destination.getConceptOutline(), slotValueMap, attributeSlotMap,inactivationReason, conceptFsnMap));
+		}
+		
+		if (!errorMsgBuilder.toString().isEmpty()) {
+			transformation.setErrorMsg(errorMsgBuilder.toString());
+			transformation.setStatus(TransformationStatus.COMPLETED_WITH_FAILURE);
+		} else {
+			transformation.setStatus(TransformationStatus.COMPLETED);
+		}
+		resultService.writeResultsToFile(transformation, results);
+		resultService.update(transformation);
+	}
+
+	private String getErrorMsg(Throwable t) {
+		if (t instanceof ServiceException) {
+			return t.getMessage();
+		} else {
+			if (t.getMessage() != null) {
+				return t.getMessage();
+			} else {
+				return "Unexpected error caused by " + t.getCause().getMessage();
+			}
+		}
+	}
 
 	/**
 	 * @param branchPath
 	 * @param conceptsToTransform
 	 * @param destinationTemplate
+	 * @param restClient 
 	 * @param inactivationReason 
 	 * @return
 	 * @throws ServiceException
 	 */
-	public List<ConceptPojo> transform(String branchPath, String destinationTemplate, TemplateTransformRequest transformRequest) throws ServiceException {
+	public List<ConceptPojo> transform(String branchPath, String destinationTemplate, TemplateTransformRequest transformRequest, SnowOwlRestClient restClient) throws ServiceException {
 		List<ConceptPojo> result = new ArrayList<>();
 		try {
 			ConceptTemplate source = templateService.loadOrThrow(transformRequest.getSourceTemplate());
@@ -65,17 +137,15 @@ public class ConceptTemplateTransformService {
 			
 			LogicalTemplateParserService parser = new LogicalTemplateParserService();
 			LogicalTemplate logical = parser.parseTemplate(source.getLogicalTemplate());
-			
 			for (String conceptId : transformRequest.getConceptsToTransform()) {
 				try {
-					SnowOwlRestClient client = terminologyClientFactory.getClient();
-					ConceptPojo conceptPojo = client.getConcept(branchPath, conceptId);
+					ConceptPojo conceptPojo = restClient.getConcept(branchPath, conceptId);
 					if (conceptPojo == null) {
 						throw new ServiceException(String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
 					}
 					Map<String, String> slotValueMap = getSlotValueMap(fsnPatterns, synonymPatterns, conceptPojo);
 					Map<String, ConceptMiniPojo> attributeSlotMap = getAttributeValueMap(logical, conceptPojo);
-					Map<String, String> conceptFsnMap = getDestinationConceptFsnMap(branchPath, client, destination);
+					Map<String, String> conceptFsnMap = getDestinationConceptFsnMap(branchPath, restClient, destination);
 					result.add(performTransform(conceptPojo, destination.getConceptOutline(), slotValueMap, attributeSlotMap, transformRequest.getInactivationReason(), conceptFsnMap));
 				} catch (RestClientException e) {
 					new ServiceException(String.format("Failed to transform concept %s to template %s ", conceptId, destinationTemplate), e);
@@ -254,4 +324,10 @@ public class ConceptTemplateTransformService {
 		return transformed;
 	}
 
+
+	public TemplateTransformation createTemplateTransformation(String branchPath, String destinationTemplate,
+			TemplateTransformRequest transformRequest) throws ServiceException {
+		TemplateTransformation templateTransformation = new TemplateTransformation(branchPath, destinationTemplate, transformRequest);
+		return templateTransformation;
+	}
 }

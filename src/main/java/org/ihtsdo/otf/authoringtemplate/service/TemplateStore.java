@@ -1,6 +1,22 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import org.ihtsdo.otf.authoringtemplate.domain.*;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+
+import javax.annotation.PostConstruct;
+
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
+import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
+import org.ihtsdo.otf.authoringtemplate.domain.Concepts;
+import org.ihtsdo.otf.authoringtemplate.domain.Description;
+import org.ihtsdo.otf.authoringtemplate.domain.LexicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.ihtsdo.otf.authoringtemplate.domain.SimpleSlot;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
@@ -8,11 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import java.io.IOException;
-import java.util.*;
-import java.util.regex.Matcher;
 
 @Service
 public class TemplateStore {
