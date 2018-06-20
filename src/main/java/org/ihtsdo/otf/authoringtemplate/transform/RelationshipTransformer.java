@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.service;
+package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
@@ -52,6 +53,12 @@ public class RelationshipTransformer {
 			if (rel.getTarget() != null) {
 				String key = rel.getTarget().getConceptId() + rel.getType().getConceptId();
 				newRelGroupMap.get(rel.getGroupId()).put(key, rel);
+			} else {
+				//handle relationship with slot
+				if (rel.getTargetSlot() != null) {
+					String key = rel.getTargetSlot().getSlotName() + rel.getType().getConceptId();
+					newRelGroupMap.get(rel.getGroupId()).put(key, rel);
+				}
 			}
 		}
 		
@@ -75,8 +82,8 @@ public class RelationshipTransformer {
 			}
 		}
 		List<RelationshipPojo> inferred = new ArrayList<>();
-		conceptToTransform.getRelationships().stream()
-				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
+		inferred = conceptToTransform.getRelationships().stream()
+				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 				.collect(Collectors.toList());
 		relationships.addAll(inferred);
 		conceptToTransform.setRelationships(relationships);
@@ -140,7 +147,6 @@ public class RelationshipTransformer {
 				if (relMapByTargetAndType.containsKey(key)) {
 					pojoSet.addAll(relMapByTargetAndType.get(key));
 				} else {
-					//TODO
 					Relationship relationship = newRelMapByTargetAndType.get(key).iterator().next();
 					pojoSet.add(constructRelationshipPojo(relationship, attributeSlotMap));
 				}
@@ -156,11 +162,12 @@ public class RelationshipTransformer {
 		pojo.setCharacteristicType(relationship.getCharacteristicType());
 		pojo.setGroupId(relationship.getGroupId());
 		pojo.setModifier(Constants.EXISTENTIAL);
-		String target = relationship.getTarget().getConceptId();
-		if (relationship.getTargetSlot() != null) {
-			pojo.setTarget(attributeSlotMap.get(relationship.getTargetSlot()));
+		if (relationship.getTarget() != null) {
+			pojo.setTarget(constructConceptMiniPojo(relationship.getTarget().getConceptId()));
 		} else {
-			pojo.setTarget(constructConceptMiniPojo(target));
+			if (relationship.getTargetSlot() != null) {
+				pojo.setTarget(attributeSlotMap.get(relationship.getTargetSlot()));
+			} 
 		}
 		pojo.setType(constructConceptMiniPojo(relationship.getType().getConceptId()));
 		return pojo;

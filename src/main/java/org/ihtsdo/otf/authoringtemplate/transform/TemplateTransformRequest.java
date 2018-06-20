@@ -1,6 +1,8 @@
-package org.ihtsdo.otf.authoringtemplate.service;
+package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.Set;
+
+import org.ihtsdo.otf.authoringtemplate.service.Constants;
 
 public class TemplateTransformRequest {
 
@@ -35,4 +37,17 @@ public class TemplateTransformRequest {
 		return this.inactivationReason;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("TemplateTransformRequest [");
+		if (conceptsToTransform != null)
+			builder.append("conceptsToTransform=").append(conceptsToTransform).append(", ");
+		if (sourceTemplate != null)
+			builder.append("sourceTemplate=").append(sourceTemplate).append(", ");
+		if (inactivationReason != null)
+			builder.append("inactivationReason=").append(inactivationReason);
+		builder.append("]");
+		return builder.toString();
+	}
 }

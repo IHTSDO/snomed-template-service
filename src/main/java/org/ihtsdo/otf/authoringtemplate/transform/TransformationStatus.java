@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.service;
+package org.ihtsdo.otf.authoringtemplate.transform;
 
 public enum TransformationStatus {
 

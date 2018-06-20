@@ -11,12 +11,12 @@ import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
-import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformRequest;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformationResultService;
-import org.ihtsdo.otf.authoringtemplate.service.TransformationStatus;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
+import org.ihtsdo.otf.authoringtemplate.transform.service.ConceptTemplateTransformService;
+import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateTransformationResultService;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
@@ -140,7 +140,7 @@ public class TemplateController {
 		TemplateTransformation transformation = transformService.createTemplateTransformation(
 				BranchPathUriUtil.parseBranchPath(branchPath), destinationTemplate, transformRequest);
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
-		transformService.transform(transformation, restClient);
+		transformService.transformAsynchnously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
 		resultService.update(transformation);
 		return ResponseEntity.created(uriComponentsBuilder.path("/templates/transform/{transformationId}")

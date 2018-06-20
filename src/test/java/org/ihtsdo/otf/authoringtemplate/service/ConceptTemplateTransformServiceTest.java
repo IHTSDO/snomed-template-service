@@ -1,13 +1,20 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.Config;
@@ -20,7 +27,11 @@ import org.ihtsdo.otf.authoringtemplate.domain.DefinitionStatus;
 import org.ihtsdo.otf.authoringtemplate.domain.Description;
 import org.ihtsdo.otf.authoringtemplate.domain.DescriptionType;
 import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
+import org.ihtsdo.otf.authoringtemplate.transform.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
@@ -35,6 +46,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
@@ -89,9 +103,8 @@ public class ConceptTemplateTransformServiceTest {
 		concepts.add("123555");
 		transformRequest.setConceptsToTransform(concepts);
 		transformRequest.setSourceTemplate(source);
-		transformService.createTemplateTransformation("MAIN", destination, transformRequest);
-//		System.out.println(transformation);
-//		assertNotNull(transformation);
+		TemplateTransformation transformation = transformService.createTemplateTransformation("MAIN", destination, transformRequest);
+		assertNotNull(transformation);
 	}
 	
 	@Test
@@ -127,9 +140,30 @@ public class ConceptTemplateTransformServiceTest {
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);
 		transformRequest.setSourceTemplate(source);
-		List<ConceptPojo> transformedConcepts = transformService.transform("MAIN", destination, transformRequest, terminologyServerClient);
-//		assertNotNull(transformedConcepts);
-//		assertEquals(concepts.size(), transformedConcepts.size());
+		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
+		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
+		assertNotNull(results);
+		
+		List<ConceptPojo> transformed = new ArrayList<>();
+		Map<String, String> errorMsgMap = new HashMap<>();
+		for (Future<TransformationResult> future : results) {
+			try {
+				TransformationResult transformationResult = future.get();
+				transformed.addAll(transformationResult.getTransformedConcepts());
+				for (String key : transformationResult.getErrors().keySet()) {
+					errorMsgMap.put(key, transformationResult.getErrors().get(key));
+				}
+			} catch (InterruptedException | ExecutionException e) {
+				fail("No exceptions should be thrown");
+			}
+		}
+		assertEquals(true, !transformed.isEmpty());
+		Gson gson =  new GsonBuilder().setPrettyPrinting().create();
+		for (ConceptPojo pojo : transformed) {
+			System.out.println(gson.toJson(pojo));
+		}
+		assertEquals(1, transformed.size());
+		assertEquals(4, transformed.get(0).getRelationships().size());
 	}
 	
 	private ConceptTemplate createConceptTemplate() {

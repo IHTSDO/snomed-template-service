@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.service;
+package org.ihtsdo.otf.authoringtemplate.transform.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -7,6 +7,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -21,7 +26,17 @@ import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.ihtsdo.otf.authoringtemplate.service.Constants;
+import org.ihtsdo.otf.authoringtemplate.service.LogicalTemplateParserService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.authoringtemplate.transform.DescriptionTransformer;
+import org.ihtsdo.otf.authoringtemplate.transform.RelationshipTransformer;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationInputData;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
@@ -43,66 +58,51 @@ public class ConceptTemplateTransformService {
 	@Autowired
 	private TemplateTransformationResultService resultService;
 	
+	private final ExecutorService executorService = Executors.newCachedThreadPool();
+	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateTransformService.class);
+
+	private static final int BATCH_SIZE = 10;
 	
 	@Async
-	public void transform(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
+	public void transformAsynchnously(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
 		transformation.setStatus(TransformationStatus.RUNNING);
 		resultService.update(transformation);
-		Map<Pattern, List<String>> synonymPatterns = null;
-		Map<Pattern, List<String>> fsnPatterns = null;
-		LogicalTemplate logical = null;
-		Map<String, String> conceptFsnMap = null;
-		ConceptTemplate destination = null;
+		List<Future<TransformationResult>> results = null;
 		try {
-			ConceptTemplate source = templateService.loadOrThrow(transformation.getTransformRequest().getSourceTemplate());
-			destination = templateService.loadOrThrow(transformation.getDestinationTemplate());
-			validate(source, destination);
-			Set<String> termTemplates = getTermTemplates(source, DescriptionType.SYNONYM);
-			Set<String> fsnTemplates = getTermTemplates(source, DescriptionType.FSN);
-			synonymPatterns = compilePatterns(termTemplates);
-			fsnPatterns = compilePatterns(fsnTemplates);
-			LogicalTemplateParserService parser = new LogicalTemplateParserService();
-			logical = parser.parseTemplate(source.getLogicalTemplate());
-			conceptFsnMap = getDestinationConceptFsnMap(transformation.getBranchPath(), restClient, destination);
-		} catch ( Throwable t) {
-			String errorMsg = getErrorMsg(t);
-			LOGGER.error(errorMsg, t);
+			results = transform(transformation, restClient);
+		} catch (Exception e) {
+			LOGGER.error("Error occurred", e);
 			transformation.setStatus(TransformationStatus.FAILED);
-			transformation.setErrorMsg(errorMsg);
-			resultService.update(transformation);
-			return;
+			transformation.setErrorMsg(getErrorMsg(e));
 		}
-		StringBuilder errorMsgBuilder = new StringBuilder();	
-		String branchPath = transformation.getBranchPath();
-		List<ConceptPojo> results = new ArrayList<>();
-		String inactivationReason = transformation.getTransformRequest().getInactivationReason();
-		for (String conceptId : transformation.getTransformRequest().getConceptsToTransform()) {
-			ConceptPojo conceptPojo = null;
+		List<ConceptPojo> transformed = new ArrayList<>();
+		Map<String, String> errorMsgMap = new HashMap<>();
+		for (Future<TransformationResult> future : results) {
 			try {
-				conceptPojo = restClient.getConcept(branchPath, conceptId);
-			} catch (RestClientException e) {
-				LOGGER.error("Unexpected error when retrieving concept " + conceptId, e);
+				TransformationResult transformationResult = future.get();
+				transformed.addAll(transformationResult.getTransformedConcepts());
+				for (String key : transformationResult.getErrors().keySet()) {
+					errorMsgMap.put(key, transformationResult.getErrors().get(key));
+				}
+			} catch (InterruptedException | ExecutionException e) {
+				String errorMsg = "Unexpected errors while merging results.";
+				LOGGER.error(errorMsg, e);
+				transformation.setStatus(TransformationStatus.FAILED);
+				transformation.setErrorMsg(errorMsg + getErrorMsg(e));
 			}
-			if (conceptPojo == null) {
-				errorMsgBuilder.append(String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
-				continue;
-			}
-			Map<String, String> slotValueMap = getSlotValueMap(fsnPatterns, synonymPatterns, conceptPojo);
-			Map<String, ConceptMiniPojo> attributeSlotMap = getAttributeValueMap(logical, conceptPojo);
-			results.add(performTransform(conceptPojo, destination.getConceptOutline(), slotValueMap, attributeSlotMap,inactivationReason, conceptFsnMap));
 		}
 		
-		if (!errorMsgBuilder.toString().isEmpty()) {
-			transformation.setErrorMsg(errorMsgBuilder.toString());
+		if (!errorMsgMap.isEmpty() && !transformed.isEmpty()) {
 			transformation.setStatus(TransformationStatus.COMPLETED_WITH_FAILURE);
+			resultService.writeFailures(transformation, errorMsgMap);
 		} else {
 			transformation.setStatus(TransformationStatus.COMPLETED);
 		}
-		resultService.writeResultsToFile(transformation, results);
+		resultService.writeResultsToFile(transformation, transformed);
 		resultService.update(transformation);
 	}
-
+	
 	private String getErrorMsg(Throwable t) {
 		if (t instanceof ServiceException) {
 			return t.getMessage();
@@ -114,50 +114,110 @@ public class ConceptTemplateTransformService {
 			}
 		}
 	}
+	
+	
+	private TransformationInputData constructTransformationInputData(ConceptTemplate source, ConceptTemplate destination) throws ServiceException {
+		Set<String> termTemplates = getTermTemplates(source, DescriptionType.SYNONYM);
+		Set<String> fsnTemplates = getTermTemplates(source, DescriptionType.FSN);
+		Map<Pattern, List<String>> synonymPatterns = compilePatterns(termTemplates);
+		Map<Pattern, List<String>> fsnPatterns = compilePatterns(fsnTemplates);
+		
+		TransformationInputData input = new TransformationInputData();
+		input.setSynonymTemplates(termTemplates);
+		input.setFsnTemplates(fsnTemplates);
+		input.setSynonymPatterns(synonymPatterns);
+		input.setFsnPatterns(fsnPatterns);
+		LogicalTemplateParserService parser = new LogicalTemplateParserService();
+		LogicalTemplate logical;
+		try {
+			logical = parser.parseTemplate(source.getLogicalTemplate());
+			input.setSourceLogicalTemplate(logical);
+			
+		} catch (IOException e) {
+			throw new ServiceException("Failed to parse source logical template", e);
+		}
+		input.setDestinationTemplate(destination);
+		return input;
+	}
 
-	/**
-	 * @param branchPath
-	 * @param conceptsToTransform
-	 * @param destinationTemplate
-	 * @param restClient 
-	 * @param inactivationReason 
-	 * @return
-	 * @throws ServiceException
-	 */
-	public List<ConceptPojo> transform(String branchPath, String destinationTemplate, TemplateTransformRequest transformRequest, SnowOwlRestClient restClient) throws ServiceException {
-		List<ConceptPojo> result = new ArrayList<>();
+	public List<Future<TransformationResult>> transform(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
+		
+		String branchPath = transformation.getBranchPath();
+		String destinationTemplate = transformation.getDestinationTemplate();
+		TemplateTransformRequest transformRequest = transformation.getTransformRequest();
+		
+		List<Future<TransformationResult>> results = new ArrayList<>();
 		try {
 			ConceptTemplate source = templateService.loadOrThrow(transformRequest.getSourceTemplate());
 			ConceptTemplate destination = templateService.loadOrThrow(destinationTemplate);
 			validate(source, destination);
-			Set<String> termTemplates = getTermTemplates(source, DescriptionType.SYNONYM);
-			Set<String> fsnTemplates = getTermTemplates(source, DescriptionType.FSN);
-			Map<Pattern, List<String>> synonymPatterns = compilePatterns(termTemplates);
-			Map<Pattern, List<String>> fsnPatterns = compilePatterns(fsnTemplates);
-			
-			LogicalTemplateParserService parser = new LogicalTemplateParserService();
-			LogicalTemplate logical = parser.parseTemplate(source.getLogicalTemplate());
+			Map<String, String> conceptFsnMap = null;
+			try {
+				conceptFsnMap = getDestinationConceptFsnMap(branchPath, restClient, destination);
+			} catch (RestClientException e) {
+				throw new ServiceException("Failed to get FSNs" , e);
+			}
+			final TransformationInputData input = constructTransformationInputData(source, destination);
+			input.setBranchPath(branchPath);
+			input.setConceptFsnMap(conceptFsnMap);
+			List<String> batchJob = null;
+			int counter=0;
 			for (String conceptId : transformRequest.getConceptsToTransform()) {
-				try {
-					ConceptPojo conceptPojo = restClient.getConcept(branchPath, conceptId);
-					if (conceptPojo == null) {
-						throw new ServiceException(String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
-					}
-					Map<String, String> slotValueMap = getSlotValueMap(fsnPatterns, synonymPatterns, conceptPojo);
-					Map<String, ConceptMiniPojo> attributeSlotMap = getAttributeValueMap(logical, conceptPojo);
-					Map<String, String> conceptFsnMap = getDestinationConceptFsnMap(branchPath, restClient, destination);
-					result.add(performTransform(conceptPojo, destination.getConceptOutline(), slotValueMap, attributeSlotMap, transformRequest.getInactivationReason(), conceptFsnMap));
-				} catch (RestClientException e) {
-					new ServiceException(String.format("Failed to transform concept %s to template %s ", conceptId, destinationTemplate), e);
+				if (batchJob == null) {
+					batchJob = new ArrayList<>();
+				}
+				batchJob.add(conceptId);
+				counter++;
+				if (counter % BATCH_SIZE == 0 || counter == transformRequest.getConceptsToTransform().size()) {
+					//do work
+					final List<String> task = batchJob;
+					results.add(executorService.submit(new Callable<TransformationResult>() {
+						@Override
+						public TransformationResult call() throws Exception {
+							
+							return batchTransform(input, task, restClient);
+						}
+					}));
+					batchJob = null;
 				}
 			}
 		} catch ( IOException e) {
 			throw new ServiceException("Failed to load template " + destinationTemplate, e);
 		}
-		return result;
+		return results;
 		
 	}
 
+	
+	private TransformationResult batchTransform(TransformationInputData input, List<String> batchJob, SnowOwlRestClient restClient) {
+		TransformationResult result = new TransformationResult();
+		String branchPath = input.getBranchPath();
+		String inactivationReason = input.getInactivationReason();
+		Map<String, String> errors = new HashMap<>();
+		result.setErrors(errors);
+		for (String conceptId : batchJob) {
+			try {
+				ConceptPojo conceptPojo = restClient.getConcept(branchPath, conceptId);
+				if (conceptPojo == null) {
+					errors.put(conceptId, String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
+					continue;
+				}
+				Map<String, String> slotValueMap = getSlotValueMap(input.getFsnPatterns(), input.getSynonymPatterns(), conceptPojo);
+				Map<String, ConceptMiniPojo> attributeSlotMap = getAttributeValueMap(input.getSourceLogicalTemplate(), conceptPojo);
+				Map<String, String> conceptFsnMap = input.getConceptFsnMap();
+				ConceptPojo transformed = performTransform(conceptPojo, input.getDestination().getConceptOutline(), slotValueMap, attributeSlotMap, inactivationReason, conceptFsnMap);
+				result.addTransformedConcept(transformed);
+			} catch (Exception e) {
+				String msg = String.format("Failed to transform concept %s to template %s ", conceptId, input.getDestination().getName());
+				if (e.getMessage() != null) {
+					msg = msg + " caused by " + e.getMessage();
+				}
+				LOGGER.warn(msg, e);
+				errors.put(conceptId, msg);
+			}
+		}
+		return result;
+	}
 	
 	private Map<String, String> getDestinationConceptFsnMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
 		Set<String> conceptIds = new HashSet<>();
@@ -173,7 +233,7 @@ public class ConceptTemplateTransformService {
 	}
 
 
-	private Map<String, ConceptMiniPojo> getAttributeValueMap(LogicalTemplate logical, ConceptPojo conceptPojo) throws ServiceException {
+	private Map<String, ConceptMiniPojo> getAttributeValueMap(LogicalTemplate logical, ConceptPojo conceptPojo) {
 		Map<String, ConceptMiniPojo> result = new HashMap<>();
 		Map<String, Set<String>> attributeSlots = new HashMap<>();
 		for (Attribute attr : logical.getUngroupedAttributes()) {
@@ -212,7 +272,7 @@ public class ConceptTemplateTransformService {
 	
 	
 	private Map<String, String> getSlotValueMap(Map<Pattern, List<String>> fsnTemplatePatterns, 
-			Map<Pattern, List<String>> synonymTemplatePatterns, ConceptPojo conceptPojo) throws ServiceException {
+			Map<Pattern, List<String>> synonymTemplatePatterns, ConceptPojo conceptPojo) {
 		Map<String, String> result = new HashMap<>();
 		for (DescriptionPojo pojo : conceptPojo.getDescriptions()) {
 			if (DescriptionType.FSN.name().equals(pojo.getType())) {
@@ -285,7 +345,7 @@ public class ConceptTemplateTransformService {
 		return slots;
 	}
 	
-	void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException, IOException {
+	public void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException, IOException {
 		Set<String> sourceSlots = getSlotsFromTemplate(source);
 		Set<String> destinationSlots = getSlotsFromTemplate(destination);
 		LOGGER.info("Source slots {} destination slots {}", sourceSlots, destinationSlots);

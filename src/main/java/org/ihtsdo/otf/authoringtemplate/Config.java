@@ -58,17 +58,6 @@ public class Config {
 	public RestTemplate restTemplate(RestTemplateBuilder builder) {
 		return builder.build();
 	}
-	
-//	@Bean
-//    public Executor asyncExecutor() {
-//        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-//        executor.setCorePoolSize(2);
-//        executor.setMaxPoolSize(2);
-//        executor.setQueueCapacity(500);
-//        executor.setThreadNamePrefix("TemplateService-");
-//        executor.initialize();
-//        return executor;
-//    }
 
 	@Bean
 	public FilterRegistrationBean getUrlRewriteFilter() {

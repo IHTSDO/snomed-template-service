@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.service;
+package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.ArrayList;
 import java.util.List;

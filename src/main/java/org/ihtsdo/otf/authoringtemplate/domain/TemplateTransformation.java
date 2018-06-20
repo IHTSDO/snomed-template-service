@@ -4,19 +4,19 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 
-import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformRequest;
-import org.ihtsdo.otf.authoringtemplate.service.TransformationStatus;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 
 public class TemplateTransformation {
 
+	private String transformationId;
+	private TransformationStatus status;
 	private String branchPath;
 	private String destinationTemplate;
-	private TemplateTransformRequest transformRequest;
-	private String transformationId;
-	private Date createdDate;
-	private TransformationStatus status;
 	private String errorMsg;
+	private Date createdDate;
 	private Date lastUpdatedDate;
+	private TemplateTransformRequest transformRequest;
 
 	public TemplateTransformation(String branchPath, String destinationTemplate,
 			TemplateTransformRequest transformRequest) {
