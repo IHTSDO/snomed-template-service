@@ -3,11 +3,13 @@ package org.ihtsdo.otf.authoringtemplate.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -134,8 +136,8 @@ public class ConceptTemplateTransformServiceTest {
 		
 		mockTerminologyServerClient();
 		ConceptPojo conceptPojo = createConceptPojo();
-		when(terminologyServerClient.getConcept(anyString(), anyString()))
-		.thenReturn(conceptPojo);
+		when(terminologyServerClient.searchConcepts(anyString(),any()))
+		.thenReturn(Arrays.asList(conceptPojo));
 		
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);
@@ -150,8 +152,8 @@ public class ConceptTemplateTransformServiceTest {
 			try {
 				TransformationResult transformationResult = future.get();
 				transformed.addAll(transformationResult.getTransformedConcepts());
-				for (String key : transformationResult.getErrors().keySet()) {
-					errorMsgMap.put(key, transformationResult.getErrors().get(key));
+				for (String key : transformationResult.getFailures().keySet()) {
+					errorMsgMap.put(key, transformationResult.getFailures().get(key));
 				}
 			} catch (InterruptedException | ExecutionException e) {
 				fail("No exceptions should be thrown");

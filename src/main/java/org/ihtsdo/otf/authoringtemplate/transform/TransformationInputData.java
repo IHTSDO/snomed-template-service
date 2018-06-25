@@ -19,6 +19,7 @@ public class TransformationInputData {
 	private ConceptTemplate destinationTemplate;
 	private Map<String, String> conceptFsnMap;
 	private String inactivationReason;
+	private Map<String, Set<String>> sourceAttributeTypeSlotMap;
 
 	public void setSynonymTemplates(Set<String> synonymTemplates) {
 		this.synonymTemplates = synonymTemplates;
@@ -72,7 +73,7 @@ public class TransformationInputData {
 		this.destinationTemplate = destination;
 	}
 
-	public ConceptTemplate getDestination() {
+	public ConceptTemplate getDestinationTemplate() {
 		return destinationTemplate;
 	}
 
@@ -95,4 +96,13 @@ public class TransformationInputData {
 	public void setInactivationReason(String inactivationReason) {
 		this.inactivationReason = inactivationReason;
 	}
+
+	public void setSourceAttributeTypeSlotMap(Map<String, Set<String>> attributeTypeSlotMap) {
+		sourceAttributeTypeSlotMap = attributeTypeSlotMap;
+	}
+
+	public Map<String, Set<String>> getSourceAttributeTypeSlotMap() {
+		return sourceAttributeTypeSlotMap;
+	}
+	
 }

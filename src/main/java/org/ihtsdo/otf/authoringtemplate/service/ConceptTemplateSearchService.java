@@ -2,6 +2,7 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,12 +14,15 @@ import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.domain.Description;
+import org.ihtsdo.otf.authoringtemplate.domain.DescriptionType;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleDescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
@@ -64,11 +68,13 @@ public class ConceptTemplateSearchService {
 			}
 			try {
 				ConceptTemplate conceptTemplate = templateService.loadOrThrow(templateName);
+				//parse logical
+				LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
 				if (lexicalMatch != null) {
-					Set<String> logicalResult = performLogicalSearch(conceptTemplate, branchPath, true, stated);
-					return performLexicalSearch(conceptTemplate, logicalResult, branchPath, lexicalMatch);
+					Set<String> logicalResult = performLogicalSearch(conceptTemplate, logical, branchPath, true, stated);
+					return performLexicalSearch(conceptTemplate, logical, logicalResult, branchPath, lexicalMatch);
 				} else {
-					return performLogicalSearch(conceptTemplate, branchPath, logicalMatch, stated);
+					return performLogicalSearch(conceptTemplate, logical, branchPath, logicalMatch, stated);
 				}
 		} catch (IOException e) {
 			throw new ServiceException("Failed to load tempate " + templateName);
@@ -76,11 +82,10 @@ public class ConceptTemplateSearchService {
 		
 	}
 	
-	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate, 
+	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate, LogicalTemplate logical, 
 			Set<String> logicalMatched, String branchPath, boolean lexicalMatch) throws ServiceException {
 		
 		Set<String> result = new HashSet<>();
-		// TODO search by lexical template
 		List<Description> descriptions = conceptTemplate.getConceptOutline().getDescriptions();
 		List<Pattern> patterns = new ArrayList<>();
 		for (Description description : descriptions) {
@@ -88,34 +93,52 @@ public class ConceptTemplateSearchService {
 				patterns.add(TemplateUtil.constructTermPattern(description.getTermTemplate()));
 			}
 		}
+		Set<String> fsnTempaltes = TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN);
+		Set<String> synoymTempaltes = TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM);
+		Map<Pattern, List<String>> fsnPaterrnSlotsMap = TemplateUtil.compilePatterns(fsnTempaltes);
+		Map<Pattern, List<String>> synoymPaterrnSlotsMap = TemplateUtil.compilePatterns(synoymTempaltes);
+		Map<String, Set<String>> attributeTypeSlotsMap = TemplateUtil.getAttributeTypeSlotMap(logical);
 		
 		try {
-			Map<String, Set<SimpleDescriptionPojo>> descriptionsMap = terminologyClientFactory.getClient()
-					.getDescriptions(branchPath, logicalMatched);
-			for (String conceptId : descriptionsMap.keySet()) {
-				List<SimpleDescriptionPojo> activeDescriptions = descriptionsMap.get(conceptId)
+			
+			Collection<ConceptPojo> concepts = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<>(logicalMatched));
+			for (ConceptPojo conceptPojo : concepts) {
+				List<String> synoyms = conceptPojo.getDescriptions()
 						.stream()
 						.filter(d->d.isActive())
+						.filter(d -> d.getType().equals(DescriptionType.SYNONYM.name()))
+						.map(d -> d.getTerm())
+						.collect(Collectors.toList());
+				
+				List<String> fsns = conceptPojo.getDescriptions()
+						.stream()
+						.filter(d->d.isActive())
+						.filter(d -> d.getType().equals(DescriptionType.FSN.name()))
+						.map(d -> d.getTerm())
 						.collect(Collectors.toList());
 				
 				boolean isMatched = false;
-				for (Pattern pattern : patterns) {
-					for (SimpleDescriptionPojo descriptionPojo : activeDescriptions) {
-						if (pattern.matcher(descriptionPojo.getTerm()).matches()) {
-							isMatched = true;
-							break;
-						} else {
-							isMatched = false;
-						}
-					}
+				for (Pattern pattern : fsnPaterrnSlotsMap.keySet()) {
+					isMatched = isPatternMatched(pattern, fsns);
 					if (!isMatched) {
 						break;
-					}
+					} 
+				}
+				for (Pattern pattern : synoymPaterrnSlotsMap.keySet()) {
+					isMatched = isPatternMatched(pattern, synoyms);
+					if (!isMatched) {
+						break;
+					} 
+				}
+				//perform slot checking
+				Map<String, ConceptMiniPojo> slotValueMap = TemplateUtil.getAttributeSlotValueMap(attributeTypeSlotsMap, conceptPojo);
+				for (String slot : slotValueMap.keySet()) {
+					System.out.println("Slot=" + slot  + " value =" + slotValueMap.get(slot).getFsn());
 				}
 				if (lexicalMatch && isMatched) {
-					result.add(conceptId);
+					result.add(conceptPojo.getConceptId());
 				} else if (!lexicalMatch && !isMatched){
-					result.add(conceptId);
+					result.add(conceptPojo.getConceptId());
 				}
 			}
 			LOGGER.info("Logical search results={} and lexical search results={}", logicalMatched.size(), result.size());
@@ -125,11 +148,59 @@ public class ConceptTemplateSearchService {
 		}
 		
 	}
+	
+	private void oldMethod() throws RestClientException {
+		String branchPath = null;
+		Collection<String> logicalMatched = null;
+		Map<String, Set<SimpleDescriptionPojo>> descriptionsMap = terminologyClientFactory.getClient()
+				.getDescriptions(branchPath, logicalMatched);
+		for (String conceptId : descriptionsMap.keySet()) {
+			List<SimpleDescriptionPojo> activeDescriptions = descriptionsMap.get(conceptId)
+					.stream()
+					.filter(d->d.isActive())
+					.collect(Collectors.toList());
+			
+			Set<String> fsns = activeDescriptions.stream()
+					.filter(d -> d.getTypeId().equals(Constants.FSN_TYPE_ID))
+					.map(d -> d.getTerm())
+					.collect(Collectors.toSet());
+			
+			List<String> synoyms = activeDescriptions.stream()
+					.filter(d -> !d.getTypeId().equals(Constants.FSN_TYPE_ID))
+					.map(d -> d.getTerm())
+					.collect(Collectors.toList());
+			
+			boolean isMatched = false;
+			Map<Pattern, List<String>> fsnPaterrnSlotsMap = null;
+			for (Pattern pattern : fsnPaterrnSlotsMap.keySet()) {
+				isMatched = isPatternMatched(pattern, fsns);
+				if (!isMatched) {
+					break;
+				} 
+			}
+			Map<Pattern, List<String>> synoymPaterrnSlotsMap = null;
+			for (Pattern pattern : synoymPaterrnSlotsMap.keySet()) {
+				isMatched = isPatternMatched(pattern, synoyms);
+				if (!isMatched) {
+					break;
+				} 
+			}
+		}
+		
+	}
+	
+	private boolean isPatternMatched(Pattern pattern, Collection<String> terms) {
+		for (String term : terms) {
+			if (pattern.matcher(term).matches()) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-	private Set<String> performLogicalSearch(ConceptTemplate conceptTemplate,
+	private Set<String> performLogicalSearch(ConceptTemplate conceptTemplate, LogicalTemplate logical,
 			String branchPath, boolean logicalMatch, boolean stated) throws ServiceException {
 		try {
-			LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
 			List<String> focusConcepts = logical.getFocusConcepts();
 			String domainEcl = conceptTemplate.getDomain();
 			if (domainEcl == null || domainEcl.isEmpty()) {
@@ -248,7 +319,6 @@ public class ConceptTemplateSearchService {
 			if (groupCounter++ > 0) {
 				queryBuilder.append(",");
 			}
-			
 			if (group.getCardinalityMin() != null) {
 				queryBuilder.append("[" + group.getCardinalityMin() + CARDINALITY_SEPARATOR);
 			}

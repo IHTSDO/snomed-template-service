@@ -14,12 +14,12 @@ import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 import org.ihtsdo.otf.authoringtemplate.transform.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateTransformationResultService;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -155,7 +155,7 @@ public class TemplateController {
 	
 	@RequestMapping(value = "/templates/transform/{transformationId}/results/", method = RequestMethod.GET)
 	@ResponseBody
-	public List<ConceptPojo> getTransformationResults(@PathVariable String transformationId) throws ServiceException {
+	public TransformationResult getTransformationResults(@PathVariable String transformationId) throws ServiceException {
 		return resultService.getTransformationResults(transformationId);
 	}
 }

@@ -8,31 +8,30 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 
 public class TransformationResult {
 	
-	private List<ConceptPojo> transformedConcepts;
-	private Map<String, String> errors;
+	private List<ConceptPojo> concepts;
+	private Map<String, String> failures;
 	
 	public TransformationResult() {
-		transformedConcepts = new ArrayList<>();
+		concepts = new ArrayList<>();
 	}
 	
 	public void addTransformedConcept(ConceptPojo transformed) {
-		transformedConcepts.add(transformed);
+		concepts.add(transformed);
 	}
 
-	public void setErrors(Map<String, String> errors) {
-		this.errors = errors;
+	public void setErrors(Map<String, String> failures) {
+		this.failures = failures;
 	}
 
 	public List<ConceptPojo> getTransformedConcepts() {
-		return transformedConcepts;
+		return concepts;
 	}
 
 	public void setTransformedConcepts(List<ConceptPojo> transformedConcepts) {
-		this.transformedConcepts = transformedConcepts;
+		this.concepts = transformedConcepts;
 	}
 
-	public Map<String, String> getErrors() {
-		return errors;
+	public Map<String, String> getFailures() {
+		return failures;
 	}
-	
 }

@@ -10,16 +10,13 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,8 +39,6 @@ public class TemplateTransformationResultService {
 
 	private static final String STATUS_JSON = "status.json";
 
-	private static final String FAILURES_JSON = "failures.json";
-	
 	private Gson prettyJson;
 	
 	public TemplateTransformationResultService(@Value("${store.root-directory}") String storeRootDirectoryPath) {
@@ -51,18 +46,17 @@ public class TemplateTransformationResultService {
 		prettyJson = new GsonBuilder().setPrettyPrinting().create();
 	}
 
-	public List<ConceptPojo> getResults(TemplateTransformation transformation) throws ServiceException {
-		List<ConceptPojo> results = new ArrayList<>();
+	public TransformationResult getResult(TemplateTransformation transformation) throws ServiceException {
+		TransformationResult result = null;
 		File resultFile = getOrCreateTransformation(transformation, RESULTS_JSON);
 		 try (Reader reader = new InputStreamReader(new FileInputStream(resultFile), "UTF-8")){
-	            ConceptPojo pojo = prettyJson.fromJson(reader, ConceptPojo.class);
-	            results.add(pojo);
+	            result = prettyJson.fromJson(reader, TransformationResult.class);
 	      } catch (Exception e) {
 			String msg = "Failed to get resutls for transformation " + transformation;
 			logger.error(msg, e);
 			throw new ServiceException(msg, e);
 		} 
-		return results;
+		return result;
 	}
 	
 	private File getTransformationDirById(String transformationId) throws ServiceException {
@@ -84,13 +78,12 @@ public class TemplateTransformationResultService {
 		return new File(rootDir.getPath().toString() + "/" + relativePath);
 	}
 	
-	public void writeResultsToFile(TemplateTransformation transformation, List<ConceptPojo> results) throws ServiceException {
-		if (results != null && !results.isEmpty()) {
+	public void writeResultsToFile(TemplateTransformation transformation, TransformationResult result) throws ServiceException {
+		if (result != null) {
 			File resultFile = getOrCreateTransformation(transformation, RESULTS_JSON);
+			
 			try (Writer writer = new FileWriter(resultFile)) {
-				for (ConceptPojo pojo : results) {
-					writer.append(prettyJson.toJson(pojo));
-				}
+				prettyJson.toJson(result, writer);
 			} catch (Exception e) {
 				throw new ServiceException("Failed to write results to disk for transformation id " + transformation.getTransformationId(), e);
 			}
@@ -120,20 +113,10 @@ public class TemplateTransformationResultService {
 		}
 	}
 
-	public List<ConceptPojo> getTransformationResults(String transformationId) throws ServiceException {
-		File transformationFile = getTransformationDirById(transformationId);
-		logger.info("Transformation dir found " + transformationFile.getAbsolutePath());
-		List<ConceptPojo> results = new ArrayList<>();
-		File resultFile = getFile(transformationFile, RESULTS_JSON);
-		 try (Reader reader = new InputStreamReader(new FileInputStream(resultFile), Constants.UTF_8)){
-	            ConceptPojo pojo = prettyJson.fromJson(reader, ConceptPojo.class);
-	            results.add(pojo);
-	      } catch (Exception e) {
-			String msg = "Failed to get resutls for transformation id " + transformationId;
-			logger.error(msg, e);
-			throw new ServiceException(msg, e);
-		} 
-		return results;
+	public TransformationResult getTransformationResults(String transformationId) throws ServiceException {
+		TemplateTransformation transformation = getTemplateTransformation(transformationId);
+		logger.info("Found transformtion " + transformation);
+		return getResult(transformation);
 	}
 	
 	
@@ -156,14 +139,4 @@ public class TemplateTransformationResultService {
 		}
 		return file;
 	}
-
-	public void writeFailures(TemplateTransformation transformation, Map<String, String> errorMsgMap) throws ServiceException {
-		File failureReport = getOrCreateTransformation(transformation, FAILURES_JSON);
-		try (Writer writer = new FileWriter(failureReport)) {
-			prettyJson.toJson(errorMsgMap);
-		} catch (Exception e) {
-			throw new ServiceException("Failed to write failure report to disk for transformation id " + transformation.getTransformationId(), e);
-		}
-	}
-	
 }
