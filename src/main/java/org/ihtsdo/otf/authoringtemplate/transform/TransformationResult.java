@@ -19,15 +19,15 @@ public class TransformationResult {
 		concepts.add(transformed);
 	}
 
-	public void setErrors(Map<String, String> failures) {
+	public void setFailures(Map<String, String> failures) {
 		this.failures = failures;
 	}
 
-	public List<ConceptPojo> getTransformedConcepts() {
+	public List<ConceptPojo> getConcepts() {
 		return concepts;
 	}
 
-	public void setTransformedConcepts(List<ConceptPojo> transformedConcepts) {
+	public void setConcepts(List<ConceptPojo> transformedConcepts) {
 		this.concepts = transformedConcepts;
 	}
 

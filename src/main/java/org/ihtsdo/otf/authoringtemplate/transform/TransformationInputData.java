@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
 import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 
 public class TransformationInputData {
 
@@ -17,7 +18,7 @@ public class TransformationInputData {
 	private LogicalTemplate sourceLogicalTemplate;
 	private String branchPath;
 	private ConceptTemplate destinationTemplate;
-	private Map<String, String> conceptFsnMap;
+	private Map<String, SimpleConceptPojo> conceptIdMap;
 	private String inactivationReason;
 	private Map<String, Set<String>> sourceAttributeTypeSlotMap;
 
@@ -85,12 +86,12 @@ public class TransformationInputData {
 		return this.inactivationReason;
 	}
 
-	public void setConceptFsnMap(Map<String, String> conceptFsnMap) {
-		this.conceptFsnMap = conceptFsnMap;
+	public void setConceptIdMap(Map<String, SimpleConceptPojo> conceptIdMap) {
+		this.conceptIdMap = conceptIdMap;
 	}
 
-	public Map<String, String> getConceptFsnMap() {
-		return conceptFsnMap;
+	public Map<String, SimpleConceptPojo> getConceptIdMap() {
+		return conceptIdMap;
 	}
 
 	public void setInactivationReason(String inactivationReason) {

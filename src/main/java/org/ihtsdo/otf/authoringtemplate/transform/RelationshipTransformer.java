@@ -14,20 +14,21 @@ import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 
 public class RelationshipTransformer {
 	
 	private ConceptPojo conceptToTransform;
 	private ConceptOutline conceptOutline;
 	private Map<String, ConceptMiniPojo> attributeSlotMap;
-	private Map<String, String> conceptFsnMap;
+	private Map<String, SimpleConceptPojo> conceptIdMap;
 
 	public RelationshipTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
-			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, String> conceptFsnMap) {
+			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, SimpleConceptPojo> conceptIdMap) {
 		this.conceptToTransform = conceptToTransform;
 		this.conceptOutline = conceptOutline;
 		this.attributeSlotMap = attributeSlotMap;
-		this.conceptFsnMap = conceptFsnMap;
+		this.conceptIdMap = conceptIdMap;
 	}
 
 	public void tranform() {
@@ -174,11 +175,14 @@ public class RelationshipTransformer {
 	}
 	
 	private ConceptMiniPojo constructConceptMiniPojo(String conceptId) {
-		ConceptMiniPojo pojo = new ConceptMiniPojo();
-		if (conceptId != null) {
-			pojo.setConceptId(conceptId);
-			pojo.setFsn(conceptFsnMap.get(conceptId));
+		ConceptMiniPojo miniPojo = new ConceptMiniPojo();
+		if (conceptId != null && conceptIdMap.get(conceptId) != null) {
+			SimpleConceptPojo concept = conceptIdMap.get(conceptId);
+			miniPojo.setConceptId(conceptId);
+			miniPojo.setFsn(concept.getFsn().getTerm());
+			miniPojo.setModuleId(concept.getModuleId());
+			miniPojo.setDefinitionStatus(concept.getDefinitionStatus());
 		}
-		return pojo;
+		return miniPojo;
 	}
 }

@@ -21,7 +21,6 @@ import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleDescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
@@ -131,10 +130,7 @@ public class ConceptTemplateSearchService {
 					} 
 				}
 				//perform slot checking
-				Map<String, ConceptMiniPojo> slotValueMap = TemplateUtil.getAttributeSlotValueMap(attributeTypeSlotsMap, conceptPojo);
-				for (String slot : slotValueMap.keySet()) {
-					System.out.println("Slot=" + slot  + " value =" + slotValueMap.get(slot).getFsn());
-				}
+				//Map<String, ConceptMiniPojo> slotValueMap = TemplateUtil.getAttributeSlotValueMap(attributeTypeSlotsMap, conceptPojo);
 				if (lexicalMatch && isMatched) {
 					result.add(conceptPojo.getConceptId());
 				} else if (!lexicalMatch && !isMatched){

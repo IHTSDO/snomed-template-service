@@ -151,7 +151,7 @@ public class ConceptTemplateTransformServiceTest {
 		for (Future<TransformationResult> future : results) {
 			try {
 				TransformationResult transformationResult = future.get();
-				transformed.addAll(transformationResult.getTransformedConcepts());
+				transformed.addAll(transformationResult.getConcepts());
 				for (String key : transformationResult.getFailures().keySet()) {
 					errorMsgMap.put(key, transformationResult.getFailures().get(key));
 				}

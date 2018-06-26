@@ -37,6 +37,7 @@ import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +77,7 @@ public class ConceptTemplateTransformService {
 		for (Future<TransformationResult> future : results) {
 			try {
 				TransformationResult transformationResult = future.get();
-				transformed.addAll(transformationResult.getTransformedConcepts());
+				transformed.addAll(transformationResult.getConcepts());
 				for (String key : transformationResult.getFailures().keySet()) {
 					errorMsgMap.put(key, transformationResult.getFailures().get(key));
 				}
@@ -94,8 +95,8 @@ public class ConceptTemplateTransformService {
 			transformation.setStatus(TransformationStatus.COMPLETED);
 		}
 		TransformationResult finalResult = new TransformationResult();
-		finalResult.setTransformedConcepts(transformed);
-		finalResult.setErrors(errorMsgMap);
+		finalResult.setConcepts(transformed);
+		finalResult.setFailures(errorMsgMap);
 		resultService.writeResultsToFile(transformation, finalResult);
 		resultService.update(transformation);
 	}
@@ -149,15 +150,15 @@ public class ConceptTemplateTransformService {
 			ConceptTemplate source = templateService.loadOrThrow(transformRequest.getSourceTemplate());
 			ConceptTemplate destination = templateService.loadOrThrow(destinationTemplate);
 			validate(source, destination);
-			Map<String, String> conceptFsnMap = null;
+			Map<String, SimpleConceptPojo> conceptMap = null;
 			try {
-				conceptFsnMap = getDestinationConceptFsnMap(branchPath, restClient, destination);
+				conceptMap = getDestinationConceptsMap(branchPath, restClient, destination);
 			} catch (RestClientException e) {
-				throw new ServiceException("Failed to get FSNs" , e);
+				throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
 			}
 			final TransformationInputData input = constructTransformationInputData(source, destination);
 			input.setBranchPath(branchPath);
-			input.setConceptFsnMap(conceptFsnMap);
+			input.setConceptIdMap(conceptMap);
 			List<String> batchJob = null;
 			int counter=0;
 			for (String conceptId : transformRequest.getConceptsToTransform()) {
@@ -192,7 +193,7 @@ public class ConceptTemplateTransformService {
 		String branchPath = input.getBranchPath();
 		String inactivationReason = input.getInactivationReason();
 		Map<String, String> errors = new HashMap<>();
-		result.setErrors(errors);
+		result.setFailures(errors);
 		List<ConceptPojo> conceptPojos = null;
 		try {
 			conceptPojos = restClient.searchConcepts(branchPath, conceptIds);
@@ -211,20 +212,19 @@ public class ConceptTemplateTransformService {
 				missing.remove(pojo.getConceptId());
 				Map<String, String> slotValueMap = TemplateUtil.getSlotValueMap(input.getFsnPatterns(), input.getSynonymPatterns(), pojo);
 				Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getSourceAttributeTypeSlotMap(), pojo);
-				Map<String, String> conceptFsnMap = input.getConceptFsnMap();
-				ConceptPojo transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), slotValueMap, attributeSlotMap, inactivationReason, conceptFsnMap);
+				Map<String, SimpleConceptPojo> conceptIdmap = input.getConceptIdMap();
+				ConceptPojo transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), slotValueMap, attributeSlotMap, inactivationReason, conceptIdmap);
 				result.addTransformedConcept(transformed);
-				
 			}
-			for (String conceptid : missing) {
-				errors.put(conceptid, String.format("Failed to find concept %s from branch %s ", conceptIds, branchPath));
+			for (String conceptId : missing) {
+				errors.put(conceptId, String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
 			}
 		}
 		return result;
 	}
 	
-	private Map<String, String> getDestinationConceptFsnMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
-		Set<String> conceptIds = new HashSet<>();
+	private Map<String, SimpleConceptPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
+		List<String> conceptIds = new ArrayList<>();
 		for (Relationship rel : destination.getConceptOutline().getRelationships()) {
 			if (rel.getType() != null) {
 				conceptIds.add(rel.getType().getConceptId());
@@ -233,7 +233,13 @@ public class ConceptTemplateTransformService {
 				conceptIds.add(rel.getTarget().getConceptId());
 			}
 		}
-		return client.getFsns(branchPath, conceptIds);
+		LOGGER.info("Load concepts " + conceptIds  + " from branch " + branchPath);
+		Set<SimpleConceptPojo> results = client.getConcepts(branchPath, null, null, conceptIds, conceptIds.size());
+		Map<String, SimpleConceptPojo> conceptIdMap = new HashMap<>();
+		for (SimpleConceptPojo pojo : results) {
+			conceptIdMap.put(pojo.getId(), pojo);
+		}
+		return conceptIdMap;
 	}
 
 	private Set<String> getSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
@@ -280,7 +286,7 @@ public class ConceptTemplateTransformService {
 										 Map<String, String> slotValueMap, 
 										 Map<String, ConceptMiniPojo> attributeSlotMap, 
 										 String inactivationReason,
-										 Map<String,String> conceptFsnMap) {
+										 Map<String, SimpleConceptPojo> conceptIdMap) {
 		ConceptPojo transformed = conceptPojo;
 		org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus definitionStatus = org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.PRIMITIVE;
 		if (DefinitionStatus.FULLY_DEFINED == conceptOutline.getDefinitionStatus()) {
@@ -289,7 +295,7 @@ public class ConceptTemplateTransformService {
 		transformed.setDefinitionStatus(definitionStatus);
 		DescriptionTransformer transformer = new DescriptionTransformer(transformed, conceptOutline, slotValueMap, inactivationReason);
 		transformer.transform();
-		RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptOutline, attributeSlotMap, conceptFsnMap);
+		RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptOutline, attributeSlotMap, conceptIdMap);
 		relationShipTransformer.tranform();
 		return transformed;
 	}
