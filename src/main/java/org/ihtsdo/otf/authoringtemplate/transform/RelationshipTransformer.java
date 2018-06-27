@@ -1,11 +1,13 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
@@ -32,7 +34,7 @@ public class RelationshipTransformer {
 		this.conceptIdMap = conceptIdMap;
 	}
 
-	public void tranform() throws ServiceException {
+	public void transform() throws ServiceException {
 		//map relationship by group
 		List<RelationshipPojo> statedRels = conceptToTransform.getRelationships().stream()
 				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
@@ -43,7 +45,7 @@ public class RelationshipTransformer {
 			if (existingRelGroupMap.get(pojo.getGroupId()) == null) {
 				existingRelGroupMap.put(pojo.getGroupId(), new HashMap<>());
 			}
-			String key = pojo.getTarget().getConceptId() + pojo.getType().getConceptId();
+			String key = pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId();
 			existingRelGroupMap.get(pojo.getGroupId()).put(key, pojo);
 		}
 
@@ -53,19 +55,24 @@ public class RelationshipTransformer {
 				newRelGroupMap.put(rel.getGroupId(), new HashMap<>());
 			}
 			if (rel.getTarget() != null) {
-				String key = rel.getTarget().getConceptId() + rel.getType().getConceptId();
+				String key = rel.getTarget().getConceptId() + "_"  + rel.getType().getConceptId();
 				newRelGroupMap.get(rel.getGroupId()).put(key, rel);
 			} else {
 				//handle relationship with slot
 				if (rel.getTargetSlot() != null) {
-					String key = rel.getTargetSlot().getSlotName() + rel.getType().getConceptId();
+					String slot = rel.getTargetSlot().getSlotName();
+					ConceptMiniPojo target = attributeSlotMap.get(slot);
+					if (target == null) {
+						throw new ServiceException(" Fail to find attribute slot value " + slot);
+					}
+					String key = target.getConceptId() + "_" + rel.getType().getConceptId();
 					newRelGroupMap.get(rel.getGroupId()).put(key, rel);
 				}
 			}
 		}
 		
 		Set<Set<RelationshipPojo>> megedSet = constructRelationshipSet(existingRelGroupMap, newRelGroupMap);
-		Set<RelationshipPojo> relationships = new HashSet<>();
+		List<RelationshipPojo> relationships = new ArrayList<>();
 		for (Set<RelationshipPojo> roleGroup : megedSet ) {
 			int roleGrp = getRoleGroup(roleGroup);
 			for (RelationshipPojo pojo : roleGroup) {
@@ -88,7 +95,9 @@ public class RelationshipTransformer {
 				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 				.collect(Collectors.toList());
 		relationships.addAll(inferred);
-		conceptToTransform.setRelationships(relationships);
+		Set<RelationshipPojo> rels = new TreeSet<RelationshipPojo>( new RelationshipPojoComparator());
+		rels.addAll(relationships);
+		conceptToTransform.setRelationships(rels);
 	}
 	
 	private int getRoleGroup(Set<RelationshipPojo> roleGroup) {
@@ -121,7 +130,7 @@ public class RelationshipTransformer {
 		for (Map<String, RelationshipPojo> relMap : existingRelGroupMap.values()) {
 			for (String key : relMap.keySet()) {
 				if (!relMapByTargetAndType.containsKey(key)) {
-					relMapByTargetAndType.put(key, new HashSet<>());
+					relMapByTargetAndType.put(key, new HashSet<RelationshipPojo>());
 				}
 				relMapByTargetAndType.get(key).add(relMap.get(key));
 			}
@@ -135,7 +144,7 @@ public class RelationshipTransformer {
 		for (Map<String, Relationship> relMap : newRelGroupMap.values()) {
 			for (String key : relMap.keySet()) {
 				if (!newRelMapByTargetAndType.containsKey(key)) {
-					newRelMapByTargetAndType.put(key, new HashSet<>());
+					newRelMapByTargetAndType.put(key, new HashSet<Relationship>());
 				}
 				newRelMapByTargetAndType.get(key).add(relMap.get(key));
 			}
@@ -192,5 +201,30 @@ public class RelationshipTransformer {
 			miniPojo.setDefinitionStatus(concept.getDefinitionStatus());
 		}
 		return miniPojo;
+	}
+	
+	private static class RelationshipPojoComparator implements Comparator<RelationshipPojo> {
+
+		@Override
+		public int compare(RelationshipPojo r1, RelationshipPojo r2) {
+			if (r1.getSourceId().equals(r2.getSourceId())) {
+				if (!r1.getCharacteristicType().equals(r2.getCharacteristicType())) {
+					return  r1.getCharacteristicType().compareTo(r2.getCharacteristicType());
+				}
+				if (r1.getGroupId() != r2.getGroupId()) {
+					return String.valueOf(r1.getGroupId()).compareTo(String.valueOf(r2.getGroupId()));
+				}
+				if (!r1.getTarget().getConceptId().equals(r2.getTarget().getConceptId())) {
+					return r1.getTarget().getConceptId().compareTo(r2.getTarget().getConceptId());
+				}
+				if (!r1.getType().getConceptId().equals(r2.getType().getConceptId())) {
+					return r1.getType().getConceptId().compareTo(r2.getType().getConceptId());
+				}
+				
+				return Boolean.valueOf(r1.isActive()).compareTo(Boolean.valueOf(r1.isActive()));
+			} else {
+				return r1.getSourceId().compareTo(r2.getSourceId());
+			}
+		}
 	}
 }

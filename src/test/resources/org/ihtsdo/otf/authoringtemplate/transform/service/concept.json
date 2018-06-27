@@ -1,0 +1,262 @@
+{
+  "effectiveTime": "20160131",
+  "moduleId": "900000000000207008",
+  "active": true,
+  "released": true,
+  "conceptId": "712839001",
+  "fsn": "Allergy to almond (disorder)",
+  "definitionStatus": "FULLY_DEFINED",
+  "preferredSynonym": "Allergy to almond",
+  "descriptions": [
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "3286073016",
+      "conceptId": "712839001",
+      "type": "FSN",
+      "lang": "en",
+      "term": "Allergy to almond (disorder)",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "3286076012",
+      "conceptId": "712839001",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Allergy to almond",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397772028",
+      "type": {
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20060131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "420134006",
+        "fsn": "Propensity to adverse reactions (disorder)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397705027",
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20170131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6750355023",
+      "type": {
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "91934008",
+        "fsn": "Allergy to nut (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397757027",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "256350002",
+        "fsn": "Almond (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397706026",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "256350002",
+        "fsn": "Almond (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 2,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397753028",
+      "type": {
+        "conceptId": "255234002",
+        "fsn": "After (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "609327009",
+        "fsn": "Allergic sensitization (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "712839001",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397794020",
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20170131",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "relationshipId": "6397704028",
+      "type": {
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "91934008",
+        "fsn": "Allergy to nut (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397707024",
+      "type": {
+        "conceptId": "255234002",
+        "fsn": "After (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "609327009",
+        "fsn": "Allergic sensitization (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "712839001",
+      "groupId": 2,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    }
+  ]
+}
