@@ -2,6 +2,7 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -165,9 +166,17 @@ public class ConceptTemplateTransformServiceTest {
 			System.out.println(gson.toJson(pojo));
 		}
 		assertEquals(1, transformed.size());
-		assertEquals(4, transformed.get(0).getRelationships().size());
+		ConceptPojo concept = transformed.get(0);
+		assertEquals(6, concept.getRelationships().size());
+		
+		for ( RelationshipPojo pojo : concept.getRelationships()) {
+			assertNotNull("Target should not be null", pojo.getTarget());
+			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
+			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
+		}
+		
 	}
-	
+
 	private ConceptTemplate createConceptTemplate() {
 		ConceptTemplate template = new ConceptTemplate();
 		ConceptOutline conceptOutline = new ConceptOutline();
@@ -222,8 +231,10 @@ public class ConceptTemplateTransformServiceTest {
 
 	private Set<RelationshipPojo> createRelationshipPojos() {
 		Set<RelationshipPojo> pojos = new HashSet<>();
-		RelationshipPojo rel = new RelationshipPojo(0, "116680003", "654321", "900000000000010007");
-		pojos.add(rel);
+		RelationshipPojo rel1 = new RelationshipPojo(0, "116680003", "654321", "STATED_RELATIONSHIP");
+		pojos.add(rel1);
+		RelationshipPojo rel2 = new RelationshipPojo(0, "246075003", "6543217", "STATED_RELATIONSHIP");
+		pojos.add(rel2);
 		return pojos;
 	}
 

@@ -4,3 +4,4 @@ target
 snomed-templates
 application-*.properties
 *.sh
+store

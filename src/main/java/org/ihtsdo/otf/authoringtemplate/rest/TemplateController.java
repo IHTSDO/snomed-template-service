@@ -156,6 +156,6 @@ public class TemplateController {
 	@RequestMapping(value = "/templates/transform/{transformationId}/results/", method = RequestMethod.GET)
 	@ResponseBody
 	public TransformationResult getTransformationResults(@PathVariable String transformationId) throws ServiceException {
-		return resultService.getTransformationResults(transformationId);
+		return resultService.getResult(transformationId);
 	}
 }

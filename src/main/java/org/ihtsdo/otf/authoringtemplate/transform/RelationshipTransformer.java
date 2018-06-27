@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
 import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
@@ -31,7 +32,7 @@ public class RelationshipTransformer {
 		this.conceptIdMap = conceptIdMap;
 	}
 
-	public void tranform() {
+	public void tranform() throws ServiceException {
 		//map relationship by group
 		List<RelationshipPojo> statedRels = conceptToTransform.getRelationships().stream()
 				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
@@ -113,7 +114,7 @@ public class RelationshipTransformer {
 	}
 
 	private Set<Set<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
-			Map<Integer, Map<String, Relationship>> newRelGroupMap) {
+			Map<Integer, Map<String, Relationship>> newRelGroupMap) throws ServiceException {
 		Set<Set<String>> existingSet = new HashSet<>();
 		existingRelGroupMap.values().stream().forEach(r -> existingSet.add(r.keySet()));
 		Map<String, Set<RelationshipPojo>> relMapByTargetAndType = new HashMap<>();
@@ -157,7 +158,7 @@ public class RelationshipTransformer {
 		return mergedSet;
 	}
 
-	private RelationshipPojo constructRelationshipPojo(Relationship relationship, Map<String, ConceptMiniPojo> attributeSlotMap) {
+	private RelationshipPojo constructRelationshipPojo(Relationship relationship, Map<String, ConceptMiniPojo> attributeSlotMap) throws ServiceException {
 		RelationshipPojo pojo = new RelationshipPojo();
 		pojo.setActive(true);
 		pojo.setCharacteristicType(relationship.getCharacteristicType());
@@ -167,7 +168,11 @@ public class RelationshipTransformer {
 			pojo.setTarget(constructConceptMiniPojo(relationship.getTarget().getConceptId()));
 		} else {
 			if (relationship.getTargetSlot() != null) {
-				pojo.setTarget(attributeSlotMap.get(relationship.getTargetSlot()));
+				ConceptMiniPojo target = attributeSlotMap.get(relationship.getTargetSlot().getSlotName());
+				if (target == null) {
+					throw new ServiceException(" Fail to find attribute slot value " + relationship.getTargetSlot().getSlotName());
+				}
+				pojo.setTarget(target);
 			} 
 		}
 		pojo.setType(constructConceptMiniPojo(relationship.getType().getConceptId()));
@@ -175,10 +180,13 @@ public class RelationshipTransformer {
 	}
 	
 	private ConceptMiniPojo constructConceptMiniPojo(String conceptId) {
+		if (conceptId == null || conceptId.isEmpty()) {
+			throw new IllegalArgumentException("Concept id can't be null or empty");
+		}
 		ConceptMiniPojo miniPojo = new ConceptMiniPojo();
-		if (conceptId != null && conceptIdMap.get(conceptId) != null) {
+		miniPojo.setConceptId(conceptId);
+		if (conceptIdMap.get(conceptId) != null) {
 			SimpleConceptPojo concept = conceptIdMap.get(conceptId);
-			miniPojo.setConceptId(conceptId);
 			miniPojo.setFsn(concept.getFsn().getTerm());
 			miniPojo.setModuleId(concept.getModuleId());
 			miniPojo.setDefinitionStatus(concept.getDefinitionStatus());

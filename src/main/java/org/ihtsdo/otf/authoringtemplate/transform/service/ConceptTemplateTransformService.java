@@ -41,6 +41,7 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -57,7 +58,9 @@ public class ConceptTemplateTransformService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateTransformService.class);
 
-	private static final int BATCH_SIZE = 10;
+	
+	@Value("${transformation.batch.max}")
+	private int batchMax;
 	
 	@Async
 	public void transformAsynchnously(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
@@ -167,7 +170,7 @@ public class ConceptTemplateTransformService {
 				}
 				batchJob.add(conceptId);
 				counter++;
-				if (counter % BATCH_SIZE == 0 || counter == transformRequest.getConceptsToTransform().size()) {
+				if (counter % batchMax == 0 || counter == transformRequest.getConceptsToTransform().size()) {
 					//do work
 					final List<String> task = batchJob;
 					results.add(executorService.submit(new Callable<TransformationResult>() {
@@ -213,8 +216,13 @@ public class ConceptTemplateTransformService {
 				Map<String, String> slotValueMap = TemplateUtil.getSlotValueMap(input.getFsnPatterns(), input.getSynonymPatterns(), pojo);
 				Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getSourceAttributeTypeSlotMap(), pojo);
 				Map<String, SimpleConceptPojo> conceptIdmap = input.getConceptIdMap();
-				ConceptPojo transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), slotValueMap, attributeSlotMap, inactivationReason, conceptIdmap);
-				result.addTransformedConcept(transformed);
+				ConceptPojo transformed;
+				try {
+					transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), slotValueMap, attributeSlotMap, inactivationReason, conceptIdmap);
+					result.addTransformedConcept(transformed);
+				} catch (ServiceException e) {
+					errors.put(pojo.getConceptId(), e.getMessage());
+				}
 			}
 			for (String conceptId : missing) {
 				errors.put(conceptId, String.format("Failed to find concept %s from branch %s ", conceptId, branchPath));
@@ -286,7 +294,7 @@ public class ConceptTemplateTransformService {
 										 Map<String, String> slotValueMap, 
 										 Map<String, ConceptMiniPojo> attributeSlotMap, 
 										 String inactivationReason,
-										 Map<String, SimpleConceptPojo> conceptIdMap) {
+										 Map<String, SimpleConceptPojo> conceptIdMap) throws ServiceException {
 		ConceptPojo transformed = conceptPojo;
 		org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus definitionStatus = org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.PRIMITIVE;
 		if (DefinitionStatus.FULLY_DEFINED == conceptOutline.getDefinitionStatus()) {

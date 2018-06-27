@@ -4,6 +4,7 @@ import static com.google.common.base.Predicates.not;
 import static springfox.documentation.builders.PathSelectors.regex;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
@@ -40,6 +41,7 @@ public class Config {
 		return Jackson2ObjectMapperBuilder
 				.json()
 				.serializationInclusion(JsonInclude.Include.NON_NULL)
+				.dateFormat((new SimpleDateFormat("dd-MM-yyyy hh:mm:ss")))
 				.build();
 	}
 
