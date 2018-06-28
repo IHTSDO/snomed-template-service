@@ -305,6 +305,7 @@ public class ConceptTemplateTransformService {
 		transformer.transform();
 		RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptOutline, attributeSlotMap, conceptIdMap);
 		relationShipTransformer.transform();
+		transformed.setEffectiveTime(null);
 		return transformed;
 	}
 

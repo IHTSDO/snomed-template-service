@@ -94,6 +94,7 @@ public class TemplateUtil {
 	public static Map<String, ConceptMiniPojo> getAttributeSlotValueMap(Map<String, Set<String>> attributeSlots, ConceptPojo conceptPojo) {
 		Map<String, ConceptMiniPojo> result = new HashMap<>();
 		List<RelationshipPojo> statedRels = conceptPojo.getRelationships().stream()
+				.filter(r -> r.isActive())
 				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
 				.collect(Collectors.toList());
 		
@@ -106,7 +107,6 @@ public class TemplateUtil {
 		}
 		return result;
 	}
-	
 
 	public static Map<String, String> getSlotValueMap(Map<Pattern, List<String>> fsnTemplatePatterns, 
 			Map<Pattern, List<String>> synonymTemplatePatterns, ConceptPojo conceptPojo) {

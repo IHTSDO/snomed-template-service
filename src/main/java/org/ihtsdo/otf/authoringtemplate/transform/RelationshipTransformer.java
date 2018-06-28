@@ -85,8 +85,11 @@ public class RelationshipTransformer {
 			}
 		}
 		for (RelationshipPojo pojo : statedRels) {
-			if (pojo.isActive() && !relationships.contains(pojo)) {
-				pojo.setActive(false);
+			if (!relationships.contains(pojo)) {
+				if (pojo.isActive()) {
+					pojo.setActive(false);
+					pojo.setEffectiveTime(null);
+				}
 				relationships.add(pojo);
 			}
 		}
@@ -161,6 +164,10 @@ public class RelationshipTransformer {
 					Relationship relationship = newRelMapByTargetAndType.get(key).iterator().next();
 					pojoSet.add(constructRelationshipPojo(relationship, attributeSlotMap));
 				}
+			}
+			for (RelationshipPojo pojo : pojoSet) {
+				//make sure relationship is active and effectiveTime is not set
+				pojo.setActive(true);
 			}
 			mergedSet.add(pojoSet);
 		}

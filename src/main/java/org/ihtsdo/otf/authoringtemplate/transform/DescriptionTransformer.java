@@ -54,6 +54,7 @@ public class DescriptionTransformer {
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
 			if (pojo.isActive() && !newTerms.contains(pojo.getTerm())) {
 				pojo.setActive(false);
+				pojo.setEffectiveTime(null);
 				pojo.setInactivationIndicator(inactivationReason);
 			}
 		}
