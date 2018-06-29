@@ -68,8 +68,7 @@ public class Attribute implements HasCardinality {
 		return slotReference;
 	}
 
-	@Override
-	public String toString() {
+	public String toStringVerbose() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("Attribute [");
 		if (type != null)
@@ -88,5 +87,16 @@ public class Attribute implements HasCardinality {
 			builder.append("slotReference=").append(slotReference);
 		builder.append("]");
 		return builder.toString();
+	}
+	
+	@Override
+	public String toString() {
+		return (cardinalityMin == null ? "": "[[~" + cardinalityMin + ".." + cardinalityMax + "]]")
+				+ getType() + " = "
+				+ (getValue() == null ? rangeToString() : getValue() );
+	}
+
+	private String rangeToString() {
+		return "[[+id(" + getAllowableRangeECL() + ") @" + getSlotName() + "]]";
 	}
 }

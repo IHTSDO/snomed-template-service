@@ -2,12 +2,13 @@ package org.ihtsdo.otf.authoringtemplate.domain.logical;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class AttributeGroup implements HasCardinality {
 
 	private List<Attribute> attributes;
-	private String cardinalityMin;
-	private String cardinalityMax;
+	private String cardinalityMin = "1";  //Default cardinality is 1 to many
+	private String cardinalityMax = "*";
 
 	public AttributeGroup() {
 		attributes = new ArrayList<>();
@@ -15,6 +16,10 @@ public class AttributeGroup implements HasCardinality {
 
 	public void addAttribute(Attribute attribute) {
 		attributes.add(attribute);
+	}
+	
+	public void setAttributes(List<Attribute> attributes) {
+		this.attributes = attributes;
 	}
 
 	public List<Attribute> getAttributes() {
@@ -39,8 +44,7 @@ public class AttributeGroup implements HasCardinality {
 		return cardinalityMax;
 	}
 
-	@Override
-	public String toString() {
+	public String toStringVerbose() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("AttributeGroup [");
 		if (attributes != null)
@@ -51,5 +55,14 @@ public class AttributeGroup implements HasCardinality {
 			builder.append("cardinalityMax=").append(cardinalityMax);
 		builder.append("]");
 		return builder.toString();
+	}
+	
+	@Override
+	public String toString() {
+		return (cardinalityMin == null? "": "[[~" + cardinalityMin + ".." + cardinalityMax + "]]") +
+				"{" + attributes.stream()
+				.map(attribute -> attribute.toString())
+				.collect (Collectors.joining(", ")) 
+				+ "}";
 	}
 }
