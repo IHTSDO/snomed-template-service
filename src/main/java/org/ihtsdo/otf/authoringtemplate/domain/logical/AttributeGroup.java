@@ -5,13 +5,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class AttributeGroup implements HasCardinality {
-
+	public static boolean useDefaultValues = false;
 	private List<Attribute> attributes;
-	private String cardinalityMin = "1";  //Default cardinality is 1 to many
-	private String cardinalityMax = "*";
+	private String cardinalityMin;  
+	private String cardinalityMax;
 
 	public AttributeGroup() {
 		attributes = new ArrayList<>();
+		if (useDefaultValues) {
+			//Default cardinality is 1 to many
+			cardinalityMax = "*";
+			cardinalityMin = "1";
+		}
 	}
 
 	public void addAttribute(Attribute attribute) {
