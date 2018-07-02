@@ -5,10 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
-import org.ihtsdo.otf.authoringtemplate.domain.Description;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.snomed.authoringtemplate.domain.*;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.*;
 
 public class DescriptionTransformer {
 

@@ -10,12 +10,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
-import org.ihtsdo.otf.authoringtemplate.domain.Description;
-import org.ihtsdo.otf.authoringtemplate.domain.DescriptionType;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.domain.*;
+import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;

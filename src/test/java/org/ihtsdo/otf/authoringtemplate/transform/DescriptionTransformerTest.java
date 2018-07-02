@@ -2,11 +2,9 @@ package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.Map;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 

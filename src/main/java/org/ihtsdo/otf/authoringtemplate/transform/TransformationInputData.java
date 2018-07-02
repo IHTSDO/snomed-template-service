@@ -5,8 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.domain.*;
+import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 
 public class TransformationInputData {

@@ -9,8 +9,8 @@ import java.io.Writer;
 import java.util.Calendar;
 
 import org.ihtsdo.otf.authoringtemplate.TransformationResourceConfiguration;
-import org.ihtsdo.otf.authoringtemplate.domain.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.dao.resources.ResourceManager;

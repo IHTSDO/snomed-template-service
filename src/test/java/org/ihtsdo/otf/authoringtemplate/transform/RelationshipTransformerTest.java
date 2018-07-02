@@ -2,7 +2,7 @@ package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.Map;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;

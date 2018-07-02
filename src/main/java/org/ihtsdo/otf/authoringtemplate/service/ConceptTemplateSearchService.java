@@ -12,12 +12,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
-import org.ihtsdo.otf.authoringtemplate.domain.Description;
-import org.ihtsdo.otf.authoringtemplate.domain.DescriptionType;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.*;
+import org.snomed.authoringtemplate.domain.logical.*;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;

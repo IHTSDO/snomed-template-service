@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -59,6 +60,11 @@ public class Config {
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder) {
 		return builder.build();
+	}
+	
+	@Bean
+	public LogicalTemplateParserService logicalTemplateParserService() {
+		return new LogicalTemplateParserService();
 	}
 
 	@Bean

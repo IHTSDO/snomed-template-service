@@ -20,12 +20,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import org.assertj.core.util.Arrays;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
-import org.ihtsdo.otf.authoringtemplate.domain.Description;
-import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
-import org.ihtsdo.otf.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;

@@ -1,9 +1,8 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
+import org.snomed.authoringtemplate.domain.*;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,9 +18,6 @@ public class JsonStoreTest {
 
 	@Autowired
 	private JsonStore jsonStore;
-
-	@Autowired
-	private ObjectMapper objectMapper;
 
 	@Test
 	public void testSaveLoad() throws Exception {

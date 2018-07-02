@@ -2,8 +2,7 @@ package org.ihtsdo.otf.authoringtemplate.rest;
 
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.App;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.junit.After;

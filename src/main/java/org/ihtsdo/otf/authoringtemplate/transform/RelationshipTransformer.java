@@ -10,14 +10,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptOutline;
-import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
+import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.*;
 
 public class RelationshipTransformer {
 	

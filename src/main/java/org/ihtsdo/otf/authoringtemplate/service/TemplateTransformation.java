@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.domain;
+package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.util.Calendar;
 import java.util.Date;

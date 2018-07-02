@@ -10,16 +10,9 @@ import java.util.regex.Matcher;
 
 import javax.annotation.PostConstruct;
 
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptMini;
-import org.ihtsdo.otf.authoringtemplate.domain.ConceptTemplate;
-import org.ihtsdo.otf.authoringtemplate.domain.Concepts;
-import org.ihtsdo.otf.authoringtemplate.domain.Description;
-import org.ihtsdo.otf.authoringtemplate.domain.LexicalTemplate;
-import org.ihtsdo.otf.authoringtemplate.domain.Relationship;
-import org.ihtsdo.otf.authoringtemplate.domain.SimpleSlot;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.Attribute;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.AttributeGroup;
-import org.ihtsdo.otf.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.domain.*;
+import org.snomed.authoringtemplate.domain.logical.*;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
