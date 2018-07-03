@@ -11,7 +11,6 @@ import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.*;
 import org.ihtsdo.otf.authoringtemplate.transform.service.ConceptTemplateTransformService;

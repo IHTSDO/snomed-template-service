@@ -12,10 +12,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
-import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
@@ -24,6 +20,13 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleDescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.DescriptionType;
+import org.snomed.authoringtemplate.domain.logical.Attribute;
+import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
+import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -92,8 +95,8 @@ public class ConceptTemplateSearchService {
 		}
 		Set<String> fsnTempaltes = TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN);
 		Set<String> synoymTempaltes = TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM);
-		Map<Pattern, List<String>> fsnPaterrnSlotsMap = TemplateUtil.compilePatterns(fsnTempaltes);
-		Map<Pattern, List<String>> synoymPaterrnSlotsMap = TemplateUtil.compilePatterns(synoymTempaltes);
+		Map<Pattern, Set<String>> fsnPaterrnSlotsMap = TemplateUtil.compilePatterns(fsnTempaltes);
+		Map<Pattern, Set<String>> synoymPaterrnSlotsMap = TemplateUtil.compilePatterns(synoymTempaltes);
 		Map<String, Set<String>> attributeTypeSlotsMap = TemplateUtil.getAttributeTypeSlotMap(logical);
 		
 		try {

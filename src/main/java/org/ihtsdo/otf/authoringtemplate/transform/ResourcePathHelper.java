@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.authoringtemplate.transform.service;
+package org.ihtsdo.otf.authoringtemplate.transform;
 
 public class ResourcePathHelper {
 

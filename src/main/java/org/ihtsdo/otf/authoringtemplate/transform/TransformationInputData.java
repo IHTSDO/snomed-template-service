@@ -1,20 +1,16 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 
 public class TransformationInputData {
 
 	private Set<String> synonymTemplates;
 	private Set<String> fsnTemplates;
-	private Map<Pattern, List<String>> synonymPatterns;
-	private Map<Pattern, List<String>> fsnPatterns;
 	private LogicalTemplate sourceLogicalTemplate;
 	private String branchPath;
 	private ConceptTemplate destinationTemplate;
@@ -34,14 +30,6 @@ public class TransformationInputData {
 		return fsnTemplates;
 	}
 
-	public void setSynonymPatterns(Map<Pattern, List<String>> synonymPatterns) {
-		this.synonymPatterns = synonymPatterns;
-	}
-
-	public void setFsnPatterns(Map<Pattern, List<String>> fsnPatterns) {
-		this.fsnPatterns = fsnPatterns;
-	}
-
 	public void setSourceLogicalTemplate(LogicalTemplate logical) {
 		this.sourceLogicalTemplate = logical;
 	}
@@ -56,14 +44,6 @@ public class TransformationInputData {
 
 	public Set<String> getSynonymTemplates() {
 		return synonymTemplates;
-	}
-
-	public Map<Pattern, List<String>> getSynonymPatterns() {
-		return synonymPatterns;
-	}
-
-	public Map<Pattern, List<String>> getFsnPatterns() {
-		return fsnPatterns;
 	}
 
 	public LogicalTemplate getSourceLogicalTemplate() {

@@ -10,10 +10,14 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.*;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.Relationship;
 
 public class RelationshipTransformer {
 	
@@ -210,23 +214,23 @@ public class RelationshipTransformer {
 
 		@Override
 		public int compare(RelationshipPojo r1, RelationshipPojo r2) {
-			if (r1.getSourceId().equals(r2.getSourceId())) {
-				if (!r1.getCharacteristicType().equals(r2.getCharacteristicType())) {
-					return  r1.getCharacteristicType().compareTo(r2.getCharacteristicType());
+			if (r1.getCharacteristicType().equals(r2.getCharacteristicType())) {
+				if (r1.getSourceId().equals(r2.getSourceId())) {
+					if (r1.getGroupId() != r2.getGroupId()) {
+						return String.valueOf(r1.getGroupId()).compareTo(String.valueOf(r2.getGroupId()));
+					}
+					if (!r1.getTarget().getConceptId().equals(r2.getTarget().getConceptId())) {
+						return r1.getTarget().getConceptId().compareTo(r2.getTarget().getConceptId());
+					}
+					if (!r1.getType().getConceptId().equals(r2.getType().getConceptId())) {
+						return r1.getType().getConceptId().compareTo(r2.getType().getConceptId());
+					}
+					return Boolean.valueOf(r2.isActive()).compareTo(Boolean.valueOf(r1.isActive()));
+				} else {
+					return r1.getSourceId().compareTo(r2.getSourceId());
 				}
-				if (r1.getGroupId() != r2.getGroupId()) {
-					return String.valueOf(r1.getGroupId()).compareTo(String.valueOf(r2.getGroupId()));
-				}
-				if (!r1.getTarget().getConceptId().equals(r2.getTarget().getConceptId())) {
-					return r1.getTarget().getConceptId().compareTo(r2.getTarget().getConceptId());
-				}
-				if (!r1.getType().getConceptId().equals(r2.getType().getConceptId())) {
-					return r1.getType().getConceptId().compareTo(r2.getType().getConceptId());
-				}
-				
-				return Boolean.valueOf(r1.isActive()).compareTo(Boolean.valueOf(r1.isActive()));
 			} else {
-				return r1.getSourceId().compareTo(r2.getSourceId());
+				return  r2.getCharacteristicType().compareTo(r1.getCharacteristicType());
 			}
 		}
 	}

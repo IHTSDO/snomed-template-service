@@ -25,15 +25,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
@@ -45,6 +43,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
+import org.snomed.authoringtemplate.domain.CaseSignificance;
+import org.snomed.authoringtemplate.domain.ConceptMini;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.DefinitionStatus;
+import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.DescriptionType;
+import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
@@ -79,20 +85,20 @@ public class ConceptTemplateTransformServiceTest {
 	@Autowired
 	private JsonStore jsonStore;
 	
-	private String source;
-	private String destination;
+	private String source = "Allergy to [substance]";
+	private String destination = "Allergy to [substance] V2";
 
 	private static final String CT_GUIDED_BODY_STRUCTURE_TEMPLATE = "CT guided [procedure] of [body structure]";
 	
 	private ConceptPojo conceptToTransform;
+	private ConceptPojo conceptTransformed;
 	private Gson gson;
 	
 	@Before
 	public void setUp() throws Exception {
-		source = "Allergy to [substance]";
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
 				jsonStore.getStoreDirectory());
-		destination = "Allergy to [substance] V2";
+		
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
 				jsonStore.getStoreDirectory());
 		
@@ -100,8 +106,10 @@ public class ConceptTemplateTransformServiceTest {
 				jsonStore.getStoreDirectory());
 		templateService.reloadCache();
 		gson = new GsonBuilder().setPrettyPrinting().create();
-		try (Reader conceptJsonReader = new InputStreamReader( getClass().getResourceAsStream("concept.json"), Constants.UTF_8)) {
+		try (Reader conceptJsonReader = new InputStreamReader(getClass().getResourceAsStream("Allergy_To_Almond_Concept.json"), Constants.UTF_8);
+			 Reader expectedJsonReader = new InputStreamReader(getClass().getResourceAsStream("Allergy_To_Almond_Concept_Trasformed.json"), Constants.UTF_8)) {
 			conceptToTransform = gson.fromJson(conceptJsonReader, ConceptPojo.class);
+			conceptTransformed = gson.fromJson(expectedJsonReader, ConceptPojo.class);
 		}
 	}
 	
@@ -119,21 +127,20 @@ public class ConceptTemplateTransformServiceTest {
 	
 	@Test
 	public void testValidateWithSuccess() {
-		
 		try {
-			ConceptTemplate sourceTemplate = jsonStore.load(source, ConceptTemplate.class);
-			ConceptTemplate destinationTemplate = jsonStore.load(destination, ConceptTemplate.class);
+			ConceptTemplate sourceTemplate = templateService.loadOrThrow(source);
+			ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
 			transformService.validate(sourceTemplate, destinationTemplate);
 		} catch (Exception e) {
-			Assert.fail("No exception is expected to be thrown");
+			Assert.fail("No exception is expected to be thrown." + e.getMessage());
 		}
 	}
 	
 	
 	@Test(expected=ServiceException.class)
 	public void testValidateWithFailure() throws Exception {
-		ConceptTemplate sourceTemplate = jsonStore.load(CT_GUIDED_BODY_STRUCTURE_TEMPLATE, ConceptTemplate.class);
-		ConceptTemplate destinationTemplate = jsonStore.load(destination, ConceptTemplate.class);
+		ConceptTemplate sourceTemplate = templateService.loadOrThrow(CT_GUIDED_BODY_STRUCTURE_TEMPLATE);
+		ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
 		transformService.validate(sourceTemplate, destinationTemplate);
 	}
 	
@@ -141,7 +148,6 @@ public class ConceptTemplateTransformServiceTest {
 	public void testConceptTransformation() throws Exception {
 		Set<String> concepts = new HashSet<>();
 		concepts.add("712839001");
-		
 		mockTerminologyServerClient();
 		when(terminologyServerClient.searchConcepts(anyString(),any()))
 		.thenReturn(Arrays.asList(conceptToTransform));
@@ -167,10 +173,25 @@ public class ConceptTemplateTransformServiceTest {
 				fail("No exceptions should be thrown");
 			}
 		}
+		
 		assertEquals(true, !transformed.isEmpty());
 		assertEquals(1, transformed.size());
 		ConceptPojo concept = transformed.get(0);
-		assertEquals(10, concept.getRelationships().size());
+		//validate descriptions transformation
+		assertEquals(3, concept.getDescriptions().size());
+		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		assertEquals(2, activeTerms.size());
+		for (DescriptionPojo term : activeTerms) {
+			if (DescriptionType.FSN.name().equals(term.getType())) {
+				assertEquals("Allergy to almond (finding)", term.getTerm());
+			} else {
+				assertEquals("Allergy to almond", term.getTerm());
+			}
+		}
+		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
+		assertEquals(1, inactiveTerms.size());
+		
+		assertEquals(11, concept.getRelationships().size());
 		List<RelationshipPojo> stated = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
 				.collect(Collectors.toList());
@@ -184,13 +205,8 @@ public class ConceptTemplateTransformServiceTest {
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
-		//Remove inferred and only display stated for manual checking
-		concept.getRelationships().removeAll(inferred);
-		Gson gson =  new GsonBuilder().setPrettyPrinting().create();
-		for (ConceptPojo pojo : transformed) {
-			System.out.println(gson.toJson(pojo));
-		}
-		
+		assertEquals(5, inferred.size());
+		assertEquals(conceptTransformed, concept);
 	}
 
 	private ConceptTemplate createConceptTemplate() {

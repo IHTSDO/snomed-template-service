@@ -3,7 +3,6 @@ package org.ihtsdo.otf.authoringtemplate.transform.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,22 +11,33 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.DefinitionStatus;
-import org.snomed.authoringtemplate.domain.logical.*;
-import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.authoringtemplate.transform.*;
+import org.ihtsdo.otf.authoringtemplate.transform.DescriptionTransformer;
+import org.ihtsdo.otf.authoringtemplate.transform.RelationshipTransformer;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationInputData;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.*;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.DefinitionStatus;
+import org.snomed.authoringtemplate.domain.DescriptionType;
+import org.snomed.authoringtemplate.domain.Relationship;
+import org.snomed.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -108,14 +118,10 @@ public class ConceptTemplateTransformService {
 	private TransformationInputData constructTransformationInputData(ConceptTemplate source, ConceptTemplate destination) throws ServiceException {
 		Set<String> termTemplates = TemplateUtil.getTermTemplates(source, DescriptionType.SYNONYM);
 		Set<String> fsnTemplates = TemplateUtil.getTermTemplates(source, DescriptionType.FSN);
-		Map<Pattern, List<String>> synonymPatterns = TemplateUtil.compilePatterns(termTemplates);
-		Map<Pattern, List<String>> fsnPatterns = TemplateUtil.compilePatterns(fsnTemplates);
 		
 		TransformationInputData input = new TransformationInputData();
 		input.setSynonymTemplates(termTemplates);
 		input.setFsnTemplates(fsnTemplates);
-		input.setSynonymPatterns(synonymPatterns);
-		input.setFsnPatterns(fsnPatterns);
 		LogicalTemplateParserService parser = new LogicalTemplateParserService();
 		LogicalTemplate logical;
 		try {
@@ -201,12 +207,11 @@ public class ConceptTemplateTransformService {
 			List<String> missing = new ArrayList<>(conceptIds);
 			for (ConceptPojo pojo : conceptPojos) {
 				missing.remove(pojo.getConceptId());
-				Map<String, String> slotValueMap = TemplateUtil.getSlotValueMap(input.getFsnPatterns(), input.getSynonymPatterns(), pojo);
 				Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getSourceAttributeTypeSlotMap(), pojo);
 				Map<String, SimpleConceptPojo> conceptIdmap = input.getConceptIdMap();
 				ConceptPojo transformed;
 				try {
-					transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), slotValueMap, attributeSlotMap, inactivationReason, conceptIdmap);
+					transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), attributeSlotMap, inactivationReason, conceptIdmap);
 					result.addTransformedConcept(transformed);
 				} catch (ServiceException e) {
 					errors.put(pojo.getConceptId(), e.getMessage());
@@ -238,28 +243,25 @@ public class ConceptTemplateTransformService {
 		return conceptIdMap;
 	}
 
-	private Set<String> getSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
-		Set<String> slots = new HashSet<>();
-		LogicalTemplateParserService parser = new LogicalTemplateParserService();
-		LogicalTemplate logical = parser.parseTemplate(conceptTemplate.getLogicalTemplate());
-		for (Attribute attr : logical.getUngroupedAttributes()) {
-			if (attr.getSlotName() != null) {
-				slots.add(attr.getSlotName());
-			}
-		}
-		for (AttributeGroup attributeGrp : logical.getAttributeGroups()) {
-			for (Attribute att : attributeGrp.getAttributes()) {
-				if (att.getSlotName() != null) {
-					slots.add(att.getSlotName());
-				}
-			}
-		}
-		return slots;
+	private Set<String> getReplacementSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
+		List<SimpleSlot> slotsRequired = TemplateUtil.getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships());
+		Set<String> slotNames = slotsRequired.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
+		return slotNames;
 	}
 	
 	public void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException, IOException {
-		Set<String> sourceSlots = getSlotsFromTemplate(source);
-		Set<String> destinationSlots = getSlotsFromTemplate(destination);
+		
+		//check term slots can be found in replacement slots
+		Set<String> termTemplates = TemplateUtil.getTermTemplates(destination);
+		Set<String> termSlots = TemplateUtil.getSlots(termTemplates.toArray(new String[termTemplates.size()]));
+		Set<String> destinationSlots = getReplacementSlotsFromTemplate(destination);
+		if (!destinationSlots.containsAll(termSlots)) {
+			Set<String> slotsNotFound = termSlots;
+			slotsNotFound.removeAll(destinationSlots);
+			throw new ServiceException(String.format("Destination template %s has term slot %s that doesn't exist in the logical template",
+					destination.getName(), slotsNotFound));
+		}
+		Set<String> sourceSlots = getReplacementSlotsFromTemplate(source);
 		LOGGER.info("Source slots {} destination slots {}", sourceSlots, destinationSlots);
 		if (!sourceSlots.containsAll(destinationSlots)) {
 			StringBuilder msgBuilder = new StringBuilder();
@@ -275,11 +277,11 @@ public class ConceptTemplateTransformService {
 			throw new ServiceException(String.format("Destination template %s has slot %s that doesn't exist in the source template %s",
 													destination.getName(), msgBuilder.toString(), source.getName()));
 		}
+		
 	}
 
 	private ConceptPojo performTransform(ConceptPojo conceptPojo,
 										 ConceptOutline conceptOutline, 
-										 Map<String, String> slotValueMap, 
 										 Map<String, ConceptMiniPojo> attributeSlotMap, 
 										 String inactivationReason,
 										 Map<String, SimpleConceptPojo> conceptIdMap) throws ServiceException {
@@ -289,14 +291,23 @@ public class ConceptTemplateTransformService {
 			definitionStatus =  org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED;
 		}
 		transformed.setDefinitionStatus(definitionStatus);
-		DescriptionTransformer transformer = new DescriptionTransformer(transformed, conceptOutline, slotValueMap, inactivationReason);
-		transformer.transform();
 		RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptOutline, attributeSlotMap, conceptIdMap);
 		relationShipTransformer.transform();
+		Map<String, String> slotValueMap = getSlotDescriptionValueMap(attributeSlotMap);
+		DescriptionTransformer transformer = new DescriptionTransformer(transformed, conceptOutline, slotValueMap, inactivationReason);
+		transformer.transform();
 		transformed.setEffectiveTime(null);
 		return transformed;
 	}
 
+
+	private Map<String, String> getSlotDescriptionValueMap(Map<String, ConceptMiniPojo> attributeSlotMap) {
+		Map<String, String> slotDescriptionMap = new HashMap<>();
+		for (String slotName : attributeSlotMap.keySet()) {
+			slotDescriptionMap.put(slotName, TemplateUtil.getDescriptionFromFSN(attributeSlotMap.get(slotName).getFsn()));
+		}
+		return slotDescriptionMap;
+	}
 
 	public TemplateTransformation createTemplateTransformation(String branchPath, String destinationTemplate,
 			TemplateTransformRequest transformRequest) throws ServiceException {

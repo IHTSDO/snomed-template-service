@@ -1,6 +1,5 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -10,18 +9,26 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.DescriptionType;
+import org.snomed.authoringtemplate.domain.Relationship;
+import org.snomed.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.logical.Attribute;
+import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
+import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 
 public class TemplateUtil {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateUtil.class);
+	
+	private static Pattern FSN_PATTERN = Pattern.compile("(.*)(\\(.*\\))");
 
 	public static Pattern constructTermPattern(String termTemplate) {
 		String result = termTemplate;
@@ -40,14 +47,25 @@ public class TemplateUtil {
 	}
 	
 	
-	
-	public static List<String> getSlots(String termTemplate) {
-		List<String> slots = new ArrayList<>();
-		Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
-		while (matcher.find()) {
-			slots.add(matcher.group());
+	public static Set<String> getSlots(String ... termTemplates) {
+		Set<String> slots = new HashSet<>();
+		for (String termTemplate : termTemplates) {
+			Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
+			while (matcher.find()) {
+				slots.add(matcher.group(1));
+			}
 		}
 		return slots;
+	}
+	
+	public static Set<String> getTermTemplates(ConceptTemplate conceptTemplate) {
+		Set<String> termTemplates = new HashSet<>();
+		for (Description desc : conceptTemplate.getConceptOutline().getDescriptions()) {
+			if (desc.getTermTemplate() != null) {
+				termTemplates.add(desc.getTermTemplate());
+			}
+		}
+		return termTemplates;
 	}
 	
 	public static Set<String> getTermTemplates(ConceptTemplate conceptTemplate, DescriptionType type) {
@@ -60,10 +78,10 @@ public class TemplateUtil {
 		return termTemplates;
 	}
 	
-	public static Map<Pattern, List<String>> compilePatterns(Set<String> termTemplates) {
-		Map<Pattern, List<String>> result = new HashMap<>();
+	public static Map<Pattern, Set<String>> compilePatterns(Set<String> termTemplates) {
+		Map<Pattern, Set<String>> result = new HashMap<>();
 		for (String termPattern : termTemplates) {
-			List<String> slots = TemplateUtil.getSlots(termPattern);
+			Set<String> slots = getSlots(termPattern);
 			if (slots.isEmpty()) {
 				continue;
 			}
@@ -146,4 +164,20 @@ public class TemplateUtil {
 		return attributeSlots;
 	}
 	
+	public static List<SimpleSlot> getSlotsRequiringInput(List<Relationship> relationships) {
+		return relationships.stream().filter(r -> isSlotRequiringInput(r.getTargetSlot()))
+				.map(Relationship::getTargetSlot).collect(Collectors.toList());
+	}
+
+	private static boolean isSlotRequiringInput(SimpleSlot targetSlot) {
+		return targetSlot != null && targetSlot.getSlotReference() == null;
+	}
+
+	public static String getDescriptionFromFSN(String fsn) {
+		Matcher matcher = FSN_PATTERN.matcher(fsn);
+		while (matcher.find()) {
+			return matcher.group(1).trim();
+		}
+		return fsn;
+	}
 }
