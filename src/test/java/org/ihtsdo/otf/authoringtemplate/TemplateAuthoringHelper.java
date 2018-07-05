@@ -22,9 +22,9 @@ import com.google.common.io.Files;
 public class TemplateAuthoringHelper {
 
 	public static void main(String[] args) throws IOException {
-		readInput();
-//		compactScratch();
-		expandScratch();
+//		readInput();
+		compactScratch();
+//		expandScratch();
 	}
 
 	// Helper code for converting template specification tables into template language!

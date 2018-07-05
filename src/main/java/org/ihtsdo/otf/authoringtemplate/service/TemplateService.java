@@ -20,7 +20,6 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import org.assertj.core.util.Arrays;
-import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
@@ -29,6 +28,12 @@ import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.ConceptMini;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.Relationship;
+import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContext;
@@ -56,7 +61,7 @@ public class TemplateService {
 
 	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 
-	public String create(String name, ConceptTemplate conceptTemplate) throws IOException {
+	public String create(String name, ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		if (load(name) != null) {
 			throw new IllegalArgumentException("Template with name '" + name + "' already exists.");
 		}
@@ -83,7 +88,7 @@ public class TemplateService {
 	}
 
 	// TODO Keep old versions of the template
-	public ConceptTemplate update(String name, ConceptTemplate conceptTemplateUpdate) throws IOException {
+	public ConceptTemplate update(String name, ConceptTemplate conceptTemplateUpdate) throws IOException, ServiceException {
 		final ConceptTemplate existingTemplate = load(name);
 		if (existingTemplate == null) {
 			throw new IllegalArgumentException("Template with name '" + name + "' does not exist.");
@@ -343,7 +348,7 @@ public class TemplateService {
 				.map(Relationship::getTargetSlot).collect(Collectors.toList());
 	}
 
-	public void reloadCache() throws IOException {
+	public void reloadCache() throws IOException, ServiceException {
 		templateStore.init();
 	}
 }

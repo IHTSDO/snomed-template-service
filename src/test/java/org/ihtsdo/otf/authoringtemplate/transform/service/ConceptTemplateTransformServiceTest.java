@@ -205,6 +205,10 @@ public class ConceptTemplateTransformServiceTest {
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
+		Gson gson =  new GsonBuilder().setPrettyPrinting().create();
+		for (ConceptPojo pojo : transformed) {
+			System.out.println(gson.toJson(pojo));
+		}
 		assertEquals(5, inferred.size());
 		assertEquals(conceptTransformed, concept);
 	}

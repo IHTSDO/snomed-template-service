@@ -180,6 +180,7 @@ public class RelationshipTransformer {
 		pojo.setCharacteristicType(relationship.getCharacteristicType());
 		pojo.setGroupId(relationship.getGroupId());
 		pojo.setModifier(Constants.EXISTENTIAL);
+		pojo.setModuleId(getModuleId());
 		if (relationship.getTarget() != null) {
 			pojo.setTarget(constructConceptMiniPojo(relationship.getTarget().getConceptId()));
 		} else {
@@ -195,6 +196,10 @@ public class RelationshipTransformer {
 		return pojo;
 	}
 	
+	private String getModuleId() {
+		return conceptOutline.getModuleId() !=null ? conceptOutline.getModuleId() : conceptToTransform.getModuleId();
+	}
+
 	private ConceptMiniPojo constructConceptMiniPojo(String conceptId) {
 		if (conceptId == null || conceptId.isEmpty()) {
 			throw new IllegalArgumentException("Concept id can't be null or empty");

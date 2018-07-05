@@ -22,7 +22,6 @@ import java.util.Set;
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.snomed.authoringtemplate.domain.*;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
@@ -35,6 +34,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.OngoingStubbing;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Concepts;
+import org.snomed.authoringtemplate.domain.DefinitionStatus;
+import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.LexicalTemplate;
+import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -151,7 +157,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testListAll() throws IOException {
+	public void testListAll() throws Exception {
 		String focusConcept = "302509004";
 		createTemplateWithFocusConcept("one", focusConcept);
 		expectGetTerminologyServerClient();
@@ -174,7 +180,7 @@ public class TemplateServiceTest {
 	}
 
 	@Test
-	public void testWriteEmptyInputFile() throws IOException, ResourceNotFoundException {
+	public void testWriteEmptyInputFile() throws Exception {
 		createCtGuidedProcedureOfX();
 
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -346,7 +352,7 @@ public class TemplateServiceTest {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 
-	private void createCtGuidedProcedureOfX() throws IOException {
+	private void createCtGuidedProcedureOfX() throws IOException, ServiceException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
 		templateRequest.setDomain("<<71388002 |Procedure|");
 		templateRequest.setLogicalTemplate("71388002 |Procedure|:   [[~1..1]] {      260686004 |Method| = 312251004 |Computed tomography imaging action|,      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]],      363703001 |Has intent| = 429892002 |Guidance intent|   },   {      260686004 |Method| = [[+id (<< 129264002 |Action|) @action]],      [[~1..1]] 405813007 |Procedure site - Direct| = [[+id $procSite]]   }");
@@ -382,7 +388,7 @@ public class TemplateServiceTest {
 		}
 	}
 
-	private void createTemplateWithFocusConcept(String name, String focusConcept) throws IOException {
+	private void createTemplateWithFocusConcept(String name, String focusConcept) throws IOException, ServiceException {
 		ConceptTemplate template = new ConceptTemplate();
 		template.setFocusConcept(focusConcept);
 		template.setLogicalTemplate(focusConcept);

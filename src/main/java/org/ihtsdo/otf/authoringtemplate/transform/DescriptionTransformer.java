@@ -75,9 +75,14 @@ public class DescriptionTransformer {
 		pojo.setTerm(term);
 		pojo.setType(desc.getType().name());
 		pojo.setLang(desc.getLang());
+		pojo.setModuleId(getModuleId());
 		return pojo;
 	}
 	
+	private String getModuleId() {
+		return conceptOutline.getModuleId() !=null ? conceptOutline.getModuleId() : conceptToTransform.getModuleId();
+	}
+
 	private  static class DescriptionPojoComparator implements Comparator<DescriptionPojo>{
 
 		@Override

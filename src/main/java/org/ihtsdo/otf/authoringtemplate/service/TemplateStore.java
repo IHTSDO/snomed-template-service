@@ -10,11 +10,20 @@ import java.util.regex.Matcher;
 
 import javax.annotation.PostConstruct;
 
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
-import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.ConceptMini;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Concepts;
+import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.LexicalTemplate;
+import org.snomed.authoringtemplate.domain.Relationship;
+import org.snomed.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.logical.Attribute;
+import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
+import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,22 +50,24 @@ public class TemplateStore {
 	 * @throws IOException
 	 */
 	@PostConstruct
-	public void init() throws IOException {
+	public void init() throws IOException, ServiceException {
 		logger.info("Loading templates into cache.");
 		templateCache.clear();
 		Set<ConceptTemplate> conceptTemplates = jsonStore.loadAll(ConceptTemplate.class);
-		conceptTemplates.forEach(template -> {
+		for (ConceptTemplate template : conceptTemplates) {
 			generateAndCache(template);
-		});
+		}
 		logger.info("{} templates loaded into cache.", templateCache.size());
 	}
 
-	private void generateAndCache(ConceptTemplate template) {
+	private void generateAndCache(ConceptTemplate template) throws ServiceException {
 		try {
 			generateTemporalParts(template);
 			templateCache.put(encodeSlash(template.getName()), template);
-		} catch (IOException | IllegalArgumentException e) {
-			logger.error("Failed to load template {}", template.getName(), e);
+		} catch (Exception e) {
+			String errorMsg = String.format("Failed to load template %s", template.getName());
+			logger.error(errorMsg, e);
+			throw new ServiceException(errorMsg, e);
 		}
 	}
 
@@ -72,7 +83,7 @@ public class TemplateStore {
 		return new HashSet<>(templateCache.values());
 	}
 
-	public void save(String name, ConceptTemplate conceptTemplate) throws IOException {
+	public void save(String name, ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		conceptTemplate.setName(name);
 		stripTemporalParts(conceptTemplate);
 		jsonStore.save(name, conceptTemplate);

@@ -6,21 +6,30 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.authoringtemplate.transform.*;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
+import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 import org.ihtsdo.otf.authoringtemplate.transform.service.ConceptTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateTransformationResultService;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -47,14 +56,14 @@ public class TemplateController {
 	
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
-	public ResponseEntity<Object> createTemplate(@RequestParam String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
+	public ResponseEntity<Object> createTemplate(@RequestParam String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		templateService.create(templateName, conceptTemplate);
 		return ControllerHelper.getCreatedResponse(templateName);
 	}
 
 	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.PUT, produces = "application/json")
 	@ResponseBody
-	public ConceptTemplate updateTemplate(@PathVariable String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException {
+	public ConceptTemplate updateTemplate(@PathVariable String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		return templateService.update(templateName, conceptTemplate);
 	}
 
@@ -101,7 +110,7 @@ public class TemplateController {
 	}
 
 	@RequestMapping(value = "/templates/reload", method = RequestMethod.POST)
-	public void reloadCache() throws IOException {
+	public void reloadCache() throws IOException, ServiceException {
 		templateService.reloadCache();
 	}
 	

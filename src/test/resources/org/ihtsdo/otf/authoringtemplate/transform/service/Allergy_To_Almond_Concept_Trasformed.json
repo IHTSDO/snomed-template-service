@@ -95,6 +95,7 @@
     {
       "active": true,
       "released": false,
+      "moduleId": "900000000000207008",
       "sourceId": "712839001",
       "target": {
         "conceptId": "473011001"
@@ -130,6 +131,7 @@
     {
       "active": true,
       "released": false,
+      "moduleId": "900000000000207008",
       "sourceId": "712839001",
       "target": {
         "conceptId": "472964009"
