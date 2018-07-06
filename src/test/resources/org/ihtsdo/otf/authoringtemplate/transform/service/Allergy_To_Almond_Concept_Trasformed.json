@@ -10,6 +10,7 @@
       "released": false,
       "term": "Allergy to almond (finding)",
       "conceptId": "712839001",
+      "moduleId": "900000000000207008",
       "lang": "en",
       "type": "FSN",
       "caseSignificance": "CASE_INSENSITIVE",

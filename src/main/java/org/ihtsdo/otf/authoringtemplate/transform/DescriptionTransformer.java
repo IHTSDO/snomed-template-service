@@ -47,7 +47,6 @@ public class DescriptionTransformer {
 				if (!previousActiveTerms.contains(term)) {
 					DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term);
 					descPojo.setConceptId(conceptToTransform.getConceptId());
-					descPojo.setModuleId(conceptOutline.getModuleId());
 					conceptToTransform.add(descPojo);
 				}
 			}
