@@ -9,8 +9,11 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,14 +46,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
-import org.snomed.authoringtemplate.domain.CaseSignificance;
-import org.snomed.authoringtemplate.domain.ConceptMini;
-import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.DefinitionStatus;
-import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
-import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
@@ -63,6 +60,9 @@ import com.google.gson.GsonBuilder;
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
 public class ConceptTemplateTransformServiceTest {
 	
+	private static final String ERROR_MSG = "Transformed concept is not as expected. "
+			+ "Compare the two concepts via the json file to find out the diffs";
+
 	private static final String TEMPLATES = "/templates/";
 
 	private static final String JSON = ".json";
@@ -96,6 +96,12 @@ public class ConceptTemplateTransformServiceTest {
 	
 	@Before
 	public void setUp() throws Exception {
+		gson = new GsonBuilder().setPrettyPrinting().create();
+		setUpTestTemplates("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
+	}
+
+	private void setUpTestTemplates(String conceptToTransfom, String transformed)
+			throws IOException, URISyntaxException, ServiceException, UnsupportedEncodingException {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
 				jsonStore.getStoreDirectory());
 		
@@ -105,14 +111,12 @@ public class ConceptTemplateTransformServiceTest {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
 				jsonStore.getStoreDirectory());
 		templateService.reloadCache();
-		gson = new GsonBuilder().setPrettyPrinting().create();
-		try (Reader conceptJsonReader = new InputStreamReader(getClass().getResourceAsStream("Allergy_To_Almond_Concept.json"), Constants.UTF_8);
-			 Reader expectedJsonReader = new InputStreamReader(getClass().getResourceAsStream("Allergy_To_Almond_Concept_Trasformed.json"), Constants.UTF_8)) {
+		try (Reader conceptJsonReader = new InputStreamReader(getClass().getResourceAsStream(conceptToTransfom), Constants.UTF_8);
+			 Reader expectedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformed), Constants.UTF_8)) {
 			conceptToTransform = gson.fromJson(conceptJsonReader, ConceptPojo.class);
 			conceptTransformed = gson.fromJson(expectedJsonReader, ConceptPojo.class);
 		}
 	}
-	
 	
 	@Test
 	public void testCreateTemplateTransformation() throws ServiceException {
@@ -145,7 +149,7 @@ public class ConceptTemplateTransformServiceTest {
 	}
 	
 	@Test
-	public void testConceptTransformation() throws Exception {
+	public void testAllegyToSubstanceTempalteTransformation() throws Exception {
 		Set<String> concepts = new HashSet<>();
 		concepts.add("712839001");
 		mockTerminologyServerClient();
@@ -159,20 +163,7 @@ public class ConceptTemplateTransformServiceTest {
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
 		
-		List<ConceptPojo> transformed = new ArrayList<>();
-		Map<String, String> errorMsgMap = new HashMap<>();
-		for (Future<TransformationResult> future : results) {
-			try {
-				TransformationResult transformationResult = future.get();
-				transformed.addAll(transformationResult.getConcepts());
-				for (String key : transformationResult.getFailures().keySet()) {
-					errorMsgMap.put(key, transformationResult.getFailures().get(key));
-				}
-			} catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
-				fail("No exceptions should be thrown");
-			}
-		}
+		List<ConceptPojo> transformed = getTransformationResults(results);
 		
 		assertEquals(true, !transformed.isEmpty());
 		assertEquals(1, transformed.size());
@@ -191,11 +182,11 @@ public class ConceptTemplateTransformServiceTest {
 		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
 		assertEquals(1, inactiveTerms.size());
 		
-		assertEquals(11, concept.getRelationships().size());
+		assertEquals(10, concept.getRelationships().size());
 		List<RelationshipPojo> stated = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
 				.collect(Collectors.toList());
-		assertEquals(6, stated.size());
+		assertEquals(5, stated.size());
 		for ( RelationshipPojo pojo : stated) {
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
@@ -212,86 +203,83 @@ public class ConceptTemplateTransformServiceTest {
 		assertEquals(5, inferred.size());
 		assertEquals(conceptTransformed, concept);
 	}
-
-	private ConceptTemplate createConceptTemplate() {
-		ConceptTemplate template = new ConceptTemplate();
-		ConceptOutline conceptOutline = new ConceptOutline();
-		conceptOutline.setDefinitionStatus(DefinitionStatus.PRIMITIVE);
-		conceptOutline.setModuleId("900000000000207008");
-		List<Description> descriptions = createDescriptions();
-		conceptOutline.setDescriptions(descriptions);
-		List<Relationship> relationships = createRelationships();
-		conceptOutline.setRelationships(relationships);
-		template.setConceptOutline(conceptOutline);
-		return template;
-	}
-
-	private List<Relationship> createRelationships() {
-		List<Relationship> relationships = new ArrayList<>();
-		Relationship rel = new Relationship();
-		rel.setTarget(new ConceptMini("234780"));
-		rel.setType(new ConceptMini("116680003"));
-		rel.setGroupId(0);
-		relationships.add(rel);
-		return relationships;
-	}
-
-	private List<Description> createDescriptions() {
-		List<Description> descriptions = new ArrayList<>();
-		Description fsn = new Description();
-		fsn.setCaseSignificance(CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE);
-		fsn.setType(DescriptionType.FSN);
-		fsn.setTerm("New Term (test)");
-		descriptions.add(fsn);
+	
+	
+	@Test
+	public void testAllergicReactionCausedBySubstanceTempalteTransformation() throws Exception {
+		source = "Allergic reaction caused by [substance]";
+		destination = "Allergic reaction caused by [substance] (disorder) V2";
+		setUpTestTemplates("Allergic_Reaction_Caused_By_Adhesive_Concept.json",
+				"Allergic_Reaction_Caused_By_Adhesive_Concept_Transformed.json");
+		Set<String> concepts = new HashSet<>();
+		concepts.add("418325008");
+		mockTerminologyServerClient();
+		when(terminologyServerClient.searchConcepts(anyString(),any()))
+		.thenReturn(Arrays.asList(conceptToTransform));
 		
-		Description synonym = new Description();
-		synonym.setCaseSignificance(CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE);
-		synonym.setType(DescriptionType.SYNONYM);
-		synonym.setTerm("New Term");
-		descriptions.add(synonym);
-		return descriptions;
-	}
-
-	private ConceptPojo createConceptPojo() {
-		ConceptPojo pojo = new ConceptPojo();
-		pojo.setActive(true);
-		pojo.setModuleId("900000000000012004");
-		pojo.setConceptId("123456");
-		pojo.setDefinitionStatus(org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED);
-		Set<DescriptionPojo> descriptions = createDescriptionPojos();
-		pojo.setDescriptions(descriptions);
-		Set<RelationshipPojo> relationships = createRelationshipPojos("123456");
-		pojo.setRelationships(relationships);
-		return pojo;
-	}
-
-	private Set<RelationshipPojo> createRelationshipPojos(String sourceId) {
-		Set<RelationshipPojo> pojos = new HashSet<>();
-		RelationshipPojo rel1 = new RelationshipPojo(0, "116680003", "654321", "STATED_RELATIONSHIP");
-		rel1.setSourceId(sourceId);
-		pojos.add(rel1);
-		RelationshipPojo rel2 = new RelationshipPojo(0, "246075003", "6543217", "STATED_RELATIONSHIP");
-		rel2.setSourceId(sourceId);
-		pojos.add(rel2);
-		return pojos;
-	}
-
-	private Set<DescriptionPojo> createDescriptionPojos() {
-		Set<DescriptionPojo> pojos = new HashSet<>();
-		DescriptionPojo pojo = new DescriptionPojo();
-		pojo.setActive(true);
-		pojo.setCaseSignificance("ci");
-		pojo.setTerm("Allergy to eggs");
-		pojo.setType(DescriptionType.SYNONYM.name());
-		pojos.add(pojo);
+		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
+		transformRequest.setConceptsToTransform(concepts);
+		transformRequest.setSourceTemplate(source);
+		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
+		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
+		assertNotNull(results);
 		
-		DescriptionPojo fsn = new DescriptionPojo();
-		fsn.setActive(true);
-		fsn.setCaseSignificance("ci");
-		fsn.setTerm("Allergy to eggs (disorder)");
-		fsn.setType(DescriptionType.FSN.name());
-		pojos.add(fsn);
-		return pojos;
+		List<ConceptPojo> transformed = getTransformationResults(results);
+		assertEquals(true, !transformed.isEmpty());
+		assertEquals(1, transformed.size());
+		ConceptPojo concept = transformed.get(0);
+		//validate descriptions transformation
+		assertEquals(6, concept.getDescriptions().size());
+		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		assertEquals(2, activeTerms.size());
+		for (DescriptionPojo term : activeTerms) {
+			if (DescriptionType.FSN.name().equals(term.getType())) {
+				assertEquals("Allergic reaction caused by adhesive agent (disorder)", term.getTerm());
+			} else {
+				assertEquals("Allergic reaction caused by adhesive agent", term.getTerm());
+			}
+		}
+		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
+		assertEquals(4, inactiveTerms.size());
+		
+		assertEquals(9, concept.getRelationships().size());
+		List<RelationshipPojo> stated = concept.getRelationships()
+				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
+				.collect(Collectors.toList());
+		assertEquals(5, stated.size());
+		for ( RelationshipPojo pojo : stated) {
+			assertNotNull("Target should not be null", pojo.getTarget());
+			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
+			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
+		}
+		
+		Set<RelationshipPojo> inferred = concept.getRelationships()
+				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
+				.collect(Collectors.toSet());
+		Gson gson =  new GsonBuilder().setPrettyPrinting().create();
+		for (ConceptPojo pojo : transformed) {
+			System.out.println(gson.toJson(pojo));
+		}
+		assertEquals(4, inferred.size());
+		assertEquals(ERROR_MSG, conceptTransformed, concept);
+	}
+
+	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {
+		List<ConceptPojo> transformed = new ArrayList<>();
+		Map<String, String> errorMsgMap = new HashMap<>();
+		for (Future<TransformationResult> future : results) {
+			try {
+				TransformationResult transformationResult = future.get();
+				transformed.addAll(transformationResult.getConcepts());
+				for (String key : transformationResult.getFailures().keySet()) {
+					errorMsgMap.put(key, transformationResult.getFailures().get(key));
+				}
+			} catch (InterruptedException | ExecutionException e) {
+				e.printStackTrace();
+				fail("No exceptions should be thrown");
+			}
+		}
+		return transformed;
 	}
 
 	private OngoingStubbing<SnowOwlRestClient> mockTerminologyServerClient() {

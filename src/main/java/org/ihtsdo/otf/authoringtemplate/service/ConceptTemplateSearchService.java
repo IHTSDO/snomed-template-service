@@ -16,7 +16,6 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleDescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +130,7 @@ public class ConceptTemplateSearchService {
 					} 
 				}
 				//perform slot checking
-				//Map<String, ConceptMiniPojo> slotValueMap = TemplateUtil.getAttributeSlotValueMap(attributeTypeSlotsMap, conceptPojo);
+//				Map<String, ConceptMiniPojo> slotValueMap = TemplateUtil.getAttributeSlotValueMap(attributeTypeSlotsMap, conceptPojo);
 				if (lexicalMatch && isMatched) {
 					result.add(conceptPojo.getConceptId());
 				} else if (!lexicalMatch && !isMatched){
@@ -142,46 +141,6 @@ public class ConceptTemplateSearchService {
 			return result;
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to complete lexical template search.", e);
-		}
-		
-	}
-	
-	private void oldMethod() throws RestClientException {
-		String branchPath = null;
-		Collection<String> logicalMatched = null;
-		Map<String, Set<SimpleDescriptionPojo>> descriptionsMap = terminologyClientFactory.getClient()
-				.getDescriptions(branchPath, logicalMatched);
-		for (String conceptId : descriptionsMap.keySet()) {
-			List<SimpleDescriptionPojo> activeDescriptions = descriptionsMap.get(conceptId)
-					.stream()
-					.filter(d->d.isActive())
-					.collect(Collectors.toList());
-			
-			Set<String> fsns = activeDescriptions.stream()
-					.filter(d -> d.getTypeId().equals(Constants.FSN_TYPE_ID))
-					.map(d -> d.getTerm())
-					.collect(Collectors.toSet());
-			
-			List<String> synoyms = activeDescriptions.stream()
-					.filter(d -> !d.getTypeId().equals(Constants.FSN_TYPE_ID))
-					.map(d -> d.getTerm())
-					.collect(Collectors.toList());
-			
-			boolean isMatched = false;
-			Map<Pattern, List<String>> fsnPaterrnSlotsMap = null;
-			for (Pattern pattern : fsnPaterrnSlotsMap.keySet()) {
-				isMatched = isPatternMatched(pattern, fsns);
-				if (!isMatched) {
-					break;
-				} 
-			}
-			Map<Pattern, List<String>> synoymPaterrnSlotsMap = null;
-			for (Pattern pattern : synoymPaterrnSlotsMap.keySet()) {
-				isMatched = isPatternMatched(pattern, synoyms);
-				if (!isMatched) {
-					break;
-				} 
-			}
 		}
 		
 	}

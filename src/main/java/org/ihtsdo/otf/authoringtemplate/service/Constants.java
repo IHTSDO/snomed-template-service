@@ -7,5 +7,6 @@ public class Constants {
 	public static final String EXISTENTIAL = "EXISTENTIAL";
 	public static final String NONCONFORMANCE =  "NONCONFORMANCE_TO_EDITORIAL_POLICY";
 	public static final String FSN_TYPE_ID = "900000000000003001";
+	public static final String IS_A = "116680003" ;
 }
 

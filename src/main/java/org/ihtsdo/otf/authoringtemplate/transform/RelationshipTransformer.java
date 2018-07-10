@@ -71,17 +71,19 @@ public class RelationshipTransformer {
 			}
 		}
 		
-		Set<Set<RelationshipPojo>> megedSet = constructRelationshipSet(existingRelGroupMap, newRelGroupMap);
+		List<List<RelationshipPojo>> mergedSet = constructRelationshipSet(existingRelGroupMap, newRelGroupMap);
 		List<RelationshipPojo> relationships = new ArrayList<>();
-		for (Set<RelationshipPojo> roleGroup : megedSet ) {
-			int roleGrp = getRoleGroup(roleGroup);
+		RoleGroupNumberGenerator roleGrpNumberGenerator = new RoleGroupNumberGenerator(mergedSet);
+		for (List<RelationshipPojo> roleGroup : mergedSet ) {
+			int grpNumber = roleGrpNumberGenerator.getRoleGroupNumber(roleGroup);
 			for (RelationshipPojo pojo : roleGroup) {
-				if (pojo.getGroupId() == roleGrp) {
-					if (pojo.getRelationshipId() == null) {
-						pojo.setSourceId(conceptToTransform.getConceptId());
-					}
-					relationships.add(pojo);
+				if (pojo.getGroupId() != grpNumber) {
+					pojo.setGroupId(grpNumber);
 				}
+				if (pojo.getRelationshipId() == null) {
+					pojo.setSourceId(conceptToTransform.getConceptId());
+				}
+				relationships.add(pojo);
 			}
 		}
 		for (RelationshipPojo pojo : statedRels) {
@@ -103,29 +105,7 @@ public class RelationshipTransformer {
 		conceptToTransform.setRelationships(rels);
 	}
 	
-	private int getRoleGroup(Set<RelationshipPojo> roleGroup) {
-		int roleGrp = 0;
-		for (RelationshipPojo rel : roleGroup) {
-			if (rel.getRelationshipId() != null) {
-				if (roleGrp == rel.getGroupId()) {
-					return roleGrp;
-				}
-				roleGrp = rel.getGroupId();
-			} 
-		}
-		
-		for (RelationshipPojo rel : roleGroup) {
-			if (rel.getRelationshipId() == null) {
-				if (roleGrp == rel.getGroupId()) {
-					return roleGrp;
-				}
-				roleGrp = rel.getGroupId();
-			} 
-		}
-		return roleGrp;
-	}
-
-	private Set<Set<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
+	private List<List<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
 			Map<Integer, Map<String, Relationship>> newRelGroupMap) throws ServiceException {
 		Set<Set<String>> existingSet = new HashSet<>();
 		existingRelGroupMap.values().stream().forEach(r -> existingSet.add(r.keySet()));
@@ -153,10 +133,10 @@ public class RelationshipTransformer {
 			}
 		}
 		
-		Set<Set<RelationshipPojo>> mergedSet = new HashSet<>();
+		List<List<RelationshipPojo>> mergedSet = new ArrayList<>();
 		//match existing role groups
 		for (Set<String> relSet : newRelSet) {
-			Set<RelationshipPojo> pojoSet = new HashSet<>();
+			List<RelationshipPojo> pojoSet = new ArrayList<>();
 			for (String key : relSet) {
 				if (relMapByTargetAndType.containsKey(key)) {
 					pojoSet.addAll(relMapByTargetAndType.get(key));

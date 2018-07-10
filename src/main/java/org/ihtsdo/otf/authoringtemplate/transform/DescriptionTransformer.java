@@ -2,11 +2,11 @@ package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
@@ -29,10 +29,14 @@ public class DescriptionTransformer {
 	}
 
 	public void transform() {
-		List<String> previousActiveTerms = conceptToTransform.getDescriptions().stream()
-				.filter(t -> t.isActive())
-				.map(t -> t.getTerm())
-				.collect(Collectors.toList());
+		
+		Map<String, DescriptionPojo> previousActiveTermMap = new HashMap<>();
+		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
+			if (pojo.isActive()) {
+				previousActiveTermMap.put(pojo.getTerm(), pojo);
+			}
+		}
+		
 		List<String> newTerms = new ArrayList<>();
 		if (conceptOutline.getDescriptions() != null) {
 			for (Description desc : conceptOutline.getDescriptions()) {
@@ -44,10 +48,15 @@ public class DescriptionTransformer {
 					}
 				}
 				newTerms.add(term);
-				if (!previousActiveTerms.contains(term)) {
+				if (!previousActiveTermMap.keySet().contains(term)) {
 					DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term);
 					descPojo.setConceptId(conceptToTransform.getConceptId());
 					conceptToTransform.add(descPojo);
+				} else {
+					//update Acceptability
+					if (desc.getAcceptabilityMap() != null && !desc.getAcceptabilityMap().isEmpty()) {
+						previousActiveTermMap.get(term).setAcceptabilityMap(desc.getAcceptabilityMap());
+					}
 				}
 			}
 		}
@@ -95,9 +104,6 @@ public class DescriptionTransformer {
 			} else {
 				return Boolean.valueOf(o2.isActive()).compareTo( Boolean.valueOf(o1.isActive()));
 			}
-		
 		}
-		
 	}
-	
 }

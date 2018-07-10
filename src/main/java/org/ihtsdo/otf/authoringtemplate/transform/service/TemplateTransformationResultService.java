@@ -1,5 +1,8 @@
 package org.ihtsdo.otf.authoringtemplate.transform.service;
+import static org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus.COMPLETED;
+import static org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus.COMPLETED_WITH_FAILURE;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -14,7 +17,9 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.ResourcePathHelper;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
+import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 import org.ihtsdo.otf.dao.resources.ResourceManager;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +52,12 @@ public class TemplateTransformationResultService {
 	}
 	
 	public TransformationResult getResult(String transformationId) throws ServiceException {
+		TemplateTransformation transformation = getTemplateTransformation(transformationId);
+		TransformationStatus status = transformation.getStatus();
+		if (COMPLETED != status || COMPLETED_WITH_FAILURE != status) {
+			throw new IllegalStateException("No results are available for transformation id " + transformationId + " due to the status is " + status);
+		}
+		
 		TransformationResult result = null;
 		 try (InputStream input = transformationResourceManager.readResourceStream(ResourcePathHelper.getResultPath(transformationId));
 			  Reader reader = new InputStreamReader(input, "UTF-8")){
@@ -85,14 +96,13 @@ public class TemplateTransformationResultService {
 		}
 	}
 	
-	public TemplateTransformation getTemplateTransformation(String transformationId) throws ServiceException {
+	public TemplateTransformation getTemplateTransformation(String transformationId) {
 		String statusPath = ResourcePathHelper.getStatusPath(transformationId);
 		try (InputStream input = transformationResourceManager.readResourceStream(statusPath);
 			 Reader reader = new InputStreamReader(input, Constants.UTF_8)) {
-			 TemplateTransformation pojo = prettyJson.fromJson(reader, TemplateTransformation.class);
-			 return pojo;
-		} catch (Exception e) {
-			throw new ServiceException("Can't find any status file for transaction id " + transformationId, e);
-		}
+			 return prettyJson.fromJson(reader, TemplateTransformation.class);
+		} catch (IOException e) {
+			throw new ResourceNotFoundException("Can't find any template transformation with id " + transformationId, e);
+		} 
 	}
 }

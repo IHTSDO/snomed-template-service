@@ -41,7 +41,7 @@ import com.google.gson.GsonBuilder;
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
 public class ConceptTemplateTransformationTestHarness {
 		
-		private static final String TEMPLATES = "/templates/";
+		private static final String TEMPLATES = "snomed-templates/";
 
 		private static final String JSON = ".json";
 		
@@ -59,19 +59,16 @@ public class ConceptTemplateTransformationTestHarness {
 		private String source;
 		
 		private String destination;
-
-		private static final String CT_GUIDED_BODY_STRUCTURE_TEMPLATE = "CT guided [procedure] of [body structure]";
 		
 		@Before
 		public void setUp() throws Exception {
-			source = "Allergy to [substance]";
-			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
+			//"Allergy to [substance]"
+			source = "Adverse reaction caused by [substance]";
+			FileUtils.copyFileToDirectory(new File(TEMPLATES + source + JSON),
 					jsonStore.getStoreDirectory());
-			destination = "Allergy to [substance] V2";
-			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
-					jsonStore.getStoreDirectory());
-			
-			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
+			//"Allergy to [substance] V2"
+			destination = "Allergic reaction caused by [substance] (disorder) V2";
+			FileUtils.copyFileToDirectory(new File(TEMPLATES + destination + JSON),
 					jsonStore.getStoreDirectory());
 			templateService.reloadCache();
 			String snowOwlUrl = "https://dev-authoring.ihtsdotools.org/snowowl/";
@@ -82,7 +79,7 @@ public class ConceptTemplateTransformationTestHarness {
 		@Test
 		public void testConceptTransformation() throws Exception {
 			Set<String> concepts = new HashSet<>();
-			concepts.add("419238009");
+			concepts.add("418325008");
 			
 			TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 			transformRequest.setConceptsToTransform(concepts);

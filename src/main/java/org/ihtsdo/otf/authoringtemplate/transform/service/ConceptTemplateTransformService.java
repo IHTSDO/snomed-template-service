@@ -71,6 +71,7 @@ public class ConceptTemplateTransformService {
 			LOGGER.error("Error occurred", e);
 			transformation.setStatus(TransformationStatus.FAILED);
 			transformation.setErrorMsg(getErrorMsg(e));
+			resultService.update(transformation);
 			return;
 		}
 		List<ConceptPojo> transformed = new ArrayList<>();

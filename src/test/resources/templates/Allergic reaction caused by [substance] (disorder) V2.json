@@ -1,15 +1,15 @@
 {
-  "name": "Allergy to [substance] V2",
-  "domain": "<<419199007 |Allergy to substance (disorder)|",
+  "name": "Allergic reaction caused by [substance] (disorder) V2",
+  "domain": "<<418634005 |Allergic reaction caused by substance (disorder)|",
   "version": 1,
-  "logicalTemplate": "420134006 |Propensity to adverse reactions (finding)|:\n\t\n\t{\n\t\t719722006 |Has realization (attribute)| = 472964009 |Allergic process (qualifier value)|,\n\t\t246075003 |Causative agent (attribute)| = [[+id(<105590001 |Substance (substance)|) @substance]]\n\t}\n",
+  "logicalTemplate": "281647001 |Adverse reaction (disorder)|:\n [[~1..1]] { \n\t370135005 |Pathological process (attribute)| = 472964009 |Allergic process (qualifier value)|,\n\t246075003 |Causative agent (attribute)| = [[+id(<105590001 |Substance (substance)|) @substance]]}\n",
   "conceptOutline": {
     "definitionStatus": "FULLY_DEFINED",
     "descriptions": [
       {
         "type": "FSN",
         "lang": "en",
-        "termTemplate": "Allergy to $substance$ (finding)",
+        "termTemplate": "Allergic reaction caused by $substance$ (disorder)",
         "caseSignificance": "CASE_INSENSITIVE",
         "acceptabilityMap": {
           "900000000000508004": "PREFERRED",
@@ -19,7 +19,7 @@
       {
         "type": "SYNONYM",
         "lang": "en",
-        "termTemplate": "Allergy to $substance$",
+        "termTemplate": "Allergic reaction caused by $substance$",
         "caseSignificance": "CASE_INSENSITIVE",
         "acceptabilityMap": {
           "900000000000508004": "PREFERRED",
