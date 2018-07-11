@@ -54,7 +54,7 @@ public class TemplateTransformationResultService {
 	public TransformationResult getResult(String transformationId) throws ServiceException {
 		TemplateTransformation transformation = getTemplateTransformation(transformationId);
 		TransformationStatus status = transformation.getStatus();
-		if (COMPLETED != status || COMPLETED_WITH_FAILURE != status) {
+		if (COMPLETED != status && COMPLETED_WITH_FAILURE != status) {
 			throw new IllegalStateException("No results are available for transformation id " + transformationId + " due to the status is " + status);
 		}
 		
