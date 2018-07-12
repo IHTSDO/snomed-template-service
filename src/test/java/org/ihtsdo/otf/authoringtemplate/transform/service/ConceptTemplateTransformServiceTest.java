@@ -60,9 +60,6 @@ import com.google.gson.GsonBuilder;
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
 public class ConceptTemplateTransformServiceTest {
 	
-	private static final String ERROR_MSG = "Transformed concept is not as expected. "
-			+ "Compare the two concepts via the json file to find out the diffs";
-
 	private static final String TEMPLATES = "/templates/";
 
 	private static final String JSON = ".json";
@@ -159,6 +156,7 @@ public class ConceptTemplateTransformServiceTest {
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);
 		transformRequest.setSourceTemplate(source);
+		transformRequest.setInactivationReason("ERRONEOUS");
 		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
@@ -181,6 +179,7 @@ public class ConceptTemplateTransformServiceTest {
 		}
 		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
 		assertEquals(1, inactiveTerms.size());
+		assertEquals("ERRONEOUS", inactiveTerms.get(0).getInactivationIndicator());
 		
 		assertEquals(10, concept.getRelationships().size());
 		List<RelationshipPojo> stated = concept.getRelationships()
@@ -203,8 +202,7 @@ public class ConceptTemplateTransformServiceTest {
 		assertEquals(5, inferred.size());
 		assertEquals(conceptTransformed, concept);
 	}
-	
-	
+
 	@Test
 	public void testAllergicReactionCausedBySubstanceTempalteTransformation() throws Exception {
 		source = "Allergic reaction caused by [substance]";
@@ -261,7 +259,7 @@ public class ConceptTemplateTransformServiceTest {
 			System.out.println(gson.toJson(pojo));
 		}
 		assertEquals(4, inferred.size());
-		assertEquals(ERROR_MSG, conceptTransformed, concept);
+		assertEquals(conceptTransformed.toString().replace(",", ",\n"), concept.toString().replace(",", ",\n"));
 	}
 
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {

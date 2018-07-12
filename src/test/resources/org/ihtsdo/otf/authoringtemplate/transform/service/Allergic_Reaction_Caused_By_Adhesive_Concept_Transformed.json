@@ -46,7 +46,8 @@
       "acceptabilityMap": {
         "900000000000509007": "PREFERRED",
         "900000000000508004": "PREFERRED"
-      }
+      },
+      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"// Default inactivation reason
     },
     {
       "descriptionId": "2574113013",
@@ -74,7 +75,8 @@
       "acceptabilityMap": {
         "900000000000509007": "ACCEPTABLE",
         "900000000000508004": "ACCEPTABLE"
-      }
+      },
+      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"// Default inactivation reason
     },
     {
       "descriptionId": "2577427016",
@@ -89,7 +91,8 @@
       "acceptabilityMap": {
         "900000000000509007": "PREFERRED",
         "900000000000508004": "PREFERRED"
-      }
+      },
+      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"// Default inactivation reason
     }
   ],
   "relationships": [

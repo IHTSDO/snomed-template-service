@@ -48,7 +48,8 @@
       "acceptabilityMap": {
         "900000000000509007": "PREFERRED",
         "900000000000508004": "PREFERRED"
-      }
+      },
+      "inactivationIndicator": "ERRONEOUS"
     }
   ],
   "relationships": [

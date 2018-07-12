@@ -116,13 +116,14 @@ public class ConceptTemplateTransformService {
 	}
 	
 	
-	private TransformationInputData constructTransformationInputData(ConceptTemplate source, ConceptTemplate destination) throws ServiceException {
+	private TransformationInputData constructTransformationInputData(ConceptTemplate source, ConceptTemplate destination, TemplateTransformRequest transformRequest) throws ServiceException {
 		Set<String> termTemplates = TemplateUtil.getTermTemplates(source, DescriptionType.SYNONYM);
 		Set<String> fsnTemplates = TemplateUtil.getTermTemplates(source, DescriptionType.FSN);
 		
 		TransformationInputData input = new TransformationInputData();
 		input.setSynonymTemplates(termTemplates);
 		input.setFsnTemplates(fsnTemplates);
+		input.setInactivationReason(transformRequest.getInactivationReason());
 		LogicalTemplateParserService parser = new LogicalTemplateParserService();
 		LogicalTemplate logical;
 		try {
@@ -154,7 +155,7 @@ public class ConceptTemplateTransformService {
 			} catch (RestClientException e) {
 				throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
 			}
-			final TransformationInputData input = constructTransformationInputData(source, destination);
+			final TransformationInputData input = constructTransformationInputData(source, destination, transformRequest);
 			input.setBranchPath(branchPath);
 			input.setConceptIdMap(conceptMap);
 			List<String> batchJob = null;
@@ -168,13 +169,7 @@ public class ConceptTemplateTransformService {
 				if (counter % batchMax == 0 || counter == transformRequest.getConceptsToTransform().size()) {
 					//do work
 					final List<String> task = batchJob;
-					results.add(executorService.submit(new Callable<TransformationResult>() {
-						@Override
-						public TransformationResult call() throws Exception {
-							
-							return batchTransform(input, task, restClient);
-						}
-					}));
+					results.add(executorService.submit(() -> batchTransform(input, task, restClient)));
 					batchJob = null;
 				}
 			}
