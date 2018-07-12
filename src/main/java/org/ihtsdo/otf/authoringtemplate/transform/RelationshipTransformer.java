@@ -20,7 +20,7 @@ import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.Relationship;
 
 public class RelationshipTransformer {
-	
+
 	private ConceptPojo conceptToTransform;
 	private ConceptOutline conceptOutline;
 	private Map<String, ConceptMiniPojo> attributeSlotMap;
@@ -42,21 +42,15 @@ public class RelationshipTransformer {
 		
 		Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap = new HashMap<>();
 		for (RelationshipPojo pojo : statedRels) {
-			if (existingRelGroupMap.get(pojo.getGroupId()) == null) {
-				existingRelGroupMap.put(pojo.getGroupId(), new HashMap<>());
-			}
-			String key = pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId();
-			existingRelGroupMap.get(pojo.getGroupId()).put(key, pojo);
+			existingRelGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashMap<>())
+					.put(pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId(), pojo);
 		}
 
 		Map<Integer, Map<String, Relationship>> newRelGroupMap = new HashMap<>();
 		for (Relationship rel : conceptOutline.getRelationships()) {
-			if (newRelGroupMap.get(rel.getGroupId()) == null) {
-				newRelGroupMap.put(rel.getGroupId(), new HashMap<>());
-			}
+			Map<String, Relationship> groupMap = newRelGroupMap.computeIfAbsent(rel.getGroupId(), k -> new HashMap<>());
 			if (rel.getTarget() != null) {
-				String key = rel.getTarget().getConceptId() + "_"  + rel.getType().getConceptId();
-				newRelGroupMap.get(rel.getGroupId()).put(key, rel);
+				groupMap.put(rel.getTarget().getConceptId() + "_"  + rel.getType().getConceptId(), rel);
 			} else {
 				//handle relationship with slot
 				if (rel.getTargetSlot() != null) {
@@ -66,7 +60,7 @@ public class RelationshipTransformer {
 						throw new ServiceException(" Fail to find attribute slot value " + slot);
 					}
 					String key = target.getConceptId() + "_" + rel.getType().getConceptId();
-					newRelGroupMap.get(rel.getGroupId()).put(key, rel);
+					groupMap.put(key, rel);
 				}
 			}
 		}
@@ -95,16 +89,15 @@ public class RelationshipTransformer {
 				relationships.add(pojo);
 			}
 		}
-		List<RelationshipPojo> inferred = new ArrayList<>();
-		inferred = conceptToTransform.getRelationships().stream()
+		List<RelationshipPojo> inferred = conceptToTransform.getRelationships().stream()
 				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 				.collect(Collectors.toList());
 		relationships.addAll(inferred);
-		Set<RelationshipPojo> rels = new TreeSet<RelationshipPojo>( new RelationshipPojoComparator());
+		Set<RelationshipPojo> rels = new TreeSet<RelationshipPojo>(new RelationshipPojoComparator());
 		rels.addAll(relationships);
 		conceptToTransform.setRelationships(rels);
 	}
-	
+
 	private List<List<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
 			Map<Integer, Map<String, Relationship>> newRelGroupMap) throws ServiceException {
 		Set<Set<String>> existingSet = new HashSet<>();
@@ -194,7 +187,7 @@ public class RelationshipTransformer {
 		}
 		return miniPojo;
 	}
-	
+
 	private static class RelationshipPojoComparator implements Comparator<RelationshipPojo> {
 
 		@Override
@@ -210,7 +203,11 @@ public class RelationshipTransformer {
 					if (!r1.getType().getConceptId().equals(r2.getType().getConceptId())) {
 						return r1.getType().getConceptId().compareTo(r2.getType().getConceptId());
 					}
-					return Boolean.valueOf(r2.isActive()).compareTo(Boolean.valueOf(r1.isActive()));
+					if (r1.isActive() != r2.isActive()) {
+						return Boolean.compare(r2.isActive(), r1.isActive());
+					}
+					return r1.getRelationshipId() != null && r2.getRelationshipId() != null ?
+							r1.getRelationshipId().compareTo(r2.getRelationshipId()) : 0;
 				} else {
 					return r1.getSourceId().compareTo(r2.getSourceId());
 				}

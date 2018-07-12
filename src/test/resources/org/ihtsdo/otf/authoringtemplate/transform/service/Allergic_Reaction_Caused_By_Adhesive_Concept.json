@@ -119,6 +119,56 @@
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
     },
+    // First duplicate inactive inferred relationship
+    {
+      "relationshipId": "4710611021",
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "418325008",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    // Second duplicate inactive inferred relationship
+    {
+      "relationshipId": "4710622022",
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "418325008",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
     {
       "effectiveTime": "20060131",
       "moduleId": "900000000000207008",

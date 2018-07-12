@@ -240,7 +240,7 @@ public class ConceptTemplateTransformServiceTest {
 		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
 		assertEquals(4, inactiveTerms.size());
 		
-		assertEquals(9, concept.getRelationships().size());
+		assertEquals(11, concept.getRelationships().size());
 		List<RelationshipPojo> stated = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
 				.collect(Collectors.toList());
@@ -258,7 +258,7 @@ public class ConceptTemplateTransformServiceTest {
 		for (ConceptPojo pojo : transformed) {
 			System.out.println(gson.toJson(pojo));
 		}
-		assertEquals(4, inferred.size());
+		assertEquals(6, inferred.size());
 		assertEquals(conceptTransformed.toString().replace(",", ",\n"), concept.toString().replace(",", ",\n"));
 	}
 
