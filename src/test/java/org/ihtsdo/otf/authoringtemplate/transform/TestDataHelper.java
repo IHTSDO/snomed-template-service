@@ -18,6 +18,10 @@ import org.snomed.authoringtemplate.domain.SimpleSlot;
 
 public class TestDataHelper {
 
+	public static final String INFERRED_RELATIONSHIP = "INFERRED_RELATIONSHIP";
+	public static final String STATED_RELATIONSHIP = "STATED_RELATIONSHIP";
+
+
 	public static ConceptPojo createConceptPojo() {
 		ConceptPojo pojo = new ConceptPojo();
 		pojo.setActive(true);
@@ -26,7 +30,7 @@ public class TestDataHelper {
 		pojo.setDefinitionStatus(org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED);
 		Set<DescriptionPojo> descriptions = createDescriptionPojos();
 		pojo.setDescriptions(descriptions);
-		Set<RelationshipPojo> relationships = createRelationshipPojos("123456");
+		Set<RelationshipPojo> relationships = createRelationshipPojos("123456", true);
 		pojo.setRelationships(relationships);
 		return pojo;
 	}
@@ -37,7 +41,7 @@ public class TestDataHelper {
 	}
 	
 	public static RelationshipPojo createRelationshipPojo(int groupNum, String type, String relationshipId) {
-		RelationshipPojo rel = new RelationshipPojo(groupNum, type, "6543217", "STATED_RELATIONSHIP");
+		RelationshipPojo rel = new RelationshipPojo(groupNum, type, "6543217", STATED_RELATIONSHIP);
 		rel.setActive(true);
 		if (relationshipId != null) {
 			rel.setRelationshipId(relationshipId);
@@ -46,16 +50,17 @@ public class TestDataHelper {
 		return rel;
 	}
 
-	public static Set<RelationshipPojo> createRelationshipPojos(String sourceId) {
+	public static Set<RelationshipPojo> createRelationshipPojos(String sourceId, boolean isStated) {
+		String characteristicType = isStated ? STATED_RELATIONSHIP : INFERRED_RELATIONSHIP;
 		Set<RelationshipPojo> pojos = new HashSet<>();
-		RelationshipPojo rel1 = new RelationshipPojo(0, "116680003", "654321", "STATED_RELATIONSHIP");
-		RelationshipPojo rel2 = new RelationshipPojo(0, "246075003", "6543217", "STATED_RELATIONSHIP");
+		RelationshipPojo rel1 = new RelationshipPojo(0, "116680003", "654321", characteristicType);
+		RelationshipPojo rel2 = new RelationshipPojo(0, "246075003", "6543217", characteristicType);
 		rel1.setSourceId(sourceId);
 		rel2.setSourceId(sourceId);
 		pojos.add(rel1);
 		pojos.add(rel2);
-		RelationshipPojo rel3 = new RelationshipPojo(1, "370135005", "65432176", "STATED_RELATIONSHIP");
-		RelationshipPojo rel4 = new RelationshipPojo(1, "246075003", "65432178", "STATED_RELATIONSHIP");
+		RelationshipPojo rel3 = new RelationshipPojo(1, "370135005", "65432176", characteristicType);
+		RelationshipPojo rel4 = new RelationshipPojo(1, "246075003", "65432178", characteristicType);
 		rel3.setSourceId(sourceId);
 		rel4.setSourceId(sourceId);
 		pojos.add(rel3);

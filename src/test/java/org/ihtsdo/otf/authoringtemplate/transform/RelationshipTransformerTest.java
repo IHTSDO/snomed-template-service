@@ -2,10 +2,12 @@ package org.ihtsdo.otf.authoringtemplate.transform;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
@@ -58,5 +60,25 @@ private RelationshipTransformer transformer;
 				.filter(r -> r.getGroupId() == 1)
 				.collect(Collectors.toList());
 		assertEquals(2, group1Rels.size());
+	}
+	
+	@Test
+	public void testRelationshipComparator() {
+		TreeSet<RelationshipPojo> relationships = new TreeSet<>(RelationshipTransformer.getRelationshipPojoComparator());
+		relationships.add(TestDataHelper.createRelationshipPojo(0, "1234"));
+		relationships.add(TestDataHelper.createRelationshipPojo(0, null));
+		relationships.add(TestDataHelper.createRelationshipPojo(1, "12345"));
+		relationships.addAll(TestDataHelper.createRelationshipPojos("23566", true));
+		relationships.addAll(TestDataHelper.createRelationshipPojos("23567", false));
+		assertEquals(11, relationships.size());
+		RelationshipPojo first = relationships.first();
+		assertEquals(TestDataHelper.STATED_RELATIONSHIP, first.getCharacteristicType());
+		assertTrue(first.getRelationshipId() == null);
+		assertEquals(0, first.getGroupId());
+		
+		RelationshipPojo last = relationships.last();
+		assertEquals(TestDataHelper.INFERRED_RELATIONSHIP, last.getCharacteristicType());
+		assertTrue(last.getRelationshipId() == null);
+		assertEquals(1, last.getGroupId());
 	}
 }

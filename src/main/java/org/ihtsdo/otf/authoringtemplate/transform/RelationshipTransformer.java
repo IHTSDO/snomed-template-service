@@ -57,7 +57,7 @@ public class RelationshipTransformer {
 					String slot = rel.getTargetSlot().getSlotName();
 					ConceptMiniPojo target = attributeSlotMap.get(slot);
 					if (target == null) {
-						throw new ServiceException(" Fail to find attribute slot value " + slot);
+						throw new ServiceException(" Failed to find attribute slot value " + slot);
 					}
 					String key = target.getConceptId() + "_" + rel.getType().getConceptId();
 					groupMap.put(key, rel);
@@ -93,9 +93,13 @@ public class RelationshipTransformer {
 				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 				.collect(Collectors.toList());
 		relationships.addAll(inferred);
-		Set<RelationshipPojo> rels = new TreeSet<RelationshipPojo>(new RelationshipPojoComparator());
-		rels.addAll(relationships);
-		conceptToTransform.setRelationships(rels);
+		
+		Set<RelationshipPojo> sortedRels = new TreeSet<RelationshipPojo>(getRelationshipPojoComparator());
+		sortedRels.addAll(relationships);
+		if (relationships.size() != sortedRels.size()) {
+			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",relationships.size(), sortedRels.size()));
+		}
+		conceptToTransform.setRelationships(sortedRels);
 	}
 
 	private List<List<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
@@ -187,33 +191,16 @@ public class RelationshipTransformer {
 		}
 		return miniPojo;
 	}
-
-	private static class RelationshipPojoComparator implements Comparator<RelationshipPojo> {
-
-		@Override
-		public int compare(RelationshipPojo r1, RelationshipPojo r2) {
-			if (r1.getCharacteristicType().equals(r2.getCharacteristicType())) {
-				if (r1.getSourceId().equals(r2.getSourceId())) {
-					if (r1.getGroupId() != r2.getGroupId()) {
-						return String.valueOf(r1.getGroupId()).compareTo(String.valueOf(r2.getGroupId()));
-					}
-					if (!r1.getTarget().getConceptId().equals(r2.getTarget().getConceptId())) {
-						return r1.getTarget().getConceptId().compareTo(r2.getTarget().getConceptId());
-					}
-					if (!r1.getType().getConceptId().equals(r2.getType().getConceptId())) {
-						return r1.getType().getConceptId().compareTo(r2.getType().getConceptId());
-					}
-					if (r1.isActive() != r2.isActive()) {
-						return Boolean.compare(r2.isActive(), r1.isActive());
-					}
-					return r1.getRelationshipId() != null && r2.getRelationshipId() != null ?
-							r1.getRelationshipId().compareTo(r2.getRelationshipId()) : 0;
-				} else {
-					return r1.getSourceId().compareTo(r2.getSourceId());
-				}
-			} else {
-				return  r2.getCharacteristicType().compareTo(r1.getCharacteristicType());
-			}
-		}
+	
+	public static Comparator<RelationshipPojo> getRelationshipPojoComparator() {
+		Comparator<RelationshipPojo> relationshipCompartor = Comparator
+				.comparing(RelationshipPojo::getCharacteristicType, Comparator.nullsFirst(String::compareTo).reversed())
+				.thenComparing(RelationshipPojo::getSourceId, Comparator.nullsFirst(String::compareTo))
+				.thenComparing(RelationshipPojo::getGroupId, Comparator.nullsFirst(Integer::compareTo))
+				.thenComparing(RelationshipPojo::isActive, Comparator.nullsFirst(Boolean::compareTo))
+				.thenComparing(RelationshipPojo::getRelationshipId, Comparator.nullsFirst(String::compareTo))
+				.thenComparing(RelationshipPojo::getType, Comparator.comparing(ConceptMiniPojo::getConceptId, Comparator.nullsFirst(String::compareTo)))
+				.thenComparing(RelationshipPojo::getTarget, Comparator.comparing(ConceptMiniPojo::getConceptId, Comparator.nullsFirst(String::compareTo)));
+		return relationshipCompartor;
 	}
 }
