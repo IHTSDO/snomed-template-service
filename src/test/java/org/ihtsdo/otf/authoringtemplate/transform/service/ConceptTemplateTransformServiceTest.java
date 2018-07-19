@@ -229,16 +229,24 @@ public class ConceptTemplateTransformServiceTest {
 		//validate descriptions transformation
 		assertEquals(6, concept.getDescriptions().size());
 		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
-		assertEquals(2, activeTerms.size());
+		assertEquals(4, activeTerms.size());
+		String[] activeSynonyms = {"Allergic reaction caused by adhesive agent",
+				"Allergic reaction to adhesive",
+				"Allergic reaction caused by adhesive"};
+		
 		for (DescriptionPojo term : activeTerms) {
 			if (DescriptionType.FSN.name().equals(term.getType())) {
 				assertEquals("Allergic reaction caused by adhesive agent (disorder)", term.getTerm());
 			} else {
-				assertEquals("Allergic reaction caused by adhesive agent", term.getTerm());
+				Arrays.asList(activeSynonyms).contains(term.getTerm());
+				if (term.equals(activeSynonyms[0])) {
+					assertNotNull(term.getAcceptabilityMap());
+					assertTrue(term.getAcceptabilityMap().values().contains(Constants.PREFERRED));
+				}
 			}
 		}
 		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
-		assertEquals(4, inactiveTerms.size());
+		assertEquals(2, inactiveTerms.size());
 		
 		assertEquals(11, concept.getRelationships().size());
 		List<RelationshipPojo> stated = concept.getRelationships()

@@ -71,6 +71,7 @@ public class TestDataHelper {
 	public static Set<DescriptionPojo> createDescriptionPojos() {
 		Set<DescriptionPojo> pojos = new HashSet<>();
 		DescriptionPojo pojo = new DescriptionPojo();
+		pojo.setReleased(true);
 		pojo.setActive(true);
 		pojo.setCaseSignificance("ci");
 		pojo.setTerm("Allergy to almond");
@@ -78,6 +79,7 @@ public class TestDataHelper {
 		pojos.add(pojo);
 		
 		DescriptionPojo fsn = new DescriptionPojo();
+		fsn.setReleased(true);
 		fsn.setActive(true);
 		fsn.setCaseSignificance("ci");
 		fsn.setTerm("Allergy to almond (disorder)");

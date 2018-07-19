@@ -20,18 +20,17 @@
       }
     },
     {
-      "active": true,
-      "released": false,
-      "term": "Allergic reaction caused by adhesive agent",
+      "descriptionId": "2574113013",
+      "active": false,
+      "released": true,
+      "term": "Allergic reaction to adhesive (disorder)",
       "conceptId": "418325008",
       "moduleId": "900000000000207008",
       "lang": "en",
-      "type": "SYNONYM",
-      "caseSignificance": "CASE_INSENSITIVE",
-      "acceptabilityMap": {
-        "900000000000508004": "PREFERRED",
-        "900000000000509007": "PREFERRED"
-      }
+      "type": "FSN",
+      "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+      "acceptabilityMap": {},
+      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"
     },
     {
       "descriptionId": "3294368015",
@@ -47,24 +46,42 @@
         "900000000000509007": "PREFERRED",
         "900000000000508004": "PREFERRED"
       },
-      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"// Default inactivation reason
+      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"
     },
     {
-      "descriptionId": "2574113013",
-      "active": false,
-      "effectiveTime": "20160131",
-      "released": true,
-      "term": "Allergic reaction to adhesive (disorder)",
+      "active": true,
+      "released": false,
+      "term": "Allergic reaction caused by adhesive agent",
       "conceptId": "418325008",
       "moduleId": "900000000000207008",
       "lang": "en",
-      "type": "FSN",
-      "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
-      "acceptabilityMap": {}
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "PREFERRED",
+        "900000000000509007": "PREFERRED"
+      }
+    },
+    {
+      "descriptionId": "2577427016",
+      "active": true,
+      "effectiveTime": "20170731",
+      "released": true,
+      "term": "Allergic reaction to adhesive",
+      "conceptId": "418325008",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "ACCEPTABLE",
+        "900000000000508004": "ACCEPTABLE"
+      }
     },
     {
       "descriptionId": "3295925018",
-      "active": false,
+      "active": true,
+      "effectiveTime": "20170731",
       "released": true,
       "term": "Allergic reaction caused by adhesive",
       "conceptId": "418325008",
@@ -75,38 +92,26 @@
       "acceptabilityMap": {
         "900000000000509007": "ACCEPTABLE",
         "900000000000508004": "ACCEPTABLE"
-      },
-      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"// Default inactivation reason
-    },
-    {
-      "descriptionId": "2577427016",
-      "active": false,
-      "released": true,
-      "term": "Allergic reaction to adhesive",
-      "conceptId": "418325008",
-      "moduleId": "900000000000207008",
-      "lang": "en",
-      "type": "SYNONYM",
-      "caseSignificance": "CASE_INSENSITIVE",
-      "acceptabilityMap": {
-        "900000000000509007": "PREFERRED",
-        "900000000000508004": "PREFERRED"
-      },
-      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"// Default inactivation reason
+      }
     }
   ],
   "relationships": [
     {
-      "active": true,
-      "released": false,
+      "relationshipId": "4230567021",
+      "active": false,
+      "released": true,
       "moduleId": "900000000000207008",
       "sourceId": "418325008",
       "target": {
-        "conceptId": "281647001"
+        "conceptId": "418634005",
+        "fsn": "Allergic reaction caused by substance (disorder)",
+        "moduleId": "900000000000207008",
+        "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 0,
       "type": {
-        "conceptId": "116680003"
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -132,21 +137,31 @@
       "modifier": "EXISTENTIAL"
     },
     {
-      "relationshipId": "4230567021",
-      "active": false,
-      "released": true,
+      "active": true,
+      "released": false,
       "moduleId": "900000000000207008",
       "sourceId": "418325008",
       "target": {
-        "conceptId": "418634005",
-        "fsn": "Allergic reaction caused by substance (disorder)",
-        "moduleId": "900000000000207008",
-        "definitionStatus": "FULLY_DEFINED"
+        "conceptId": "281647001"
       },
       "groupId": 0,
       "type": {
-        "conceptId": "116680003",
-        "fsn": "Is a (attribute)"
+        "conceptId": "116680003"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "active": true,
+      "released": false,
+      "moduleId": "900000000000207008",
+      "sourceId": "418325008",
+      "target": {
+        "conceptId": "472964009"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "370135005"
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -173,37 +188,43 @@
       "modifier": "EXISTENTIAL"
     },
     {
-      "active": true,
-      "released": false,
-      "moduleId": "900000000000207008",
-      "sourceId": "418325008",
-      "target": {
-        "conceptId": "472964009"
-      },
-      "groupId": 1,
-      "type": {
-        "conceptId": "370135005"
-      },
-      "characteristicType": "STATED_RELATIONSHIP",
-      "modifier": "EXISTENTIAL"
-    },
-    {
-      "relationshipId": "2850668028",
-      "active": true,
-      "effectiveTime": "20060131",
+      "relationshipId": "4710611021",
+      "active": false,
+      "effectiveTime": "20130731",
       "released": true,
       "moduleId": "900000000000207008",
       "sourceId": "418325008",
       "target": {
-        "conceptId": "400195000",
-        "fsn": "Contact hypersensitivity reaction (disorder)",
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
-        "conceptId": "116680003",
-        "fsn": "Is a (attribute)"
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4710622022",
+      "active": false,
+      "effectiveTime": "20130731",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "418325008",
+      "target": {
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "moduleId": "900000000000207008",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -220,6 +241,27 @@
         "fsn": "Allergic reaction caused by substance (disorder)",
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "2850668028",
+      "active": true,
+      "effectiveTime": "20060131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "418325008",
+      "target": {
+        "conceptId": "400195000",
+        "fsn": "Contact hypersensitivity reaction (disorder)",
+        "moduleId": "900000000000207008",
+        "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
@@ -268,56 +310,6 @@
         "conceptId": "370135005",
         "fsn": "Pathological process (attribute)"
       },
-      "characteristicType": "INFERRED_RELATIONSHIP",
-      "modifier": "EXISTENTIAL"
-    },
-    // First duplicate inactive inferred relationship
-    {
-      "relationshipId": "4710611021",
-      "effectiveTime": "20130731",
-      "moduleId": "900000000000207008",
-      "active": false,
-      "released": true,
-      "type": {
-        "conceptId": "370135005",
-        "fsn": "Pathological process (attribute)"
-      },
-      "target": {
-        "effectiveTime": "20130131",
-        "moduleId": "900000000000207008",
-        "active": true,
-        "released": true,
-        "conceptId": "472964009",
-        "fsn": "Allergic process (qualifier value)",
-        "definitionStatus": "PRIMITIVE"
-      },
-      "sourceId": "418325008",
-      "groupId": 0,
-      "characteristicType": "INFERRED_RELATIONSHIP",
-      "modifier": "EXISTENTIAL"
-    },
-    // Second duplicate inactive inferred relationship
-    {
-      "relationshipId": "4710622022",
-      "effectiveTime": "20130731",
-      "moduleId": "900000000000207008",
-      "active": false,
-      "released": true,
-      "type": {
-        "conceptId": "370135005",
-        "fsn": "Pathological process (attribute)"
-      },
-      "target": {
-        "effectiveTime": "20130131",
-        "moduleId": "900000000000207008",
-        "active": true,
-        "released": true,
-        "conceptId": "472964009",
-        "fsn": "Allergic process (qualifier value)",
-        "definitionStatus": "PRIMITIVE"
-      },
-      "sourceId": "418325008",
-      "groupId": 0,
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
     }

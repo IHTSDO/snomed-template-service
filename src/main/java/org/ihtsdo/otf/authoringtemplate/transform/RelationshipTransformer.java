@@ -80,15 +80,20 @@ public class RelationshipTransformer {
 				relationships.add(pojo);
 			}
 		}
+		
 		for (RelationshipPojo pojo : statedRels) {
 			if (!relationships.contains(pojo)) {
 				if (pojo.isActive()) {
 					pojo.setActive(false);
 					pojo.setEffectiveTime(null);
 				}
-				relationships.add(pojo);
+				// only adding published inactive stated rels
+				if (pojo.isReleased() || pojo.isActive()) {
+					relationships.add(pojo);
+				}
 			}
 		}
+		
 		List<RelationshipPojo> inferred = conceptToTransform.getRelationships().stream()
 				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 				.collect(Collectors.toList());

@@ -8,10 +8,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.DescriptionType;
 
 public class DescriptionTransformer {
 	private static final String TERM_SLOT_INDICATOR = "$";
@@ -19,6 +23,8 @@ public class DescriptionTransformer {
 	private ConceptOutline conceptOutline;
 	private Map<String, String> slotValueMap;
 	private String inactivationReason;
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTransformer.class);
 	
 	public DescriptionTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
 			Map<String, String> slotValueMap, String inactivationReason) {
@@ -29,15 +35,15 @@ public class DescriptionTransformer {
 	}
 
 	public void transform() {
-		
 		Map<String, DescriptionPojo> previousActiveTermMap = new HashMap<>();
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
 			if (pojo.isActive()) {
 				previousActiveTermMap.put(pojo.getTerm(), pojo);
 			}
 		}
-		
-		List<String> newTerms = new ArrayList<>();
+		List<DescriptionPojo> newDescriptions = new ArrayList<>();
+		String newFsn = null;
+		List<String> newPts = new ArrayList<>();
 		if (conceptOutline.getDescriptions() != null) {
 			for (Description desc : conceptOutline.getDescriptions()) {
 				String term = desc.getTerm();
@@ -47,10 +53,18 @@ public class DescriptionTransformer {
 						term = term.replace(TERM_SLOT_INDICATOR + slot + TERM_SLOT_INDICATOR, slotValueMap.get(slot).toLowerCase());
 					}
 				}
-				newTerms.add(term);
+				
+				if (DescriptionType.FSN == desc.getType()) {
+					newFsn = term;
+				} else {
+					if (desc.getAcceptabilityMap().values().contains(Constants.PREFERRED)) {
+						newPts.add(term);
+					}
+				}
 				if (!previousActiveTermMap.keySet().contains(term)) {
 					DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term);
 					descPojo.setConceptId(conceptToTransform.getConceptId());
+					newDescriptions.add(descPojo);
 					conceptToTransform.add(descPojo);
 				} else {
 					//update Acceptability
@@ -60,21 +74,49 @@ public class DescriptionTransformer {
 				}
 			}
 		}
-		//inactivation
-		//TODO need to clarify that we need to in-activate all active terms that don't exist in the new template
+		
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
-			if (pojo.isActive() && !newTerms.contains(pojo.getTerm())) {
-				pojo.setActive(false);
-				pojo.setEffectiveTime(null);
-				pojo.setInactivationIndicator(inactivationReason);
+			if (DescriptionType.FSN.name().equals(pojo.getType())) {
+				if (newFsn != null && !newFsn.equals(pojo.getTerm())) {
+					pojo.setActive(false);
+					pojo.setInactivationIndicator(inactivationReason);
+					pojo.setEffectiveTime(null);
+				}
+			} else {
+				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().values().contains(Constants.PREFERRED)) {
+					if (!newPts.contains(pojo.getTerm())) {
+						updateAcceptablityMap(pojo.getAcceptabilityMap(), Constants.ACCEPTABLE);
+					}
+				}
 			}
 		}
-		Set<DescriptionPojo> descriptions = new TreeSet<DescriptionPojo>( new DescriptionPojoComparator());
-		descriptions.addAll(conceptToTransform.getDescriptions());
+		
+		List<DescriptionPojo> updated = new ArrayList<>();
+		updated.addAll(newDescriptions);
+		int counter = 0;
+		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
+			if (pojo.isActive() || pojo.isReleased()) {
+				updated.add(pojo);
+			} else {
+				counter++;
+			}
+		}
+		if (counter > 0) {
+			LOGGER.info("Total unpublished inactive descriptions removed:" + counter);
+		}
+		Set<DescriptionPojo> descriptions = new TreeSet<DescriptionPojo>( getDescriptionPojoComparator());
+		descriptions.addAll(updated);
 		conceptToTransform.setDescriptions(descriptions);
 	}
 	
 	
+
+	private void updateAcceptablityMap(Map<String, String> acceptabilityMap, String newValue) {
+		for (String refsetId : acceptabilityMap.keySet()) {
+			acceptabilityMap.put(refsetId, newValue);
+		}
+	}
+
 	private DescriptionPojo conscturctDescriptionPojo(Description desc, String term) {
 		DescriptionPojo pojo = new DescriptionPojo();
 		pojo.setAcceptabilityMap(desc.getAcceptabilityMap());
@@ -91,19 +133,12 @@ public class DescriptionTransformer {
 		return conceptOutline.getModuleId() !=null ? conceptOutline.getModuleId() : conceptToTransform.getModuleId();
 	}
 
-	private  static class DescriptionPojoComparator implements Comparator<DescriptionPojo>{
-
-		@Override
-		public int compare(DescriptionPojo o1, DescriptionPojo o2) {
-			if (o1.isActive() == o2.isActive()) {
-				if (!o1.getType().equals(o2.getType())) {
-					return o1.getType().compareTo(o2.getType());
-				} else {
-					return o1.getTerm().compareTo(o2.getTerm());
-				}
-			} else {
-				return Boolean.valueOf(o2.isActive()).compareTo( Boolean.valueOf(o1.isActive()));
-			}
-		}
+	public static Comparator<DescriptionPojo> getDescriptionPojoComparator() {
+		Comparator<DescriptionPojo> comparator = Comparator
+				.comparing(DescriptionPojo::getType, Comparator.naturalOrder())
+				.thenComparing(DescriptionPojo:: isActive, Comparator.nullsFirst(Boolean::compareTo).reversed())
+				.thenComparing(DescriptionPojo::getDescriptionId, Comparator.nullsFirst(String::compareTo))
+				.thenComparing(DescriptionPojo::getTerm, Comparator.naturalOrder());
+		return comparator;
 	}
 }

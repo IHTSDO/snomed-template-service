@@ -35,13 +35,13 @@ private RelationshipTransformer transformer;
 		transformer = new RelationshipTransformer(conceptToTransform, conceptOutline, attributeSlotMap, conceptIdMap);
 		transformer.transform();
 		assertNotNull(conceptToTransform.getRelationships());
-		assertEquals(8, conceptToTransform.getRelationships().size());
+		assertEquals(4, conceptToTransform.getRelationships().size());
 		
 		List<RelationshipPojo> inActiveRels = conceptToTransform.getRelationships()
 				.stream()
 				.filter(r -> !r.isActive())
 				.collect(Collectors.toList());
-		assertEquals(4, inActiveRels.size());
+		assertEquals(0, inActiveRels.size());
 		
 		List<RelationshipPojo> activeRels = conceptToTransform.getRelationships()
 				.stream()
