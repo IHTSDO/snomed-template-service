@@ -158,7 +158,8 @@ public class ConceptTemplateSearchService {
 			String branchPath, boolean logicalMatch, boolean stated) throws ServiceException {
 		try {
 			List<String> focusConcepts = logical.getFocusConcepts();
-			String domainEcl = conceptTemplate.getDomain();
+			//domain concept from template is only for inferred search
+			String domainEcl = !stated ? conceptTemplate.getDomain() : null;
 			if (domainEcl == null || domainEcl.isEmpty()) {
 				domainEcl = constructEclQuery(focusConcepts, Collections.emptyList(), Collections.emptyList());
 			}
