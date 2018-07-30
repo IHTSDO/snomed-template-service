@@ -16,6 +16,7 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,17 +166,63 @@ public class ConceptTemplateSearchService {
 			}
 			LOGGER.debug("Domain ECL=" + domainEcl);
 			List<AttributeGroup> attributeGroups = logical.getAttributeGroups();
-			List<Attribute> unGroupedAttriburtes = logical.getUngroupedAttributes();
-			String logicalEcl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttriburtes);
+			List<Attribute> unGroupedAttributes = logical.getUngroupedAttributes();
+			String logicalEcl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttributes);
 			String ecl = constructLogicalSearchEcl(domainEcl, logicalEcl, logicalMatch);
 			LOGGER.debug("Logic template ECL=" + logicalEcl);
 			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
+			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
+			Set<String> attributes = getAttributes(attributeGroups, unGroupedAttributes);
+			LOGGER.info("Attribute set " + attributes);
+			Set<String> toRemove = filterConceptWithAdditionalAttributes(conceptPojos, attributes);
 			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
+			if (toRemove.size() > 0) {
+				LOGGER.info("Total Concepts " + toRemove.size() + " with additional attributes and removed from results " + toRemove);
+				results.removeAll(toRemove);
+			}
 			LOGGER.info("Logical results {}", results.size());
 			return results;
 		} catch (Exception e) {
 			throw new ServiceException("Failed to complete logical template search for template " + conceptTemplate.getName(), e);
 		}
+	}
+
+	private Set<String> filterConceptWithAdditionalAttributes(List<ConceptPojo> conceptPojos, Set<String> attributes) {
+		Set<String> toRemove = new HashSet<String>();
+		for (ConceptPojo pojo : conceptPojos) {
+			boolean foundAdditional = false;
+			for (RelationshipPojo rel : pojo.getRelationships()) {
+				if (!rel.isActive() || !rel.getCharacteristicType().equals(Constants.STATED)) {
+					continue;
+				}
+				if (!Constants.IS_A.equals(rel.getType().getConceptId()) && !attributes.contains(rel.getType().getConceptId())) {
+					foundAdditional = true;
+					break;
+				}
+			}
+			if (foundAdditional) {
+				toRemove.add(pojo.getConceptId());
+				continue;
+			}
+		}
+		return toRemove;
+	}
+
+	private Set<String> getAttributes(List<AttributeGroup> attributeGroups, List<Attribute> unGroupedAttributes) {
+		Set<String> attributeSet = new HashSet<>();
+		if (attributeGroups != null) {
+			for (AttributeGroup grp : attributeGroups) {
+				for (Attribute attribute : grp.getAttributes()) {
+					attributeSet.add(attribute.getType());
+				}
+			}
+		}
+		if (unGroupedAttributes != null) {
+			for (Attribute attribute : unGroupedAttributes) {
+				attributeSet.add(attribute.getType());
+			}
+		}
+		return attributeSet;
 	}
 
 	private String constructLogicalSearchEcl(String domainEcl, String logicalEcl, boolean logicalMatch) {
