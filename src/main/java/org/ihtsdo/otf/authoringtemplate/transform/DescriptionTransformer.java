@@ -1,5 +1,10 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
+import static org.ihtsdo.otf.authoringtemplate.service.Constants.ACCEPTABLE;
+import static org.ihtsdo.otf.authoringtemplate.service.Constants.PREFERRED;
+import static org.snomed.authoringtemplate.domain.DescriptionType.FSN;
+import static org.snomed.authoringtemplate.domain.DescriptionType.SYNONYM;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -8,14 +13,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.ihtsdo.otf.authoringtemplate.service.Constants;
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.Description;
-import org.snomed.authoringtemplate.domain.DescriptionType;
 
 public class DescriptionTransformer {
 	private static final String TERM_SLOT_INDICATOR = "$";
@@ -34,7 +38,7 @@ public class DescriptionTransformer {
 		this.inactivationReason = inactivationReason;
 	}
 
-	public void transform() {
+	public void transform() throws ServiceException {
 		Map<String, DescriptionPojo> previousActiveTermMap = new HashMap<>();
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
 			if (pojo.isActive()) {
@@ -53,11 +57,10 @@ public class DescriptionTransformer {
 						term = term.replace(TERM_SLOT_INDICATOR + slot + TERM_SLOT_INDICATOR, slotValueMap.get(slot).toLowerCase());
 					}
 				}
-				
-				if (DescriptionType.FSN == desc.getType()) {
+				if (FSN == desc.getType()) {
 					newFsn = term;
 				} else {
-					if (desc.getAcceptabilityMap().values().contains(Constants.PREFERRED)) {
+					if (desc.getAcceptabilityMap().values().contains(PREFERRED)) {
 						newPts.add(term);
 					}
 				}
@@ -65,7 +68,6 @@ public class DescriptionTransformer {
 					DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term);
 					descPojo.setConceptId(conceptToTransform.getConceptId());
 					newDescriptions.add(descPojo);
-					conceptToTransform.add(descPojo);
 				} else {
 					//update Acceptability
 					if (desc.getAcceptabilityMap() != null && !desc.getAcceptabilityMap().isEmpty()) {
@@ -76,16 +78,16 @@ public class DescriptionTransformer {
 		}
 		
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
-			if (DescriptionType.FSN.name().equals(pojo.getType())) {
+			if (FSN.name().equals(pojo.getType())) {
 				if (newFsn != null && !newFsn.equals(pojo.getTerm())) {
 					pojo.setActive(false);
 					pojo.setInactivationIndicator(inactivationReason);
 					pojo.setEffectiveTime(null);
 				}
-			} else {
-				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().values().contains(Constants.PREFERRED)) {
+			} else if (SYNONYM.name().equals(pojo.getType())){
+				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().values().contains(PREFERRED)) {
 					if (!newPts.contains(pojo.getTerm())) {
-						updateAcceptablityMap(pojo.getAcceptabilityMap(), Constants.ACCEPTABLE);
+						updateAcceptablityMap(pojo.getAcceptabilityMap(), ACCEPTABLE);
 					}
 				}
 			}
@@ -106,6 +108,9 @@ public class DescriptionTransformer {
 		}
 		Set<DescriptionPojo> descriptions = new TreeSet<DescriptionPojo>( getDescriptionPojoComparator());
 		descriptions.addAll(updated);
+		if (updated.size() != descriptions.size()) {
+			throw new ServiceException(String.format("The total sorted descriptions %s doesn't match the total before sorting %s", descriptions.size(), updated.size()));
+		}
 		conceptToTransform.setDescriptions(descriptions);
 	}
 	

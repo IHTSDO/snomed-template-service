@@ -1,8 +1,12 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
+import static org.ihtsdo.otf.authoringtemplate.service.Constants.PREFERRED;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
@@ -73,19 +77,38 @@ public class TestDataHelper {
 		DescriptionPojo pojo = new DescriptionPojo();
 		pojo.setReleased(true);
 		pojo.setActive(true);
-		pojo.setCaseSignificance("ci");
+		pojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
 		pojo.setTerm("Allergy to almond");
 		pojo.setType(DescriptionType.SYNONYM.name());
+		pojo.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
 		pojos.add(pojo);
 		
 		DescriptionPojo fsn = new DescriptionPojo();
 		fsn.setReleased(true);
 		fsn.setActive(true);
-		fsn.setCaseSignificance("ci");
+		fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
 		fsn.setTerm("Allergy to almond (disorder)");
 		fsn.setType(DescriptionType.FSN.name());
+		fsn.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
 		pojos.add(fsn);
+		
+		DescriptionPojo textDefinition = new DescriptionPojo();
+		textDefinition.setReleased(true);
+		textDefinition.setActive(true);
+		textDefinition.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		textDefinition.setTerm("Allergy to almond text definition");
+		textDefinition.setType("TEXT_DEFINITION");
+		textDefinition.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
+		pojos.add(textDefinition);
 		return pojos;
+	}
+
+
+	private static Map<String, String> constructAcceptabilityMap(String usValue, String gbValue) {
+		Map<String, String> result = new HashMap<>();
+		result.put("900000000000509007", usValue);
+		result.put("900000000000508004", gbValue);
+		return result;
 	}
 
 
@@ -100,7 +123,7 @@ public class TestDataHelper {
 		Description preferedTerm = new Description();
 		preferedTerm.setTerm("Allergy to almond");
 		preferedTerm.setType(DescriptionType.SYNONYM);
-		preferedTerm.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE);
+	
 		descriptions.add(preferedTerm);
 		conceptOutline.setDescriptions(descriptions);
 		List<Relationship> relationships = new ArrayList<>();
