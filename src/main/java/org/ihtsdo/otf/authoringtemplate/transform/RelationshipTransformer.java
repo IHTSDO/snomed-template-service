@@ -42,8 +42,10 @@ public class RelationshipTransformer {
 		
 		Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap = new HashMap<>();
 		for (RelationshipPojo pojo : statedRels) {
-			existingRelGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashMap<>())
-					.put(pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId(), pojo);
+			if (pojo.isActive()) {
+				existingRelGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashMap<>())
+				.put(pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId(), pojo);
+			}
 		}
 
 		Map<Integer, Map<String, Relationship>> newRelGroupMap = new HashMap<>();
@@ -80,7 +82,6 @@ public class RelationshipTransformer {
 				relationships.add(pojo);
 			}
 		}
-		
 		for (RelationshipPojo pojo : statedRels) {
 			if (!relationships.contains(pojo)) {
 				if (pojo.isActive()) {
@@ -141,15 +142,16 @@ public class RelationshipTransformer {
 			List<RelationshipPojo> pojoSet = new ArrayList<>();
 			for (String key : relSet) {
 				if (relMapByTargetAndType.containsKey(key)) {
-					pojoSet.addAll(relMapByTargetAndType.get(key));
+					RelationshipPojo pojo = relMapByTargetAndType.get(key).iterator().next();
+					pojoSet.add(pojo);
+					if (relMapByTargetAndType.get(key).size() > 1) {
+						relMapByTargetAndType.get(key).remove(pojo);
+					}
 				} else {
+					//no need to remove new relationship as it is not published 
 					Relationship relationship = newRelMapByTargetAndType.get(key).iterator().next();
 					pojoSet.add(constructRelationshipPojo(relationship, attributeSlotMap));
 				}
-			}
-			for (RelationshipPojo pojo : pojoSet) {
-				//make sure relationship is active and effectiveTime is not set
-				pojo.setActive(true);
 			}
 			mergedSet.add(pojoSet);
 		}

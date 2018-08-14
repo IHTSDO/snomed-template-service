@@ -90,6 +90,7 @@ public class ConceptTemplateTransformServiceTest {
 	private ConceptPojo conceptToTransform;
 	private ConceptPojo conceptTransformed;
 	private Gson gson;
+	private boolean isDebug = false;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -181,26 +182,35 @@ public class ConceptTemplateTransformServiceTest {
 		assertEquals(1, inactiveTerms.size());
 		assertEquals("ERRONEOUS", inactiveTerms.get(0).getInactivationIndicator());
 		
-		assertEquals(10, concept.getRelationships().size());
+		assertEquals(12, concept.getRelationships().size());
 		List<RelationshipPojo> stated = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
 				.collect(Collectors.toList());
-		assertEquals(5, stated.size());
+		assertEquals(7, stated.size());
 		for ( RelationshipPojo pojo : stated) {
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
 			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
 		}
 		
+		List<RelationshipPojo> inactiveStated = stated.stream().filter(r -> !r.isActive()).collect(Collectors.toList());
+		assertEquals(4, inactiveStated.size());
+		
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
-		Gson gson =  new GsonBuilder().setPrettyPrinting().create();
-		for (ConceptPojo pojo : transformed) {
-			System.out.println(gson.toJson(pojo));
-		}
+		printTransformedConcept(transformed);
 		assertEquals(5, inferred.size());
 		assertEquals(conceptTransformed, concept);
+	}
+
+	private void printTransformedConcept(List<ConceptPojo> transformed) {
+		if (isDebug) {
+			Gson gson =  new GsonBuilder().setPrettyPrinting().create();
+			for (ConceptPojo pojo : transformed) {
+				System.out.println(gson.toJson(pojo));
+			}
+		}
 	}
 
 	@Test
@@ -262,10 +272,7 @@ public class ConceptTemplateTransformServiceTest {
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
-		Gson gson =  new GsonBuilder().setPrettyPrinting().create();
-		for (ConceptPojo pojo : transformed) {
-			System.out.println(gson.toJson(pojo));
-		}
+		printTransformedConcept(transformed);
 		assertEquals(6, inferred.size());
 		assertEquals(conceptTransformed.toString().replace(",", ",\n"), concept.toString().replace(",", ",\n"));
 	}

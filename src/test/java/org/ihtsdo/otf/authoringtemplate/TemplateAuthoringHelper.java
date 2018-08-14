@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Assert;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.io.Files;
@@ -21,16 +22,18 @@ import com.google.common.io.Files;
  */
 public class TemplateAuthoringHelper {
 
+	
 	public static void main(String[] args) throws IOException {
-//		readInput();
+		String logical = readAndConvertInput();
+		validate(logical);
 		compactScratch();
 //		expandScratch();
 	}
 
 	// Helper code for converting template specification tables into template language!
 	// Not for production use
-	private static void readInput() throws IOException {
-		File file = new File("snomed-templates/.input.txt");
+	private static String readAndConvertInput() throws IOException {
+		File file = new File("templates/.input.txt");
 
 		List<String> lines = Files.readLines(file, Charset.forName("UTF-8"));
 
@@ -63,9 +66,9 @@ public class TemplateAuthoringHelper {
 					} else {
 						if (!group.equals(lastGroup)) {
 							if (!group.equals("0")) {
-								template += "\t},\n";
+								template += "\n";
+								template += "\t{\n";
 							}
-							template += "\t{\n";
 						} else {
 							template += ",\n";
 						}
@@ -83,6 +86,10 @@ public class TemplateAuthoringHelper {
 								template += s;
 							}
 							template += ") @" + slotName + "]]";
+						} else {
+							for (int i = 0; i < range.size(); i++) { 
+								template += range.get(i);
+							}
 						}
 					}
 					type = null;
@@ -97,14 +104,24 @@ public class TemplateAuthoringHelper {
 		System.out.println(template);
 		System.out.println();
 		System.out.println(template.replace("\t", "\\t").replace("\n", "\\n"));
+		return template;
 	}
 
+	private static void validate(String logical) {
+		LogicalTemplateParserService parser = new LogicalTemplateParserService();
+		try {
+			parser.parseTemplate(logical);
+		} catch (Exception e) {
+			System.out.println("Failed to parse logical template");
+			e.printStackTrace();
+		}
+	}
 	private static void compactScratch() throws IOException {transformScratch(true);}
 
 	private static void expandScratch() throws IOException {transformScratch(false);}
 
 	private static void transformScratch(boolean compact) throws IOException {
-		File file = new File("snomed-templates/.scratch.txt");
+		File file = new File("templates/.scratch.txt");
 		File tempFile = new File(file.getAbsolutePath() + ".tmp");
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {

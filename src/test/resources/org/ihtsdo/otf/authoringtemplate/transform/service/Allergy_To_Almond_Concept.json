@@ -71,6 +71,128 @@
       "moduleId": "900000000000207008",
       "active": true,
       "released": true,
+      "relationshipId": "6397794020",
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    //added for testing same attribute appears in group and non-group
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "12345678",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "256350002",
+        "fsn": "Almond (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 0,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+   	{
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397753028",
+      "type": {
+        "conceptId": "255234002",
+        "fsn": "After (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "609327009",
+        "fsn": "Allergic sensitization (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "712839001",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "6397757027",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "256350002",
+        "fsn": "Almond (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+      //added for testing only inactive attribute
+    {
+      "effectiveTime": "20150731",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "relationshipId": "6397757028",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "256350002",
+        "fsn": "Almond (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "712839001",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20160131",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
       "relationshipId": "6397705027",
       "type": {
         "conceptId": "370135005",
@@ -119,30 +241,6 @@
       "moduleId": "900000000000207008",
       "active": true,
       "released": true,
-      "relationshipId": "6397757027",
-      "type": {
-        "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
-      },
-      "target": {
-        "effectiveTime": "20020131",
-        "moduleId": "900000000000207008",
-        "active": true,
-        "released": true,
-        "conceptId": "256350002",
-        "fsn": "Almond (substance)",
-        "definitionStatus": "PRIMITIVE"
-      },
-      "sourceId": "712839001",
-      "groupId": 1,
-      "characteristicType": "STATED_RELATIONSHIP",
-      "modifier": "EXISTENTIAL"
-    },
-    {
-      "effectiveTime": "20160131",
-      "moduleId": "900000000000207008",
-      "active": true,
-      "released": true,
       "relationshipId": "6397706026",
       "type": {
         "conceptId": "246075003",
@@ -160,54 +258,6 @@
       "sourceId": "712839001",
       "groupId": 2,
       "characteristicType": "INFERRED_RELATIONSHIP",
-      "modifier": "EXISTENTIAL"
-    },
-    {
-      "effectiveTime": "20160131",
-      "moduleId": "900000000000207008",
-      "active": true,
-      "released": true,
-      "relationshipId": "6397753028",
-      "type": {
-        "conceptId": "255234002",
-        "fsn": "After (attribute)"
-      },
-      "target": {
-        "effectiveTime": "20130731",
-        "moduleId": "900000000000207008",
-        "active": true,
-        "released": true,
-        "conceptId": "609327009",
-        "fsn": "Allergic sensitization (disorder)",
-        "definitionStatus": "FULLY_DEFINED"
-      },
-      "sourceId": "712839001",
-      "groupId": 1,
-      "characteristicType": "STATED_RELATIONSHIP",
-      "modifier": "EXISTENTIAL"
-    },
-    {
-      "effectiveTime": "20160131",
-      "moduleId": "900000000000207008",
-      "active": true,
-      "released": true,
-      "relationshipId": "6397794020",
-      "type": {
-        "conceptId": "370135005",
-        "fsn": "Pathological process (attribute)"
-      },
-      "target": {
-        "effectiveTime": "20130131",
-        "moduleId": "900000000000207008",
-        "active": true,
-        "released": true,
-        "conceptId": "472964009",
-        "fsn": "Allergic process (qualifier value)",
-        "definitionStatus": "PRIMITIVE"
-      },
-      "sourceId": "712839001",
-      "groupId": 0,
-      "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
     },
     {

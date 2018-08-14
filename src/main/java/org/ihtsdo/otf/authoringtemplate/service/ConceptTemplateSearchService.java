@@ -168,14 +168,15 @@ public class ConceptTemplateSearchService {
 			List<AttributeGroup> attributeGroups = logical.getAttributeGroups();
 			List<Attribute> unGroupedAttributes = logical.getUngroupedAttributes();
 			String logicalEcl = constructEclQuery(focusConcepts, attributeGroups, unGroupedAttributes);
-			String ecl = constructLogicalSearchEcl(domainEcl, logicalEcl, logicalMatch);
 			LOGGER.debug("Logic template ECL=" + logicalEcl);
+			String ecl = constructLogicalSearchEcl(domainEcl, logicalEcl, logicalMatch);
+			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
 			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
 			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
 			Set<String> attributes = getAttributes(attributeGroups, unGroupedAttributes);
 			LOGGER.info("Attribute set " + attributes);
 			Set<String> toRemove = filterConceptWithAdditionalAttributes(conceptPojos, attributes);
-			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
+			
 			if (toRemove.size() > 0) {
 				LOGGER.info("Total Concepts " + toRemove.size() + " with additional attributes and removed from results " + toRemove);
 				results.removeAll(toRemove);
