@@ -2,28 +2,35 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.snomed.authoringtemplate.domain.*;
-import org.snomed.authoringtemplate.domain.logical.*;
-import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.logical.Attribute;
+import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
+import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
+import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
@@ -74,16 +81,20 @@ public class ConceptTemplateSearchServiceTest {
 		assertNotNull(concepts);
 	}
 	
-	
-	
+	@SuppressWarnings("unchecked")
 	@Test
-	public void searchConceptsByLogicalOnly() throws ServiceException, IOException, URISyntaxException {
+	public void searchConceptsByLogicalOnly() throws Exception {
 		String templateName = "CT guided [procedure] of [body structure]";
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + templateName + JSON).toURI()), jsonStore.getStoreDirectory());
 		ConceptTemplate template = jsonStore.load(templateName, ConceptTemplate.class);
 		when(templateService.loadOrThrow(anyString()))
 		.thenReturn(template);
 		expectGetTerminologyServerClient();
+		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt()))
+		.thenReturn(new HashSet<>());
+		
+		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
+		.thenReturn(Arrays.asList(TestDataHelper.createConceptPojo()));
 		
 		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, true, true);
 		assertNotNull(concepts);

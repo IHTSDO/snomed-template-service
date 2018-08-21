@@ -93,15 +93,14 @@ public class ConceptTemplateSearchService {
 				patterns.add(TemplateUtil.constructTermPattern(description.getTermTemplate()));
 			}
 		}
-		Set<String> fsnTempaltes = TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN);
-		Set<String> synoymTempaltes = TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM);
-		Map<Pattern, Set<String>> fsnPaterrnSlotsMap = TemplateUtil.compilePatterns(fsnTempaltes);
-		Map<Pattern, Set<String>> synoymPaterrnSlotsMap = TemplateUtil.compilePatterns(synoymTempaltes);
-		Map<String, Set<String>> attributeTypeSlotsMap = TemplateUtil.getAttributeTypeSlotMap(logical);
+		Map<Pattern, Set<String>> fsnPatternSlotsMap = TemplateUtil.compilePatterns(
+				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN));
+		Map<Pattern, Set<String>> synoymPatternSlotsMap = TemplateUtil.compilePatterns(
+				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM));
 		
 		try {
-			
-			Collection<ConceptPojo> concepts = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<>(logicalMatched));
+			Collection<ConceptPojo> concepts = terminologyClientFactory.getClient()
+					.searchConcepts(branchPath, new ArrayList<>(logicalMatched));
 			for (ConceptPojo conceptPojo : concepts) {
 				List<String> synoyms = conceptPojo.getDescriptions()
 						.stream()
@@ -118,20 +117,18 @@ public class ConceptTemplateSearchService {
 						.collect(Collectors.toList());
 				
 				boolean isMatched = false;
-				for (Pattern pattern : fsnPaterrnSlotsMap.keySet()) {
+				for (Pattern pattern : fsnPatternSlotsMap.keySet()) {
 					isMatched = isPatternMatched(pattern, fsns);
 					if (!isMatched) {
 						break;
 					} 
 				}
-				for (Pattern pattern : synoymPaterrnSlotsMap.keySet()) {
+				for (Pattern pattern : synoymPatternSlotsMap.keySet()) {
 					isMatched = isPatternMatched(pattern, synoyms);
 					if (!isMatched) {
 						break;
 					} 
 				}
-				//perform slot checking
-//				Map<String, ConceptMiniPojo> slotValueMap = TemplateUtil.getAttributeSlotValueMap(attributeTypeSlotsMap, conceptPojo);
 				if (lexicalMatch && isMatched) {
 					result.add(conceptPojo.getConceptId());
 				} else if (!lexicalMatch && !isMatched){
@@ -173,10 +170,7 @@ public class ConceptTemplateSearchService {
 			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
 			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
 			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
-			Set<String> attributes = getAttributes(attributeGroups, unGroupedAttributes);
-			LOGGER.info("Attribute set " + attributes);
-			Set<String> toRemove = filterConceptWithAdditionalAttributes(conceptPojos, attributes);
-			
+			Set<String> toRemove = filterConceptsWithAdditionalAttributes(conceptPojos, attributeGroups, unGroupedAttributes, stated);
 			if (toRemove.size() > 0) {
 				LOGGER.info("Total Concepts " + toRemove.size() + " with additional attributes and removed from results " + toRemove);
 				results.removeAll(toRemove);
@@ -188,42 +182,67 @@ public class ConceptTemplateSearchService {
 		}
 	}
 
-	private Set<String> filterConceptWithAdditionalAttributes(List<ConceptPojo> conceptPojos, Set<String> attributes) {
-		Set<String> toRemove = new HashSet<String>();
-		for (ConceptPojo pojo : conceptPojos) {
-			boolean foundAdditional = false;
-			for (RelationshipPojo rel : pojo.getRelationships()) {
-				if (!rel.isActive() || !rel.getCharacteristicType().equals(Constants.STATED)) {
-					continue;
+	private Set<String> filterConceptsWithAdditionalAttributes(List<ConceptPojo> conceptPojos, List<AttributeGroup> attributeGroups,
+			List<Attribute> unGroupedAttributes, boolean stated) {
+		
+		List<Set<String>> allTypes = new ArrayList<>();
+		List<Set<String>> mandatoryTypes = new ArrayList<>();
+		for (AttributeGroup group : attributeGroups) {
+			Set<String> groupTypes = new HashSet<>();
+			Set<String> mandatoryGroupTypes = new HashSet<>();
+			for (Attribute attribute : group.getAttributes()) {
+				groupTypes.add(attribute.getType());
+				if ("1".equals(attribute.getCardinalityMin())) {
+					mandatoryGroupTypes.add(attribute.getType());
 				}
-				if (!Constants.IS_A.equals(rel.getType().getConceptId()) && !attributes.contains(rel.getType().getConceptId())) {
-					foundAdditional = true;
+			}
+			allTypes.add(groupTypes);
+			mandatoryTypes.add(mandatoryGroupTypes);
+		}
+		
+		Set<String> ungrouped = new HashSet<>();
+		Set<String> mandatoryUngrouped = new HashSet<>();
+		ungrouped.add(Constants.IS_A);
+		mandatoryUngrouped.add(Constants.IS_A);
+		for (Attribute attr : unGroupedAttributes) {
+			ungrouped.add(attr.getType());
+			if ("1".equals(attr.getCardinalityMin())) {
+				mandatoryUngrouped.add(attr.getType());
+			}
+		}
+		allTypes.add(ungrouped);
+		mandatoryTypes.add(mandatoryUngrouped);
+		
+		Set<String> results = new HashSet<>();
+		for (ConceptPojo concept : conceptPojos) {
+			//map relationship by group
+			List<RelationshipPojo> activeRelationships = null;
+			if (stated) {
+				activeRelationships = concept.getRelationships().stream()
+					.filter(r -> r.isActive())
+					.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
+					.collect(Collectors.toList());
+			} else {
+				activeRelationships = concept.getRelationships().stream()
+						.filter(r -> r.isActive())
+						.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
+						.collect(Collectors.toList());
+			}
+
+			Map<Integer, Set<String>> relGroupMap = new HashMap<>();
+			for (RelationshipPojo pojo : activeRelationships) {
+				relGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashSet<>())
+				.add(pojo.getType().getConceptId());
+			}
+			
+			for (Set<String> typeSet : relGroupMap.values()) {
+				if (!allTypes.contains(typeSet) && !mandatoryTypes.contains(typeSet)) {
+					results.add(concept.getConceptId());
 					break;
 				}
 			}
-			if (foundAdditional) {
-				toRemove.add(pojo.getConceptId());
-				continue;
-			}
 		}
-		return toRemove;
-	}
-
-	private Set<String> getAttributes(List<AttributeGroup> attributeGroups, List<Attribute> unGroupedAttributes) {
-		Set<String> attributeSet = new HashSet<>();
-		if (attributeGroups != null) {
-			for (AttributeGroup grp : attributeGroups) {
-				for (Attribute attribute : grp.getAttributes()) {
-					attributeSet.add(attribute.getType());
-				}
-			}
-		}
-		if (unGroupedAttributes != null) {
-			for (Attribute attribute : unGroupedAttributes) {
-				attributeSet.add(attribute.getType());
-			}
-		}
-		return attributeSet;
+		return results;
 	}
 
 	private String constructLogicalSearchEcl(String domainEcl, String logicalEcl, boolean logicalMatch) {
