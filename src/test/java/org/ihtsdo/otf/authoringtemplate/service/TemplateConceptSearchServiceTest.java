@@ -2,6 +2,8 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyString;
@@ -22,6 +24,8 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,14 +43,14 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
-public class ConceptTemplateSearchServiceTest {
+public class TemplateConceptSearchServiceTest {
 
 	private static final String TEMPLATES = "/templates/";
 
 	private static final String JSON = ".json";
 
 	@Autowired
-	private ConceptTemplateSearchService searchService;
+	private TemplateConceptSearchService searchService;
 	
 	@MockBean
 	private TemplateService templateService;
@@ -69,37 +73,74 @@ public class ConceptTemplateSearchServiceTest {
 	}
 	
 	@Test
-	public void searchConceptsWithLogicalAndLexicalTemplate() throws ServiceException, IOException, URISyntaxException {
-		String templateName = "CT guided [procedure] of [body structure]";
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + templateName + JSON).toURI()), jsonStore.getStoreDirectory());
-		ConceptTemplate template = jsonStore.load(templateName, ConceptTemplate.class);
-		assertEquals("<<71388002 |Procedure|", template.getDomain());
-		when(templateService.loadOrThrow(anyString()))
-		.thenReturn(template);
-		expectGetTerminologyServerClient();
+	public void searchConceptsLogicallyAndLexically() throws ServiceException, IOException, URISyntaxException {
+		String templateName = createCTGuidedProcedureTemplate();
 		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, true, true);
 		assertNotNull(concepts);
+		assertTrue(concepts.isEmpty());
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Test
-	public void searchConceptsByLogicalOnly() throws Exception {
+	public void searchConceptsLogicallyWithoutMatchingResults() throws Exception {
+		String templateName = createCTGuidedProcedureTemplate();
+		ConceptPojo testConcept = TestDataHelper.createCTGuidedProcedureConcept(true);
+		RelationshipPojo additionalRel = new RelationshipPojo(0, "246075003", "6543217", TestDataHelper.STATED_RELATIONSHIP);
+		testConcept.add(additionalRel);
+		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
+		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
+		
+		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
+		.thenReturn(Arrays.asList(testConcept));
+		
+		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, null, true);
+		assertNotNull(concepts);
+		assertEquals(0, concepts.size());
+	}
+
+	private String createCTGuidedProcedureTemplate() throws IOException, URISyntaxException {
 		String templateName = "CT guided [procedure] of [body structure]";
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + templateName + JSON).toURI()), jsonStore.getStoreDirectory());
 		ConceptTemplate template = jsonStore.load(templateName, ConceptTemplate.class);
 		when(templateService.loadOrThrow(anyString()))
 		.thenReturn(template);
 		expectGetTerminologyServerClient();
-		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt()))
-		.thenReturn(new HashSet<>());
-		
-		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
-		.thenReturn(Arrays.asList(TestDataHelper.createConceptPojo()));
-		
-		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, true, true);
-		assertNotNull(concepts);
+		return templateName;
 	}
 	
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void searchConceptsLogicallyWithResults() throws Exception {
+		String templateName = createCTGuidedProcedureTemplate();
+		ConceptPojo testConcept = TestDataHelper.createCTGuidedProcedureConcept(true);
+		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
+		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
+		
+		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
+		.thenReturn(Arrays.asList(testConcept));
+		
+		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, null, true);
+		assertNotNull(concepts);
+		assertEquals(1, concepts.size());
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void searchConceptsLogicallyWithoutOptionalAttributeType() throws Exception {
+		String templateName = createCTGuidedProcedureTemplate();
+		
+		ConceptPojo testConcept = TestDataHelper.createCTGuidedProcedureConcept(false);
+		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
+		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
+		
+		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
+		.thenReturn(Arrays.asList(testConcept));
+		
+		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, null, true);
+		assertNotNull(concepts);
+		assertEquals(1, concepts.size());
+	}
 	
 	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);

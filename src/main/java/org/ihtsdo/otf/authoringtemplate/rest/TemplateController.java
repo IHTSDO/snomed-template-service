@@ -7,14 +7,15 @@ import java.util.Set;
 import javax.servlet.http.HttpServletResponse;
 
 import org.ihtsdo.otf.authoringtemplate.rest.util.ControllerHelper;
-import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptCreateService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
-import org.ihtsdo.otf.authoringtemplate.transform.service.ConceptTemplateTransformService;
+import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateConceptTransformService;
 import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateTransformationResultService;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
@@ -43,10 +44,13 @@ public class TemplateController {
 	private TemplateService templateService;
 	
 	@Autowired
-	private ConceptTemplateSearchService searchService;
+	private TemplateConceptCreateService createService;
 	
 	@Autowired
-	private ConceptTemplateTransformService transformService;
+	private TemplateConceptSearchService searchService;
+	
+	@Autowired
+	private TemplateConceptTransformService transformService;
 	
 	@Autowired
 	private SnowOwlRestClientFactory terminologyClientFactory;
@@ -106,7 +110,7 @@ public class TemplateController {
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
 												 @PathVariable String templateName,
 												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
-		return templateService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
+		return createService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
 	@RequestMapping(value = "/templates/reload", method = RequestMethod.POST)

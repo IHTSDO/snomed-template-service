@@ -31,7 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ConceptTemplateSearchService {
+public class TemplateConceptSearchService {
 
 	private static final String AND = "AND";
 
@@ -48,7 +48,7 @@ public class ConceptTemplateSearchService {
 	@Autowired
 	private TemplateService templateService;
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateSearchService.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateConceptSearchService.class);
 
 	private static final int MAX = 200000;
 	
@@ -86,6 +86,10 @@ public class ConceptTemplateSearchService {
 			Set<String> logicalMatched, String branchPath, boolean lexicalMatch) throws ServiceException {
 		
 		Set<String> result = new HashSet<>();
+		if (logicalMatched == null || logicalMatched.isEmpty()) {
+			LOGGER.info("No results found for logical search.");
+			return result;
+		}
 		List<Description> descriptions = conceptTemplate.getConceptOutline().getDescriptions();
 		List<Pattern> patterns = new ArrayList<>();
 		for (Description description : descriptions) {
@@ -97,7 +101,6 @@ public class ConceptTemplateSearchService {
 				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN));
 		Map<Pattern, Set<String>> synoymPatternSlotsMap = TemplateUtil.compilePatterns(
 				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM));
-		
 		try {
 			Collection<ConceptPojo> concepts = terminologyClientFactory.getClient()
 					.searchConcepts(branchPath, new ArrayList<>(logicalMatched));
@@ -170,9 +173,9 @@ public class ConceptTemplateSearchService {
 			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
 			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
 			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
-			Set<String> toRemove = filterConceptsWithAdditionalAttributes(conceptPojos, attributeGroups, unGroupedAttributes, stated);
+			Set<String> toRemove = findConceptsWithExtraAttributeTypes(conceptPojos, attributeGroups, unGroupedAttributes, stated);
 			if (toRemove.size() > 0) {
-				LOGGER.info("Total Concepts " + toRemove.size() + " with additional attributes and removed from results " + toRemove);
+				LOGGER.info("Total Concepts " + toRemove.size() + " with additional attributes and are removed from results " + toRemove);
 				results.removeAll(toRemove);
 			}
 			LOGGER.info("Logical results {}", results.size());
@@ -182,7 +185,7 @@ public class ConceptTemplateSearchService {
 		}
 	}
 
-	private Set<String> filterConceptsWithAdditionalAttributes(List<ConceptPojo> conceptPojos, List<AttributeGroup> attributeGroups,
+	private Set<String> findConceptsWithExtraAttributeTypes(List<ConceptPojo> conceptPojos, List<AttributeGroup> attributeGroups,
 			List<Attribute> unGroupedAttributes, boolean stated) {
 		
 		List<Set<String>> allTypes = new ArrayList<>();
@@ -197,9 +200,11 @@ public class ConceptTemplateSearchService {
 				}
 			}
 			allTypes.add(groupTypes);
-			mandatoryTypes.add(mandatoryGroupTypes);
+			if ("1".equals(group.getCardinalityMin())) {
+				mandatoryTypes.add(mandatoryGroupTypes);
+			}
 		}
-		
+
 		Set<String> ungrouped = new HashSet<>();
 		Set<String> mandatoryUngrouped = new HashSet<>();
 		ungrouped.add(Constants.IS_A);

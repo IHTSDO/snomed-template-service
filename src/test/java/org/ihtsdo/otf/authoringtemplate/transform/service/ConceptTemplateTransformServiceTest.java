@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.ihtsdo.otf.authoringtemplate.service.ConceptTemplateSearchService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
@@ -65,10 +65,10 @@ public class ConceptTemplateTransformServiceTest {
 	private static final String JSON = ".json";
 	
 	@MockBean
-	private ConceptTemplateSearchService searchService;
+	private TemplateConceptSearchService searchService;
 	
 	@Autowired
-	private ConceptTemplateTransformService transformService;
+	private TemplateConceptTransformService transformService;
 	
 	@MockBean
 	private SnowOwlRestClientFactory clientFactory;

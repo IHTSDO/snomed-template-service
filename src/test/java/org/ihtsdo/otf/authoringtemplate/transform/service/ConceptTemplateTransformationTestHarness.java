@@ -46,7 +46,7 @@ public class ConceptTemplateTransformationTestHarness {
 		private static final String JSON = ".json";
 		
 		@Autowired
-		private ConceptTemplateTransformService transformService;
+		private TemplateConceptTransformService transformService;
 		
 		private SnowOwlRestClient termServerRestClient;
 		

@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,7 +43,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ConceptTemplateTransformService {
+public class TemplateConceptTransformService {
 
 	@Autowired
 	private TemplateService templateService;
@@ -54,7 +53,7 @@ public class ConceptTemplateTransformService {
 	
 	private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(ConceptTemplateTransformService.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateConceptTransformService.class);
 
 	
 	@Value("${transformation.batch.max}")

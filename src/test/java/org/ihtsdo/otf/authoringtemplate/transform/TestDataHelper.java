@@ -161,4 +161,51 @@ public class TestDataHelper {
 		relationships.add(rel4);
 		return conceptOutline;
 	}
+
+
+	public static ConceptPojo createCTGuidedProcedureConcept(boolean withOptionalGroup) {
+		ConceptPojo pojo = new ConceptPojo();
+		pojo.setActive(true);
+		pojo.setModuleId("900000000000012004");
+		pojo.setConceptId("1234445");
+		pojo.setDefinitionStatus(org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED);
+		Set<DescriptionPojo> descriptions = createDescriptionPojos();
+		pojo.setDescriptions(descriptions);
+		List<Map<String, String>> typeAndValues = new ArrayList<>();
+		Map<String, String> group0 = new HashMap<>();
+		group0.put("116680003", "71388002");
+		
+		Map<String, String> group1 = new HashMap<>();
+		group1.put("260686004", "312251004");
+		group1.put("405813007", "442083009");
+		group1.put("363703001", "429892002");
+		typeAndValues.add(group0);
+		typeAndValues.add(group1);
+		
+		if (withOptionalGroup) {
+			Map<String, String> group2 = new HashMap<>();
+			group2.put("260686004", "129264002");
+			group2.put("405813007", "442083009");
+			typeAndValues.add(group2);
+		}
+		
+		Set<RelationshipPojo> relationships = createRelationshipPojos("1234445", true, typeAndValues);
+		pojo.setRelationships(relationships);
+		return pojo;
+	}
+	
+	public static Set<RelationshipPojo> createRelationshipPojos(String sourceId, boolean isStated, List<Map<String,String>> typeAndValues) {
+		String characteristicType = isStated ? STATED_RELATIONSHIP : INFERRED_RELATIONSHIP;
+		Set<RelationshipPojo> pojos = new HashSet<>();
+		int group = 0;
+		for (Map<String, String> typeAndValueMap : typeAndValues) {
+			for (String type : typeAndValueMap.keySet()) {
+				RelationshipPojo relationship = new RelationshipPojo(group, type, typeAndValueMap.get(type), characteristicType);
+				relationship.setSourceId(sourceId);
+				pojos.add(relationship);
+			}
+			group++;
+		}
+		return pojos;
+	}
 }
