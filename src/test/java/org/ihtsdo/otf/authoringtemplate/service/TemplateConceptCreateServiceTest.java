@@ -3,6 +3,7 @@ package org.ihtsdo.otf.authoringtemplate.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyCollection;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
@@ -14,7 +15,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
@@ -113,6 +116,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		mockEclQueryResponse(
 				Sets.newHashSet("12656001", "63303001", "63124001", "63125000", "24626005"),
 				Sets.newHashSet("419988009", "415186003", "426865009", "426530000", "426413004"));
+		
+		mockGetFsnResponse();
 
 		List<ConceptOutline> conceptOutlines = conceptCreateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-cols-5-values.txt"));
 		assertEquals(5, conceptOutlines.size());
@@ -173,6 +178,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("30766002"));
+		mockGetFsnResponse();
 		List<ConceptOutline> generatedConcepts = conceptCreateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
 		assertEquals(2, generatedConcepts.size());
 		ConceptOutline c1 = generatedConcepts.get(0);
@@ -198,6 +204,32 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 
 	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
+	}
+	
+	private void mockGetFsnResponse() {
+		expectGetTerminologyServerClient();
+		OngoingStubbing<Map<String,String>> when = null;
+		try {
+			when = when(terminologyServerClient.getFsns(anyString(), anyCollection()));
+		} catch (RestClientException e) {
+			throw new RuntimeException(e);
+		}
+		Map<String,String> conceptFsnMap = new HashMap<>();
+		conceptFsnMap.put("123037004", "Body structure (body structure)");
+		conceptFsnMap.put("118598001", "Property of measurement (qualifier value)");
+		conceptFsnMap.put("7389001", "Time frame (qualifier value)");
+		conceptFsnMap.put("30766002", "Quantitative (qualifier value)");
+		conceptFsnMap.put("12656001", "Structure of body of pubis (body structure)");
+		conceptFsnMap.put("419988009", "Action of drug administration (qualifier value)");
+		conceptFsnMap.put("63303001", "Juxtaglomerular apparatus structure (body structure)");
+		conceptFsnMap.put("415186003", "Proximal illumination - action (qualifier value)");
+		conceptFsnMap.put("63124001", "Structure of posterolateral branch of circle of Willis (body structure)");
+		conceptFsnMap.put("426865009", "3D mode ultrasound (qualifier value)");
+		conceptFsnMap.put("63125000", "Structure of dorsum of hand (body structure)");
+		conceptFsnMap.put("426530000", "Open reduction - action (qualifier value)");
+		conceptFsnMap.put("24626005", "Structure of root of mesentery (body structure)");
+		conceptFsnMap.put("426413004", "Closed reduction - action (qualifier value)");
+		when = when.thenReturn(conceptFsnMap);
 	}
 
 	private void mockEclQueryResponse(Set<String>... conceptIdResults) {

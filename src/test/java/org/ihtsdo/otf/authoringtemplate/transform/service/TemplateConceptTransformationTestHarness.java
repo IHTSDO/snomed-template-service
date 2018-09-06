@@ -39,9 +39,9 @@ import com.google.gson.GsonBuilder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
-public class ConceptTemplateTransformationTestHarness {
+public class TemplateConceptTransformationTestHarness {
 		
-		private static final String TEMPLATES = "snomed-templates/";
+		private static final String TEMPLATES_DIR = "/Users/mchu/Development/snomed-templates/";
 
 		private static final String JSON = ".json";
 		
@@ -62,24 +62,22 @@ public class ConceptTemplateTransformationTestHarness {
 		
 		@Before
 		public void setUp() throws Exception {
-			//"Allergy to [substance]"
-			source = "Adverse reaction caused by [substance]";
-			FileUtils.copyFileToDirectory(new File(TEMPLATES + source + JSON),
+			source = "[Clinical course] contact dermatitis of [body structure] caused by [substance] v1 - OUTDATED";
+			FileUtils.copyFileToDirectory(new File(TEMPLATES_DIR + source + JSON),
 					jsonStore.getStoreDirectory());
-			//"Allergy to [substance] V2"
-			destination = "Allergic reaction caused by [substance] (disorder) V2";
-			FileUtils.copyFileToDirectory(new File(TEMPLATES + destination + JSON),
+			destination = "[Clinical course] contact dermatitis of [body structure] caused by [substance] (disorder) v2";
+			FileUtils.copyFileToDirectory(new File(TEMPLATES_DIR + destination + JSON),
 					jsonStore.getStoreDirectory());
 			templateService.reloadCache();
 			String snowOwlUrl = "https://dev-authoring.ihtsdotools.org/snowowl/";
-			String singleSignOnCookie = "dev-ims-ihtsdo=yyf1vfktrVE6wOzGO9kyow00";
+			String singleSignOnCookie = "ADD_TOKEN_HERE";
 			termServerRestClient = new SnowOwlRestClient(snowOwlUrl, singleSignOnCookie);
 		}
 		
 		@Test
 		public void testConceptTransformation() throws Exception {
 			Set<String> concepts = new HashSet<>();
-			concepts.add("418325008");
+			concepts.add("402263001");
 			
 			TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 			transformRequest.setConceptsToTransform(concepts);

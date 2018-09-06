@@ -3,6 +3,7 @@ package org.ihtsdo.otf.authoringtemplate.transform.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +30,6 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DefinitionStatus;
 import org.snomed.authoringtemplate.domain.DescriptionType;
@@ -89,11 +89,10 @@ public class TemplateConceptTransformService {
 				transformation.setErrorMsg(errorMsg + getErrorMsg(e));
 			}
 		}
-		
-		if (!errorMsgMap.isEmpty() && !transformed.isEmpty()) {
-			transformation.setStatus(TransformationStatus.COMPLETED_WITH_FAILURE);
-		} else {
+		if (errorMsgMap.isEmpty()) {
 			transformation.setStatus(TransformationStatus.COMPLETED);
+		} else {
+			transformation.setStatus(TransformationStatus.COMPLETED_WITH_FAILURE);
 		}
 		TransformationResult finalResult = new TransformationResult();
 		finalResult.setConcepts(transformed);
@@ -203,10 +202,9 @@ public class TemplateConceptTransformService {
 			for (ConceptPojo pojo : conceptPojos) {
 				missing.remove(pojo.getConceptId());
 				Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getSourceAttributeTypeSlotMap(), pojo);
-				Map<String, SimpleConceptPojo> conceptIdmap = input.getConceptIdMap();
-				ConceptPojo transformed;
+				ConceptPojo transformed = null;
 				try {
-					transformed = performTransform(pojo, input.getDestinationTemplate().getConceptOutline(), attributeSlotMap, inactivationReason, conceptIdmap);
+					transformed = performTransform(pojo, input.getDestinationTemplate(), attributeSlotMap, inactivationReason, input.getConceptIdMap());
 					result.addTransformedConcept(transformed);
 				} catch (ServiceException e) {
 					errors.put(pojo.getConceptId(), e.getMessage());
@@ -238,7 +236,7 @@ public class TemplateConceptTransformService {
 		return conceptIdMap;
 	}
 
-	private Set<String> getReplacementSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
+	private Set<String> getLogicalReplacementSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
 		List<SimpleSlot> slotsRequired = TemplateUtil.getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships());
 		Set<String> slotNames = slotsRequired.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
 		return slotNames;
@@ -249,14 +247,24 @@ public class TemplateConceptTransformService {
 		//check term slots can be found in replacement slots
 		Set<String> termTemplates = TemplateUtil.getTermTemplates(destination);
 		Set<String> termSlots = TemplateUtil.getSlots(termTemplates.toArray(new String[termTemplates.size()]));
-		Set<String> destinationSlots = getReplacementSlotsFromTemplate(destination);
-		if (!destinationSlots.containsAll(termSlots)) {
+		Map<String, String> lexicalTermNameSlotMap = TemplateUtil.getLexicalTermNameSlotMap(destination);
+		//Check term names in term templates are defined in the lexical templates
+		if (!lexicalTermNameSlotMap.keySet().containsAll(termSlots)) {
 			Set<String> slotsNotFound = termSlots;
-			slotsNotFound.removeAll(destinationSlots);
-			throw new ServiceException(String.format("Destination template %s has term slot %s that doesn't exist in the logical template",
+			slotsNotFound.removeAll(lexicalTermNameSlotMap.keySet());
+			throw new ServiceException(String.format("Template %s has term slot %s that is not defined in the lexical template",
 					destination.getName(), slotsNotFound));
 		}
-		Set<String> sourceSlots = getReplacementSlotsFromTemplate(source);
+		
+		Set<String> destinationSlots = getLogicalReplacementSlotsFromTemplate(destination);
+		Set<String> slotsReferencedInLexical = new HashSet<>(lexicalTermNameSlotMap.values());
+		if (!destinationSlots.containsAll(slotsReferencedInLexical)) {
+			Set<String> slotsNotFound = slotsReferencedInLexical;
+			slotsNotFound.removeAll(destinationSlots);
+			throw new ServiceException(String.format("Destination template %s has slot referenced in the lexical template %s that doesn't exist in the logical template",
+					destination.getName(), slotsNotFound));
+		}
+		Set<String> sourceSlots = getLogicalReplacementSlotsFromTemplate(source);
 		LOGGER.info("Source slots {} destination slots {}", sourceSlots, destinationSlots);
 		if (!sourceSlots.containsAll(destinationSlots)) {
 			StringBuilder msgBuilder = new StringBuilder();
@@ -276,20 +284,20 @@ public class TemplateConceptTransformService {
 	}
 
 	private ConceptPojo performTransform(ConceptPojo conceptPojo,
-										 ConceptOutline conceptOutline, 
+										 ConceptTemplate conceptTemplate, 
 										 Map<String, ConceptMiniPojo> attributeSlotMap, 
 										 String inactivationReason,
 										 Map<String, SimpleConceptPojo> conceptIdMap) throws ServiceException {
 		ConceptPojo transformed = conceptPojo;
 		org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus definitionStatus = org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.PRIMITIVE;
-		if (DefinitionStatus.FULLY_DEFINED == conceptOutline.getDefinitionStatus()) {
+		if (DefinitionStatus.FULLY_DEFINED == conceptTemplate.getConceptOutline().getDefinitionStatus()) {
 			definitionStatus =  org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED;
 		}
 		transformed.setDefinitionStatus(definitionStatus);
-		RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptOutline, attributeSlotMap, conceptIdMap);
+		RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptTemplate.getConceptOutline(), attributeSlotMap, conceptIdMap);
 		relationShipTransformer.transform();
 		Map<String, String> slotValueMap = getSlotDescriptionValueMap(attributeSlotMap);
-		DescriptionTransformer transformer = new DescriptionTransformer(transformed, conceptOutline, slotValueMap, inactivationReason);
+		DescriptionTransformer transformer = new DescriptionTransformer(transformed, conceptTemplate, slotValueMap, inactivationReason);
 		transformer.transform();
 		transformed.setEffectiveTime(null);
 		return transformed;

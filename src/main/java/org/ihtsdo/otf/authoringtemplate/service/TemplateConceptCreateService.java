@@ -1,17 +1,16 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import static org.ihtsdo.otf.authoringtemplate.service.TemplateService.TERM_SLOT_PATTERN;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -27,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptMini;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,18 +53,135 @@ public class TemplateConceptCreateService {
 	
 	public List<ConceptOutline> generateConcepts(String branchPath, String templateName, InputStream inputStream) throws IOException, ServiceException {
 		Assert.notNull(inputStream, "Batch file is required.");
-
 		ConceptTemplate template = templateService.loadOrThrow(templateName);
 		ConceptOutline conceptOutline = template.getConceptOutline();
 		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(conceptOutline.getRelationships());
-		List<String> additionalSlots = template.getAdditionalSlots();
-		List<String> errorMessages = new ArrayList<>();
-		List<List<String>> columnValues = new ArrayList<>();
+		List<List<String>> slotColumnValues = getSlotInputValues(inputStream, template);
+		int batchSize = slotColumnValues.get(0).size();
+		logger.info("Validating {} slot value concepts on branch '{}'", batchSize, branchPath);
+		validateSlotValues(branchPath, slotsRequiringInput, slotColumnValues);
+		logger.info("Generating batch of {} concepts on branch '{}' using template '{}'", batchSize, branchPath, templateName);
+		return createConceptsWithSlotValues(branchPath, slotsRequiringInput, slotColumnValues, template);
+		
+	}
 
+	private List<ConceptOutline> createConceptsWithSlotValues(String branchPath, List<SimpleSlot> slotsRequiringInput,
+			List<List<String>> slotColumnValues, ConceptTemplate template) throws ServiceException {
+		List<ConceptOutline> generatedConcepts = new ArrayList<>();
+		List<String> additionalSlots = template.getAdditionalSlots();
+		// Generate unsaved concepts
+		List<String> slotNames = slotsRequiringInput.stream()
+						.filter(slot -> slot.getSlotName() != null)
+						.map(SimpleSlot::getSlotName)
+						.collect(Collectors.toList());
+				slotNames.addAll(additionalSlots);
+
+		// Create x blank concepts
+		IntStream.range(0, slotColumnValues.get(0).size()).forEach(i -> generatedConcepts.add(new ConceptOutline()));
+
+		// Push each template relationship into all concepts
+		AtomicInteger column = new AtomicInteger(0);
+		template.getConceptOutline().getRelationships().forEach(relationship -> {
+			SimpleSlot targetSlot = relationship.getTargetSlot();
+			if (targetSlot == null) {
+				generatedConcepts.forEach(concept -> concept.addRelationship(relationship));
+			}
+			if (targetSlot != null) {
+				String slotName = targetSlot.getSlotName();
+				if (slotName != null) {
+					int slotColumn = column.getAndIncrement();
+					addRelationshipToAllConcepts(relationship, slotColumn, slotColumnValues, generatedConcepts);
+				} else {
+					addRelationshipToAllConcepts(relationship, slotNames.indexOf(targetSlot.getSlotReference()), slotColumnValues, generatedConcepts);
+				}
+			}
+		});
+
+		// clone each template description into all concepts
+		template.getConceptOutline().getDescriptions().forEach(description -> {
+			generatedConcepts.forEach(concept -> concept.addDescription(description.clone()));
+		});
+
+		for (int i = 0; i < generatedConcepts.size(); i++) {
+			List<String> slotRowValues = new ArrayList<>();
+			for (int k = 0; k < slotNames.size(); k ++) {
+				slotRowValues.add(slotColumnValues.get(k).get(i));
+			}
+			Map<String, String> slotValueMap = createSlotValueMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
+			LexicalTemplateTransformService.transformDescriptions(template.getLexicalTemplates(), generatedConcepts.get(i).getDescriptions(), slotValueMap);
+		}
+		return generatedConcepts;
+	}
+
+	private Map<String, String> createSlotValueMap(String branchPath, List<String> slotNames, List<String> slotValues, int additionalSlots) throws ServiceException {
+		Map<String, String> slotValueMap = new HashMap<>();
+		SnowOwlRestClient client = terminologyClientFactory.getClient();
+		Map<String, String> coneptFsnMap;
+		try {
+			coneptFsnMap = client.getFsns(branchPath, slotValues.subList(0, slotValues.size() - additionalSlots));
+		} catch (RestClientException e) {
+			throw new ServiceException("Failed to get FSNs for concepts from branch " + branchPath, e);
+		}
+		for (int i = 0; i < slotNames.size(); i++) {
+			if (i < (slotValues.size() - additionalSlots)) {
+				slotValueMap.put(slotNames.get(i), TemplateUtil.getDescriptionFromFSN(coneptFsnMap.get(slotValues.get(i))));
+			} else {
+				slotValueMap.put(slotNames.get(i), slotValues.get(i));
+			}
+		}
+		return slotValueMap;
+	}
+
+	private void validateSlotValues(String branchPath, List<SimpleSlot> slotsRequiringInput, List<List<String>> slotInputValues) throws ServiceException {
+		// Validate values against slot constraints, column at a time
+		int slotIndex = -1;
+		List<String> errorMessages = new ArrayList<>();
+		try {
+			SnowOwlRestClient client = terminologyClientFactory.getClient();
+			for (SimpleSlot simpleSlot : slotsRequiringInput) {
+				slotIndex++;
+				Set<String> slotValues = new HashSet<>(slotInputValues.get(slotIndex));
+				Set<String> invalidSlotValues = new HashSet<>(slotValues);
+				String slotEcl = simpleSlot.getAllowableRangeECL();
+				for (List<String> slotValuePartition : Iterables.partition(slotValues, 100)) {
+					StringBuilder validationEcl = new StringBuilder()
+							.append("(")
+							.append(slotEcl)
+							.append(") AND (");
+					for (String slotValue : slotValuePartition) {
+						validationEcl.append(slotValue)
+								.append(" OR ");
+					}
+					// Remove last OR
+					validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
+					validationEcl.append(")");
+
+					Set<String> validSlotValues = client.eclQuery(branchPath, validationEcl.toString(), slotValuePartition.size());
+					invalidSlotValues.removeAll(validSlotValues);
+				}
+				if (!invalidSlotValues.isEmpty()) {
+					errorMessages.add(String.format("Column %s has the constraint %s. " +
+									"The following given values do not match this constraint: %s",
+							slotIndex + 1,
+							slotEcl,
+							invalidSlotValues));
+				}
+			}
+		} catch (RestClientException e) {
+			throw new ServiceException("Error validating slots using terminologyClientFactory server.", e);
+		}
+		throwAnyInputErrors(errorMessages);
+	}
+	
+	private List<List<String>> getSlotInputValues(InputStream inputStream, ConceptTemplate template) throws IOException {
+		List<List<String>> columnValues = new ArrayList<>();
+		List<String> errorMessages = new ArrayList<>();
+		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(template.getConceptOutline().getRelationships());
+		List<String> additionalSlots = template.getAdditionalSlots();
+		int expectedColumnCount = slotsRequiringInput.size() + additionalSlots.size();
 		// Read input file
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 			// Validate header
-			int expectedColumnCount = slotsRequiringInput.size() + additionalSlots.size();
 			validateHeader(reader.readLine(), expectedColumnCount);
 
 			// Collect values with basic validation
@@ -100,108 +215,9 @@ public class TemplateConceptCreateService {
 		if (batchSize == 0) {
 			throw new InputError("Batch input file doesn't contain any rows.");
 		}
-
-		logger.info("Generating batch of {} concepts on branch '{}' using template '{}'", batchSize, branchPath, templateName);
-
-		// Validate values against slot constraints, column at a time
-		int slotIndex = -1;
-		try {
-			SnowOwlRestClient client = terminologyClientFactory.getClient();
-			for (SimpleSlot simpleSlot : slotsRequiringInput) {
-				slotIndex++;
-				Set<String> slotValues = new HashSet<>(columnValues.get(slotIndex));
-				Set<String> invalidSlotValues = new HashSet<>(slotValues);
-				String slotEcl = simpleSlot.getAllowableRangeECL();
-				for (List<String> slotValuePartition : Iterables.partition(slotValues, 100)) {
-					StringBuilder validationEcl = new StringBuilder()
-							.append("(")
-							.append(slotEcl)
-							.append(") AND (");
-					for (String slotValue : slotValuePartition) {
-						validationEcl.append(slotValue)
-								.append(" OR ");
-					}
-					// Remove last OR
-					validationEcl.delete(validationEcl.length() - 4, validationEcl.length());
-					validationEcl.append(")");
-
-					Set<String> validSlotValues = client.eclQuery(branchPath, validationEcl.toString(), slotValuePartition.size());
-					invalidSlotValues.removeAll(validSlotValues);
-				}
-				if (!invalidSlotValues.isEmpty()) {
-					errorMessages.add(String.format("Column %s has the constraint %s. " +
-									"The following given values do not match this constraint: %s",
-							slotIndex + 1,
-							slotEcl,
-							invalidSlotValues));
-				}
-			}
-		} catch (RestClientException e) {
-			throw new ServiceException("Error validating slots using terminologyClientFactory server.", e);
-		}
-		throwAnyInputErrors(errorMessages);
-
-		// Generate unsaved concepts
-		List<String> slotNames = slotsRequiringInput.stream().filter(slot -> slot.getSlotName() != null).map(SimpleSlot::getSlotName).collect(Collectors.toList());
-		slotNames.addAll(additionalSlots);
-
-		List<ConceptOutline> generatedConcepts = new ArrayList<>();
-
-		// Create x blank concepts
-		IntStream.range(0, batchSize).forEach(i -> generatedConcepts.add(new ConceptOutline()));
-
-		// Push each template relationship into all concepts
-		AtomicInteger column = new AtomicInteger(0);
-		template.getConceptOutline().getRelationships().forEach(relationship -> {
-			SimpleSlot targetSlot = relationship.getTargetSlot();
-			if (targetSlot == null) {
-				generatedConcepts.forEach(concept -> concept.addRelationship(relationship));
-			}
-			if (targetSlot != null) {
-				String slotName = targetSlot.getSlotName();
-				if (slotName != null) {
-					int slotColumn = column.getAndIncrement();
-					addRelationshipToAllConcepts(relationship, slotColumn, columnValues, generatedConcepts);
-				} else {
-					addRelationshipToAllConcepts(relationship, slotNames.indexOf(targetSlot.getSlotReference()), columnValues, generatedConcepts);
-				}
-			}
-		});
-
-		// Push each template description into all concepts
-		AtomicInteger descriptionIndex = new AtomicInteger(0);
-		template.getConceptOutline().getDescriptions().forEach(description -> {
-			generatedConcepts.forEach(concept -> concept.addDescription(description.clone()));
-
-			Set<String> additionalSlotsToProcess = new HashSet<>();
-			String termTemplate = description.getTermTemplate();
-			if (termTemplate != null) {
-				Matcher matcher = TERM_SLOT_PATTERN.matcher(termTemplate);
-				while (matcher.find()) {
-					String termSlot = matcher.group(1);
-					if (additionalSlots.contains(termSlot)) {
-						additionalSlotsToProcess.add(termSlot);
-					}
-				}
-			}
-			for (String additionalSlotToProcess : additionalSlotsToProcess) {
-				int index = additionalSlots.indexOf(additionalSlotToProcess);
-				List<String> additionalSlotValues = columnValues.get(slotsRequiringInput.size() + index);
-				for (int i = 0; i < generatedConcepts.size(); i++) {
-					Description generatedDescription = generatedConcepts.get(i).getDescriptions().get(descriptionIndex.get());
-					if (generatedDescription.getTerm() == null) {
-						generatedDescription.setTerm(generatedDescription.getTermTemplate());
-					}
-					generatedDescription.setTerm(generatedDescription.getTerm().replace("$" + additionalSlotToProcess + "$", additionalSlotValues.get(i)));
-				}
-			}
-			descriptionIndex.incrementAndGet();
-		});
-
-		return generatedConcepts;
+		return columnValues;
 	}
 	
-
 	private void addRelationshipToAllConcepts(Relationship relationship, int slotColumn, List<List<String>> columnValues, List<ConceptOutline> generatedConcepts) {
 		List<String> values = columnValues.get(slotColumn);
 		for (int i = 0; i < values.size(); i++) {

@@ -37,7 +37,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 
 @RestController
-@SuppressWarnings("unused")
 public class TemplateController {
 
 	@Autowired
@@ -127,12 +126,6 @@ public class TemplateController {
 									  @RequestParam(defaultValue="true") boolean stated) throws IOException, ServiceException {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
-	
-	
-	private SnowOwlRestClient getRestClient() {
-		return terminologyClientFactory.getClient();
-	}
-	
 	
 	@SuppressWarnings("rawtypes")
 	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform", method = RequestMethod.POST)

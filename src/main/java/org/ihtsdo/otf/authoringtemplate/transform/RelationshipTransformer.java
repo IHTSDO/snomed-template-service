@@ -59,7 +59,12 @@ public class RelationshipTransformer {
 					String slot = rel.getTargetSlot().getSlotName();
 					ConceptMiniPojo target = attributeSlotMap.get(slot);
 					if (target == null) {
-						throw new ServiceException(" Failed to find attribute slot value " + slot);
+						if ("0".equals(rel.getCardinalityMin()) || rel.getCardinalityMin() == null) {
+							//optional
+							continue;
+						} else {
+							throw new ServiceException("Failed to find attribute slot value " + slot);
+						}
 					}
 					String key = target.getConceptId() + "_" + rel.getType().getConceptId();
 					groupMap.put(key, rel);

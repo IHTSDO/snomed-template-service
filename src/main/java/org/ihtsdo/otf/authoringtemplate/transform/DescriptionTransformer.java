@@ -13,27 +13,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.ihtsdo.otf.authoringtemplate.service.LexicalTemplateTransformService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 
 public class DescriptionTransformer {
-	private static final String TERM_SLOT_INDICATOR = "$";
 	private ConceptPojo conceptToTransform;
-	private ConceptOutline conceptOutline;
 	private Map<String, String> slotValueMap;
 	private String inactivationReason;
+	private ConceptTemplate conceptTemplate;
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTransformer.class);
 	
-	public DescriptionTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
+	public DescriptionTransformer(ConceptPojo conceptToTransform, ConceptTemplate conceptTemplate,
 			Map<String, String> slotValueMap, String inactivationReason) {
 		this.conceptToTransform = conceptToTransform;
-		this.conceptOutline = conceptOutline;
+		this.conceptTemplate = conceptTemplate;
 		this.slotValueMap = slotValueMap;
 		this.inactivationReason = inactivationReason;
 	}
@@ -48,36 +49,38 @@ public class DescriptionTransformer {
 		List<DescriptionPojo> newDescriptions = new ArrayList<>();
 		String newFsn = null;
 		List<String> newPts = new ArrayList<>();
-		if (conceptOutline.getDescriptions() != null) {
-			for (Description desc : conceptOutline.getDescriptions()) {
-				String term = desc.getTerm();
-				if (desc.getTermTemplate() != null) {
-					term = desc.getTermTemplate();
-					for (String slot : slotValueMap.keySet()) {
-						term = term.replace(TERM_SLOT_INDICATOR + slot + TERM_SLOT_INDICATOR, slotValueMap.get(slot).toLowerCase());
-					}
+		ConceptOutline conceptOutline = conceptTemplate.getConceptOutline();
+		String moduleId = conceptToTransform.getModuleId();
+		if (conceptTemplate.getConceptOutline().getModuleId() !=null) {
+			moduleId = conceptTemplate.getConceptOutline().getModuleId();
+		}
+		LexicalTemplateTransformService.transformDescriptions(conceptTemplate.getLexicalTemplates(), 
+				conceptOutline.getDescriptions(), slotValueMap);
+		for (Description desc : conceptOutline.getDescriptions()) {
+			String term = desc.getTerm();
+			if (FSN == desc.getType()) {
+				newFsn = term;
+			} else {
+				if (desc.getAcceptabilityMap().values().contains(PREFERRED)) {
+					newPts.add(term);
 				}
-				if (FSN == desc.getType()) {
-					newFsn = term;
-				} else {
-					if (desc.getAcceptabilityMap().values().contains(PREFERRED)) {
-						newPts.add(term);
-					}
-				}
-				if (!previousActiveTermMap.keySet().contains(term)) {
-					DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term);
-					descPojo.setConceptId(conceptToTransform.getConceptId());
-					newDescriptions.add(descPojo);
-				} else {
-					//update Acceptability
-					if (desc.getAcceptabilityMap() != null && !desc.getAcceptabilityMap().isEmpty()) {
-						previousActiveTermMap.get(term).setAcceptabilityMap(desc.getAcceptabilityMap());
-					}
+			}
+			if (!previousActiveTermMap.keySet().contains(term)) {
+				DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term, moduleId);
+				descPojo.setConceptId(conceptToTransform.getConceptId());
+				newDescriptions.add(descPojo);
+			} else {
+				//update Acceptability
+				if (desc.getAcceptabilityMap() != null && !desc.getAcceptabilityMap().isEmpty()) {
+					previousActiveTermMap.get(term).setAcceptabilityMap(desc.getAcceptabilityMap());
 				}
 			}
 		}
 		
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
+			if (!pojo.isActive()) {
+				continue;
+			}
 			if (FSN.name().equals(pojo.getType())) {
 				if (newFsn != null && !newFsn.equals(pojo.getTerm())) {
 					pojo.setActive(false);
@@ -122,7 +125,7 @@ public class DescriptionTransformer {
 		}
 	}
 
-	private DescriptionPojo conscturctDescriptionPojo(Description desc, String term) {
+	private DescriptionPojo conscturctDescriptionPojo(Description desc, String term, String moduleid) {
 		DescriptionPojo pojo = new DescriptionPojo();
 		pojo.setAcceptabilityMap(desc.getAcceptabilityMap());
 		pojo.setActive(true);
@@ -130,12 +133,8 @@ public class DescriptionTransformer {
 		pojo.setTerm(term);
 		pojo.setType(desc.getType().name());
 		pojo.setLang(desc.getLang());
-		pojo.setModuleId(getModuleId());
+		pojo.setModuleId(moduleid);
 		return pojo;
-	}
-	
-	private String getModuleId() {
-		return conceptOutline.getModuleId() !=null ? conceptOutline.getModuleId() : conceptToTransform.getModuleId();
 	}
 
 	public static Comparator<DescriptionPojo> getDescriptionPojoComparator() {

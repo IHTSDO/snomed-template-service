@@ -116,15 +116,17 @@ public class TestDataHelper {
 		ConceptOutline conceptOutline = new ConceptOutline();
 		List<Description> descriptions = new ArrayList<>();
 		Description fsn = new Description();
-		fsn.setTerm("Allergy to almond (finding)");
+		fsn.setTermTemplate("Allergy to $substance$ (finding)");
 		fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE);
 		fsn.setType(DescriptionType.FSN);
 		descriptions.add(fsn);
+		
 		Description preferedTerm = new Description();
-		preferedTerm.setTerm("Allergy to almond");
+		preferedTerm.setTermTemplate("Allergy to $substance$");
+		preferedTerm.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE);
 		preferedTerm.setType(DescriptionType.SYNONYM);
-	
 		descriptions.add(preferedTerm);
+		
 		conceptOutline.setDescriptions(descriptions);
 		List<Relationship> relationships = new ArrayList<>();
 		Relationship rel1 = new Relationship();

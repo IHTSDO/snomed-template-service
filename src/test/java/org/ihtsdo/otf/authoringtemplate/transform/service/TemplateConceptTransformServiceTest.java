@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
@@ -58,7 +58,7 @@ import com.google.gson.GsonBuilder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = {Config.class, TestConfig.class})
-public class ConceptTemplateTransformServiceTest {
+public class TemplateConceptTransformServiceTest {
 	
 	private static final String TEMPLATES = "/templates/";
 

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
+import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.snomed.authoringtemplate.domain.logical.Attribute;
@@ -68,6 +69,14 @@ public class TemplateUtil {
 		return termTemplates;
 	}
 	
+	public static Map<String,String> getLexicalTermNameSlotMap(ConceptTemplate conceptTemplate) {
+		Map<String, String> termNameSlotMap = new HashMap<>();
+		for (LexicalTemplate lexical : conceptTemplate.getLexicalTemplates()) {
+			termNameSlotMap.put(lexical.getName(), lexical.getTakeFSNFromSlot());
+		}
+		return termNameSlotMap;
+	}
+	
 	public static Set<String> getTermTemplates(ConceptTemplate conceptTemplate, DescriptionType type) {
 		Set<String> termTemplates = new HashSet<>();
 		for (Description desc : conceptTemplate.getConceptOutline().getDescriptions()) {
@@ -107,12 +116,10 @@ public class TemplateUtil {
 	
 	public static Map<String, ConceptMiniPojo> getAttributeSlotValueMap(Map<String, Set<String>> attributeSlots, ConceptPojo conceptPojo) {
 		Map<String, ConceptMiniPojo> result = new HashMap<>();
-		List<RelationshipPojo> statedRels = conceptPojo.getRelationships().stream()
-				.filter(r -> r.isActive())
-				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
-				.collect(Collectors.toList());
-		
-		for (RelationshipPojo pojo : statedRels) {
+		for (RelationshipPojo pojo : conceptPojo.getRelationships()) {
+			if (!pojo.isActive()) {
+				continue;
+			}
 			if (attributeSlots.keySet().contains(pojo.getType().getConceptId())) {
 				for (String slot : attributeSlots.get(pojo.getType().getConceptId())) {
 					result.putIfAbsent(slot, pojo.getTarget());
@@ -174,9 +181,11 @@ public class TemplateUtil {
 	}
 
 	public static String getDescriptionFromFSN(String fsn) {
-		Matcher matcher = FSN_PATTERN.matcher(fsn);
-		while (matcher.find()) {
-			return matcher.group(1).trim();
+		if (fsn != null) {
+			Matcher matcher = FSN_PATTERN.matcher(fsn);
+			while (matcher.find()) {
+				return matcher.group(1).trim();
+			}
 		}
 		return fsn;
 	}

@@ -175,13 +175,17 @@ public class TemplateConceptSearchService {
 			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
 			Set<String> toRemove = findConceptsWithExtraAttributeTypes(conceptPojos, attributeGroups, unGroupedAttributes, stated);
 			if (toRemove.size() > 0) {
-				LOGGER.info("Total Concepts " + toRemove.size() + " with additional attributes and are removed from results " + toRemove);
+				LOGGER.info("Total concepts " + toRemove.size() + " with additional attributes and are removed from results " + toRemove);
 				results.removeAll(toRemove);
 			}
 			LOGGER.info("Logical results {}", results.size());
 			return results;
 		} catch (Exception e) {
-			throw new ServiceException("Failed to complete logical template search for template " + conceptTemplate.getName(), e);
+			String msg = "Failed to complete logical template search for template " + conceptTemplate.getName();
+			if (e.getCause() != null && e.getCause().getMessage() != null) {
+				msg = msg + " due to " +  e.getCause().getMessage();
+			}
+			throw new ServiceException(msg, e);
 		}
 	}
 
@@ -239,15 +243,40 @@ public class TemplateConceptSearchService {
 				relGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashSet<>())
 				.add(pojo.getType().getConceptId());
 			}
-			
-			for (Set<String> typeSet : relGroupMap.values()) {
-				if (!allTypes.contains(typeSet) && !mandatoryTypes.contains(typeSet)) {
-					results.add(concept.getConceptId());
-					break;
-				}
+			if (containExtraAttribute(mandatoryTypes, allTypes, relGroupMap.values())) {
+				results.add(concept.getConceptId());
 			}
 		}
 		return results;
+	}
+	
+	private boolean containExtraAttribute(List<Set<String>> mandatoryTypes, List<Set<String>> allTypes, Collection<Set<String>> relGroups) {
+		for (Set<String> mandatory : mandatoryTypes) {
+			boolean isFound = false;
+			for (Set<String> typeSet : relGroups) {
+				if (typeSet.containsAll(mandatory)) {
+					isFound = true;
+					break;
+				}
+			}
+			if (!isFound) {
+				return true;
+			}
+		}
+		
+		for (Set<String> typeSet : relGroups) {
+			boolean isFound = false;
+			for (Set<String> allType : allTypes) {
+				if (allType.containsAll(typeSet)) {
+					isFound = true;
+					break;
+				}
+			}
+			if (!isFound) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private String constructLogicalSearchEcl(String domainEcl, String logicalEcl, boolean logicalMatch) {

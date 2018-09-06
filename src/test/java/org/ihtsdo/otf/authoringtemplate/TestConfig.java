@@ -18,7 +18,7 @@ import org.springframework.util.FileSystemUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
-@PropertySource("classpath:application.properties")
+@PropertySource("classpath:application-test.properties")
 @EnableAsync
 public class TestConfig {
 

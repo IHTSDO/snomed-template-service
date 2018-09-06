@@ -17,7 +17,9 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
+import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DescriptionType;
+import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -30,8 +32,15 @@ public class DescriptionTransformerTest {
 		ConceptPojo conceptToTransform = TestDataHelper.createConceptPojo();
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
 		Map<String, String> slotValueMap = new HashMap<>();
+		slotValueMap.put("substance", "Almond");
 		String inactivationReason = "Out_Of_Dated";
-		transformer = new DescriptionTransformer(conceptToTransform, conceptOutline, slotValueMap, inactivationReason);
+		ConceptTemplate conceptTempalte = new ConceptTemplate();
+		conceptTempalte.setConceptOutline(conceptOutline);
+		LexicalTemplate lexical = new LexicalTemplate();
+		lexical.setName("substance");
+		lexical.setTakeFSNFromSlot("substance");
+		conceptTempalte.addLexicalTemplate(lexical);
+		transformer = new DescriptionTransformer(conceptToTransform, conceptTempalte, slotValueMap, inactivationReason);
 		transformer.transform();
 		assertNotNull(conceptToTransform.getDescriptions());
 		assertEquals(4, conceptToTransform.getDescriptions().size());

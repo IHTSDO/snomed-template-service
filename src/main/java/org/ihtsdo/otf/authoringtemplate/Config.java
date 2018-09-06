@@ -66,7 +66,7 @@ public class Config {
 	public LogicalTemplateParserService logicalTemplateParserService() {
 		return new LogicalTemplateParserService();
 	}
-
+	
 	@Bean
 	public FilterRegistrationBean getUrlRewriteFilter() {
 		// Encode branch paths in uri to allow request mapping to work

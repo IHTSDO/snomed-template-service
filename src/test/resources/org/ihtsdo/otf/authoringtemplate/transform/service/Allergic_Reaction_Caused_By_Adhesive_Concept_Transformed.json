@@ -22,6 +22,7 @@
     {
       "descriptionId": "2574113013",
       "active": false,
+      "effectiveTime": "20160131",
       "released": true,
       "term": "Allergic reaction to adhesive (disorder)",
       "conceptId": "418325008",
@@ -29,8 +30,7 @@
       "lang": "en",
       "type": "FSN",
       "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
-      "acceptabilityMap": {},
-      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"
+      "acceptabilityMap": {}
     },
     {
       "descriptionId": "3294368015",
