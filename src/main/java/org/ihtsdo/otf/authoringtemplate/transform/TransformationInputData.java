@@ -5,34 +5,15 @@ import java.util.Set;
 
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 
 public class TransformationInputData {
 
-	private Set<String> synonymTemplates;
-	private Set<String> fsnTemplates;
-	private LogicalTemplate sourceLogicalTemplate;
 	private String branchPath;
 	private ConceptTemplate destinationTemplate;
 	private Map<String, SimpleConceptPojo> conceptIdMap;
 	private String inactivationReason;
-	private Map<String, Set<String>> sourceAttributeTypeSlotMap;
+	private Map<String, Set<String>> destinationAttributeTypeSlotMap;
 
-	public void setSynonymTemplates(Set<String> synonymTemplates) {
-		this.synonymTemplates = synonymTemplates;
-	}
-
-	public void setFsnTemplates(Set<String> fsnTemplates) {
-		this.fsnTemplates = fsnTemplates;
-	}
-	
-	public Set<String> getFsnTemplates() {
-		return fsnTemplates;
-	}
-
-	public void setSourceLogicalTemplate(LogicalTemplate logical) {
-		this.sourceLogicalTemplate = logical;
-	}
 
 	public void setBranchPath(String branchPath) {
 		this.branchPath = branchPath;
@@ -40,14 +21,6 @@ public class TransformationInputData {
 
 	public String getBranchPath() {
 		return this.branchPath;
-	}
-
-	public Set<String> getSynonymTemplates() {
-		return synonymTemplates;
-	}
-
-	public LogicalTemplate getSourceLogicalTemplate() {
-		return sourceLogicalTemplate;
 	}
 
 	public void setDestinationTemplate(ConceptTemplate destination) {
@@ -78,12 +51,12 @@ public class TransformationInputData {
 		this.inactivationReason = inactivationReason;
 	}
 
-	public void setSourceAttributeTypeSlotMap(Map<String, Set<String>> attributeTypeSlotMap) {
-		sourceAttributeTypeSlotMap = attributeTypeSlotMap;
+	public void setDestinationAttributeTypeSlotMap(Map<String, Set<String>> attributeTypeSlotMap) {
+		destinationAttributeTypeSlotMap = attributeTypeSlotMap;
 	}
 
-	public Map<String, Set<String>> getSourceAttributeTypeSlotMap() {
-		return sourceAttributeTypeSlotMap;
+	public Map<String, Set<String>> getDestinationAttributeTypeSlotMap() {
+		return destinationAttributeTypeSlotMap;
 	}
 	
 }

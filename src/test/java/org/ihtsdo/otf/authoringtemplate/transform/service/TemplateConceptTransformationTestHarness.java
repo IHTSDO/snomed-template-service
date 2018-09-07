@@ -70,14 +70,14 @@ public class TemplateConceptTransformationTestHarness {
 					jsonStore.getStoreDirectory());
 			templateService.reloadCache();
 			String snowOwlUrl = "https://dev-authoring.ihtsdotools.org/snowowl/";
-			String singleSignOnCookie = "ADD_TOKEN_HERE";
+			String singleSignOnCookie = "dev-ims-ihtsdo=As8jOHP8h7UmM9rByqJk3Q00";
 			termServerRestClient = new SnowOwlRestClient(snowOwlUrl, singleSignOnCookie);
 		}
 		
 		@Test
 		public void testConceptTransformation() throws Exception {
 			Set<String> concepts = new HashSet<>();
-			concepts.add("402263001");
+			concepts.add("40275004");
 			
 			TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 			transformRequest.setConceptsToTransform(concepts);

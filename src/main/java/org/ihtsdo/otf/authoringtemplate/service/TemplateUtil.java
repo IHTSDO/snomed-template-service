@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,24 +128,6 @@ public class TemplateUtil {
 		return result;
 	}
 
-	public static Map<String, String> getSlotValueMap(Map<Pattern, List<String>> fsnTemplatePatterns, 
-			Map<Pattern, List<String>> synonymTemplatePatterns, ConceptPojo conceptPojo) {
-		Map<String, String> result = new HashMap<>();
-		for (DescriptionPojo pojo : conceptPojo.getDescriptions()) {
-			if (DescriptionType.FSN.name().equals(pojo.getType())) {
-				TemplateUtil.mapSlots(fsnTemplatePatterns, pojo.getTerm(), result);
-			} 
-		}
-		
-		for (DescriptionPojo pojo : conceptPojo.getDescriptions()) {
-			if (DescriptionType.SYNONYM.name().equals(pojo.getType())) {
-				TemplateUtil.mapSlots(synonymTemplatePatterns, pojo.getTerm(), result);
-			}
-		}
-		return result;
-	}
-	
-	
 	public static Map<String, Set<String>>  getAttributeTypeSlotMap(LogicalTemplate logical) {
 		Map<String, Set<String>> attributeSlots = new HashMap<>();
 		for (Attribute attr : logical.getUngroupedAttributes()) {
@@ -188,5 +169,20 @@ public class TemplateUtil {
 			}
 		}
 		return fsn;
+	}
+
+
+	public static Set<String> getAttributeTypes(LogicalTemplate logical) {
+		Set<String> result = new HashSet<>();
+		for (Attribute attr : logical.getUngroupedAttributes()) {
+			result.add(attr.getType());
+		}
+
+		for (AttributeGroup attributeGrp : logical.getAttributeGroups()) {
+			for (Attribute attr : attributeGrp.getAttributes()) {
+				result.add(attr.getType());
+			}
+		}
+		return result;
 	}
 }

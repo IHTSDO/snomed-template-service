@@ -59,7 +59,7 @@ public class RelationshipTransformer {
 					String slot = rel.getTargetSlot().getSlotName();
 					ConceptMiniPojo target = attributeSlotMap.get(slot);
 					if (target == null) {
-						if ("0".equals(rel.getCardinalityMin()) || rel.getCardinalityMin() == null) {
+						if (rel.getCardinalityMin() == null || "0".equals(rel.getCardinalityMin())) {
 							//optional
 							continue;
 						} else {

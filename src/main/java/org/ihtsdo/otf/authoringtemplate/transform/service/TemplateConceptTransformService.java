@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DefinitionStatus;
-import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
@@ -114,23 +113,17 @@ public class TemplateConceptTransformService {
 	}
 	
 	
-	private TransformationInputData constructTransformationInputData(ConceptTemplate source, ConceptTemplate destination, TemplateTransformRequest transformRequest) throws ServiceException {
-		Set<String> termTemplates = TemplateUtil.getTermTemplates(source, DescriptionType.SYNONYM);
-		Set<String> fsnTemplates = TemplateUtil.getTermTemplates(source, DescriptionType.FSN);
-		
+	private TransformationInputData constructTransformationInputData(ConceptTemplate destination, TemplateTransformRequest transformRequest) throws ServiceException {
 		TransformationInputData input = new TransformationInputData();
-		input.setSynonymTemplates(termTemplates);
-		input.setFsnTemplates(fsnTemplates);
 		input.setInactivationReason(transformRequest.getInactivationReason());
 		LogicalTemplateParserService parser = new LogicalTemplateParserService();
 		LogicalTemplate logical;
 		try {
-			logical = parser.parseTemplate(source.getLogicalTemplate());
-			input.setSourceAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical));
-			input.setSourceLogicalTemplate(logical);
+			logical = parser.parseTemplate(destination.getLogicalTemplate());
+			input.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical));
 			
 		} catch (IOException e) {
-			throw new ServiceException("Failed to parse source logical template", e);
+			throw new ServiceException("Failed to parse logical template " + destination.getName(), e);
 		}
 		input.setDestinationTemplate(destination);
 		return input;
@@ -153,7 +146,7 @@ public class TemplateConceptTransformService {
 			} catch (RestClientException e) {
 				throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
 			}
-			final TransformationInputData input = constructTransformationInputData(source, destination, transformRequest);
+			final TransformationInputData input = constructTransformationInputData(destination, transformRequest);
 			input.setBranchPath(branchPath);
 			input.setConceptIdMap(conceptMap);
 			List<String> batchJob = null;
@@ -201,7 +194,7 @@ public class TemplateConceptTransformService {
 			List<String> missing = new ArrayList<>(conceptIds);
 			for (ConceptPojo pojo : conceptPojos) {
 				missing.remove(pojo.getConceptId());
-				Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getSourceAttributeTypeSlotMap(), pojo);
+				Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getDestinationAttributeTypeSlotMap(), pojo);
 				ConceptPojo transformed = null;
 				try {
 					transformed = performTransform(pojo, input.getDestinationTemplate(), attributeSlotMap, inactivationReason, input.getConceptIdMap());
@@ -238,8 +231,8 @@ public class TemplateConceptTransformService {
 
 	private Set<String> getLogicalReplacementSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
 		List<SimpleSlot> slotsRequired = TemplateUtil.getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships());
-		Set<String> slotNames = slotsRequired.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
-		return slotNames;
+		Set<String> slotAttributeTypes = slotsRequired.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
+		return slotAttributeTypes;
 	}
 	
 	public void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException, IOException {
@@ -264,21 +257,30 @@ public class TemplateConceptTransformService {
 			throw new ServiceException(String.format("Destination template %s has slot referenced in the lexical template %s that doesn't exist in the logical template",
 					destination.getName(), slotsNotFound));
 		}
-		Set<String> sourceSlots = getLogicalReplacementSlotsFromTemplate(source);
-		LOGGER.info("Source slots {} destination slots {}", sourceSlots, destinationSlots);
-		if (!sourceSlots.containsAll(destinationSlots)) {
-			StringBuilder msgBuilder = new StringBuilder();
-			int counter = 0;
-			for (String slot : destinationSlots) {
-				if (!sourceSlots.contains(slot)) {
-					if (counter++ > 0) {
-						msgBuilder.append(",");
+		
+		try {
+			LogicalTemplateParserService parser = new LogicalTemplateParserService();
+			LogicalTemplate sourcelogical = parser.parseTemplate(source.getLogicalTemplate());
+			LogicalTemplate destinationLogical = parser.parseTemplate(destination.getLogicalTemplate());
+			Set<String> sourceAttributeTypes = TemplateUtil.getAttributeTypes(sourcelogical);
+			Map<String, Set<String>> destinationAttribyteSlotMap = TemplateUtil.getAttributeTypeSlotMap(destinationLogical);
+			Set<String> destinationTypes = destinationAttribyteSlotMap.keySet();
+			if (!sourceAttributeTypes.containsAll(destinationTypes)) {
+				StringBuilder msgBuilder = new StringBuilder();
+				int counter = 0;
+				for (String type : destinationTypes) {
+					if (!sourceAttributeTypes.contains(type)) {
+						if (counter++ > 0) {
+							msgBuilder.append(",");
+						}
+						msgBuilder.append(type);
 					}
-					msgBuilder.append(slot);
 				}
+				throw new ServiceException(String.format("Destination template %s has slot attribute type %s that doesn't exist in the source template %s",
+														destination.getName(), msgBuilder.toString(), source.getName()));
 			}
-			throw new ServiceException(String.format("Destination template %s has slot %s that doesn't exist in the source template %s",
-													destination.getName(), msgBuilder.toString(), source.getName()));
+		} catch (IOException e) {
+			throw new ServiceException("Failed to parse logical template", e);
 		}
 		
 	}

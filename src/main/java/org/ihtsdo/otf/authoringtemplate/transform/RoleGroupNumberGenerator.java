@@ -25,29 +25,33 @@ public class RoleGroupNumberGenerator {
 	}
 	
 	public int getRoleGroupNumber(List<RelationshipPojo> roleGroup) {
-		int nextGrp = -1;
+		int groupNum = -1;
 		Map<Integer, Integer> publishedGroupNumberCounterMap = getGroupNumberCounterMap(roleGroup, true);
 		Map<Integer, Integer> newGroupNumberCounterMap = getGroupNumberCounterMap(roleGroup, false);
 		Map.Entry<Integer, Integer> publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
 		Map.Entry<Integer, Integer> newMaxEntry = newGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByKey()).get();
+		
 		if (publishedMaxEntry.getValue() >=2 || publishedMaxEntry.getValue() >= newMaxEntry.getValue()) {
-			nextGrp = publishedMaxEntry.getKey().intValue();
-		} else {
-			nextGrp = newMaxEntry.getKey().intValue();
-		}
-		
-		if (nextGrp == 0 && !containsISA(roleGroup)) {
-			nextGrp = 1;
-		}
-		
-		if (nextGrp != 0) {
-			while (groupInUse.contains(nextGrp)) {
-				Integer max = groupInUse.stream().max(Comparator.comparing(Integer:: intValue)).get();
-				nextGrp = max + 1;
+			groupNum = publishedMaxEntry.getKey().intValue();
+			if (groupInUse.contains(groupNum) && groupNum > 0) {
+				//use existing published group
+				return groupNum;
 			}
-			groupInUse.add(nextGrp);
+		} else {
+			groupNum = newMaxEntry.getKey().intValue();
 		}
-		return nextGrp;
+		
+		if (groupNum == 0 && !containsISA(roleGroup)) {
+			groupNum = 1;
+		}
+		if (groupNum != 0) {
+			while (groupInUse.contains(groupNum)) {
+				Integer max = groupInUse.stream().max(Comparator.comparing(Integer:: intValue)).get();
+				groupNum = max + 1;
+			}
+		}
+		groupInUse.add(groupNum);
+		return groupNum;
 	}
 	
 	private boolean containsISA(List<RelationshipPojo> roleGroup) {
