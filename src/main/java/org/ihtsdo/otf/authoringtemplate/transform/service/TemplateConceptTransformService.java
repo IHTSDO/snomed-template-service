@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
+import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
@@ -28,6 +29,7 @@ import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -318,5 +320,27 @@ public class TemplateConceptTransformService {
 			TemplateTransformRequest transformRequest) throws ServiceException {
 		TemplateTransformation templateTransformation = new TemplateTransformation(branchPath, destinationTemplate, transformRequest);
 		return templateTransformation;
+	}
+
+	public ConceptPojo transformConcept(String branchPath, String destinationTemplate, ConceptPojo conceptToTransform, SnowOwlRestClient restClient) throws ServiceException {
+		ConceptTemplate destination = null;
+		LogicalTemplate logical = null;
+		try {
+			destination = templateService.loadOrThrow(destinationTemplate);
+			LogicalTemplateParserService parser = new LogicalTemplateParserService();
+			logical = parser.parseTemplate(destination.getLogicalTemplate());
+		} catch (ResourceNotFoundException | IOException e) {
+			throw new ServiceException("Failed to load and parse logical template " + destinationTemplate, e);
+		}
+		Map<String, SimpleConceptPojo> conceptMap = null;
+		try {
+			conceptMap = getDestinationConceptsMap(branchPath, restClient, destination);
+		} catch (RestClientException e) {
+			throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
+		}
+		
+		Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(
+				TemplateUtil.getAttributeTypeSlotMap(logical), conceptToTransform);
+		return performTransform(conceptToTransform, destination, attributeSlotMap, Constants.NONCONFORMANCE, conceptMap);
 	}
 }

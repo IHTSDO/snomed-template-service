@@ -19,6 +19,7 @@ import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateConceptTransfo
 import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateTransformationResultService;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -127,6 +128,8 @@ public class TemplateController {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 	
+	
+	
 	@SuppressWarnings("rawtypes")
 	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform", method = RequestMethod.POST)
 	public ResponseEntity createTemplateTransformation(@PathVariable String branchPath,
@@ -142,6 +145,16 @@ public class TemplateController {
 		resultService.update(transformation);
 		return ResponseEntity.created(uriComponentsBuilder.path("/templates/transform/{transformationId}")
 				.buildAndExpand(transformation.getTransformationId()).toUri()).build();
+	}
+	
+	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform/concept", method = RequestMethod.POST)
+	@ResponseBody
+	public ConceptPojo transformConceptToTemplate(@PathVariable String branchPath,
+									@PathVariable String destinationTemplate,
+									@RequestBody ConceptPojo conceptToTransform) throws ServiceException {
+		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
+		return transformService.transformConcept(BranchPathUriUtil.parseBranchPath(branchPath),
+				destinationTemplate, conceptToTransform, restClient);
 	}
 	
 	@RequestMapping(value = "/templates/transform/{transformationId}", method = RequestMethod.GET)

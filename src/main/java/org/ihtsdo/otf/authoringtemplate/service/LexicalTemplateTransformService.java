@@ -24,9 +24,10 @@ public class LexicalTemplateTransformService {
 			Set<String> termSlotNames = TemplateUtil.getSlots(term);
 			for (String slotName : termSlotNames) {
 				LexicalTemplate template = lexicalTemplateMap.get(slotName);
+				String termSlot = TERM_SLOT_INDICATOR + slotName + TERM_SLOT_INDICATOR;
 				if (template == null) {
 					//Additional slot
-					term = term.replace(TERM_SLOT_INDICATOR + slotName + TERM_SLOT_INDICATOR, slotValueMap.get(slotName));
+					term = term.replace(termSlot, slotValueMap.get(slotName));
 					continue;
 				}
 				if (!slotValueMap.containsKey(template.getTakeFSNFromSlot())) {
@@ -50,7 +51,11 @@ public class LexicalTemplateTransformService {
 								slotValue = slotValue.replaceAll(partToRemove, "");
 							}
 						}
-						term = term.replace(TERM_SLOT_INDICATOR + slotName + TERM_SLOT_INDICATOR, slotValue.toLowerCase());
+						if (term.startsWith(termSlot)) {
+							term = term.replace(termSlot, slotValue);
+						} else {
+							term = term.replace(termSlot, slotValue.toLowerCase());
+						}
 					}
 				}
 			}
