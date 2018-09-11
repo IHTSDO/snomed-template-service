@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
@@ -68,10 +69,12 @@ public class TemplateUtil {
 		return termTemplates;
 	}
 	
-	public static Map<String,String> getLexicalTermNameSlotMap(ConceptTemplate conceptTemplate) {
+	public static Map<String, String> getLexicalTermNameSlotMap(ConceptTemplate conceptTemplate) {
 		Map<String, String> termNameSlotMap = new HashMap<>();
 		for (LexicalTemplate lexical : conceptTemplate.getLexicalTemplates()) {
-			termNameSlotMap.put(lexical.getName(), lexical.getTakeFSNFromSlot());
+			if (lexical.getTakeFSNFromSlot() != null) {
+				termNameSlotMap.put(lexical.getName(), lexical.getTakeFSNFromSlot());
+			}
 		}
 		return termNameSlotMap;
 	}
@@ -184,5 +187,34 @@ public class TemplateUtil {
 			}
 		}
 		return result;
+	}
+
+	public static void validateTermSlots(ConceptTemplate conceptTemplate, boolean checkAdditionalSlots) throws ServiceException {
+		//check term slots can be found in replacement slots
+		Set<String> termTemplates = getTermTemplates(conceptTemplate);
+		Set<String> termSlots = getSlots(termTemplates.toArray(new String[termTemplates.size()]));
+		Map<String, String> lexicalTermNameSlotMap = getLexicalTermNameSlotMap(conceptTemplate);
+		Set<String> slotsDefinedInLexical = new HashSet<>(lexicalTermNameSlotMap.keySet());
+		if (checkAdditionalSlots) {
+			slotsDefinedInLexical.addAll(conceptTemplate.getAdditionalSlots());
+		}
+		//Check term names in term templates are defined in the lexical templates
+		if (!slotsDefinedInLexical.containsAll(termSlots)) {
+			Set<String> slotsNotFound = termSlots;
+			slotsNotFound.removeAll(slotsDefinedInLexical);
+			throw new ServiceException(String.format("Template %s has term slot %s that is not defined in the lexical template",
+					conceptTemplate.getName(), slotsNotFound));
+		}
+		
+		Set<String> logicalSlots = getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships())
+				.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
+		
+		Set<String> logicalSlotsReferencedInLexical = new HashSet<>(lexicalTermNameSlotMap.values());
+		if (!logicalSlots.containsAll(logicalSlotsReferencedInLexical)) {
+			Set<String> slotsNotFound = logicalSlotsReferencedInLexical;
+			slotsNotFound.removeAll(logicalSlots);
+					throw new ServiceException(String.format("Template %s has slot referenced in the lexical template %s but doesn't exist in the logical template",
+							conceptTemplate.getName(), slotsNotFound));
+		}
 	}
 }

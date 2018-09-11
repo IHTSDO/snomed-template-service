@@ -96,10 +96,11 @@ public class TemplateStore {
 		conceptTemplate.getConceptOutline().getDescriptions().forEach(d -> d.setInitialTerm(null));
 	}
 
-	private void generateTemporalParts(ConceptTemplate conceptTemplate) throws IOException {
+	private void generateTemporalParts(ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		final LogicalTemplate logicalTemplate = logicalParserService.parseTemplate(conceptTemplate.getLogicalTemplate());
 		conceptTemplate.setFocusConcept(logicalTemplate.getFocusConcepts().isEmpty() ? null : logicalTemplate.getFocusConcepts().get(0));
 		updateRelationships(conceptTemplate.getConceptOutline().getRelationships(), logicalTemplate);
+		TemplateUtil.validateTermSlots(conceptTemplate, true);
 		updateDescriptions(conceptTemplate.getLexicalTemplates(), conceptTemplate.getConceptOutline().getDescriptions(), conceptTemplate.getAdditionalSlots());
 	}
 

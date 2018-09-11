@@ -3,7 +3,6 @@ package org.ihtsdo.otf.authoringtemplate.transform.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,7 +10,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
@@ -35,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DefinitionStatus;
 import org.snomed.authoringtemplate.domain.Relationship;
-import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -230,36 +227,10 @@ public class TemplateConceptTransformService {
 		}
 		return conceptIdMap;
 	}
-
-	private Set<String> getLogicalReplacementSlotsFromTemplate(ConceptTemplate conceptTemplate) throws IOException {
-		List<SimpleSlot> slotsRequired = TemplateUtil.getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships());
-		Set<String> slotAttributeTypes = slotsRequired.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
-		return slotAttributeTypes;
-	}
 	
 	public void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException, IOException {
-		
-		//check term slots can be found in replacement slots
-		Set<String> termTemplates = TemplateUtil.getTermTemplates(destination);
-		Set<String> termSlots = TemplateUtil.getSlots(termTemplates.toArray(new String[termTemplates.size()]));
-		Map<String, String> lexicalTermNameSlotMap = TemplateUtil.getLexicalTermNameSlotMap(destination);
-		//Check term names in term templates are defined in the lexical templates
-		if (!lexicalTermNameSlotMap.keySet().containsAll(termSlots)) {
-			Set<String> slotsNotFound = termSlots;
-			slotsNotFound.removeAll(lexicalTermNameSlotMap.keySet());
-			throw new ServiceException(String.format("Template %s has term slot %s that is not defined in the lexical template",
-					destination.getName(), slotsNotFound));
-		}
-		
-		Set<String> destinationSlots = getLogicalReplacementSlotsFromTemplate(destination);
-		Set<String> slotsReferencedInLexical = new HashSet<>(lexicalTermNameSlotMap.values());
-		if (!destinationSlots.containsAll(slotsReferencedInLexical)) {
-			Set<String> slotsNotFound = slotsReferencedInLexical;
-			slotsNotFound.removeAll(destinationSlots);
-			throw new ServiceException(String.format("Destination template %s has slot referenced in the lexical template %s that doesn't exist in the logical template",
-					destination.getName(), slotsNotFound));
-		}
-		
+
+		TemplateUtil.validateTermSlots(destination, false);
 		try {
 			LogicalTemplateParserService parser = new LogicalTemplateParserService();
 			LogicalTemplate sourcelogical = parser.parseTemplate(source.getLogicalTemplate());
