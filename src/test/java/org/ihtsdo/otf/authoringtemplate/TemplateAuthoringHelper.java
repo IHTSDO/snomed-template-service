@@ -112,7 +112,7 @@ public class TemplateAuthoringHelper {
 		try {
 			parser.parseTemplate(logical);
 		} catch (Exception e) {
-			System.out.println("Failed to parse logical template");
+			System.out.println("Failed to parse logical template " + logical );
 			e.printStackTrace();
 		}
 	}

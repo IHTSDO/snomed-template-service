@@ -330,8 +330,11 @@ public class TemplateConceptTransformService {
 			LogicalTemplateParserService parser = new LogicalTemplateParserService();
 			logical = parser.parseTemplate(destination.getLogicalTemplate());
 		} catch (ResourceNotFoundException | IOException e) {
-			throw new ServiceException("Failed to load and parse logical template " + destinationTemplate, e);
-		}
+			if (destination == null) {
+				throw new IllegalArgumentException("No tempalte found with name " + destinationTemplate, e);
+			}
+			throw new ServiceException("Failed to load and parse template " + destinationTemplate, e);
+		} 
 		Map<String, SimpleConceptPojo> conceptMap = null;
 		try {
 			conceptMap = getDestinationConceptsMap(branchPath, restClient, destination);
