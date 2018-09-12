@@ -126,8 +126,12 @@ public class TemplateStore {
 			final AttributeGroup attributeGroup = attributeGroups.get(i);
 			for (Attribute attribute : attributeGroup.getAttributes()) {
 				final Relationship relationship = new Relationship();
-				relationship.setCardinalityMin(attribute.getCardinalityMin());
-				relationship.setCardinalityMax(attribute.getCardinalityMax());
+				if (attribute.getCardinalityMin() != null) {
+					relationship.setCardinalityMin(attribute.getCardinalityMin());
+				}
+				if (attribute.getCardinalityMax() != null) {
+					relationship.setCardinalityMax(attribute.getCardinalityMax());
+				}
 				relationship.setGroupId(i + 1);
 				setRelationshipTypeAndTarget(attribute, relationship);
 				relationships.add(relationship);
@@ -138,6 +142,13 @@ public class TemplateStore {
 	private Relationship setRelationshipTypeAndTarget(Attribute attribute, Relationship relationship) {
 		relationship.setType(new ConceptMini(attribute.getType()));
 		relationship.setTarget(getConceptMiniOrNull(attribute.getValue()));
+		if (attribute.getCardinalityMin() != null) {
+			relationship.setCardinalityMin(attribute.getCardinalityMin());
+		}
+		
+		if (attribute.getCardinalityMax() != null) {
+			relationship.setCardinalityMax(attribute.getCardinalityMax());
+		}
 		if (attribute.getAllowableRangeECL() != null) {
 			relationship.setTargetSlot(new SimpleSlot(attribute.getSlotName(), attribute.getAllowableRangeECL()));
 		}

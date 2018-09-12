@@ -95,14 +95,14 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		final List<Relationship> rel = updated.getConceptOutline().getRelationships();
 		assertEquals(3, rel.size());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=0, type=ConceptMini{conceptId='116680003'}, " +
-				"target=ConceptMini{conceptId='71388002'}, targetSlot=null, cardinalityMin='null', cardinalityMax='null'}",
+				"target=ConceptMini{conceptId='71388002'}, targetSlot=null, cardinalityMin='1', cardinalityMax='*'}",
 				rel.get(0).toString());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=1, type=ConceptMini{conceptId='405813007'}, " +
 				"target=null, targetSlot=SimpleSlot{slotName='proc', " +
 				"allowableRangeECL='<< 442083009 |Anatomical or acquired body structure|', slotReference='null'}, cardinalityMin='1', cardinalityMax='1'}",
 				rel.get(1).toString());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=1, type=ConceptMini{conceptId='363703001'}, " +
-				"target=ConceptMini{conceptId='429892002'}, targetSlot=null, cardinalityMin='null', cardinalityMax='null'}",
+				"target=ConceptMini{conceptId='429892002'}, targetSlot=null, cardinalityMin='1', cardinalityMax='*'}",
 				rel.get(2).toString());
 
 		final List<Description> desc = updated.getConceptOutline().getDescriptions();

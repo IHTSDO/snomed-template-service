@@ -29,6 +29,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class TemplateService {
 
+	public static final String OPTIONAL = "(optional)";
+
 	public static final Pattern TERM_SLOT_PATTERN = Pattern.compile("\\$([^\\$]*)\\$");
 
 	@Autowired
@@ -120,6 +122,9 @@ public class TemplateService {
 				SimpleSlot targetSlot = relationship.getTargetSlot();
 				if (isSlotRequiringInput(targetSlot)) {
 					String slotName = targetSlot.getSlotName();
+					if (TemplateUtil.isOptional(relationship)) {
+						slotName = slotName + OPTIONAL;
+					}
 					if (!header.isEmpty()) header += "\t";
 					header += slotName != null ? slotName : "slot";
 				}

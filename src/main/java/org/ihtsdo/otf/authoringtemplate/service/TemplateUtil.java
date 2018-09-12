@@ -217,4 +217,12 @@ public class TemplateUtil {
 							conceptTemplate.getName(), slotsNotFound));
 		}
 	}
+	
+	
+	public static boolean isOptional(Relationship relationship) {
+		if (relationship.getCardinalityMin() == null || "0".equals(relationship.getCardinalityMin())) {
+			return true;
+		}
+		return false;
+	}
 }

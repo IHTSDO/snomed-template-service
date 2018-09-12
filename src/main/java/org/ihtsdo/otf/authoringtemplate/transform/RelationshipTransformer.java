@@ -11,6 +11,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
@@ -59,8 +60,7 @@ public class RelationshipTransformer {
 					String slot = rel.getTargetSlot().getSlotName();
 					ConceptMiniPojo target = attributeSlotMap.get(slot);
 					if (target == null) {
-						if (rel.getCardinalityMin() == null || "0".equals(rel.getCardinalityMin())) {
-							//optional
+						if (TemplateUtil.isOptional(rel)) {
 							continue;
 						} else {
 							throw new ServiceException("Failed to find attribute slot value " + slot);

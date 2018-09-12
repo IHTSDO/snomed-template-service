@@ -30,7 +30,7 @@ public class LexicalTemplateTransformService {
 					term = term.replace(termSlot, slotValueMap.get(slotName));
 					continue;
 				}
-				if (!slotValueMap.containsKey(template.getTakeFSNFromSlot())) {
+				if (slotValueMap.get(template.getTakeFSNFromSlot()) == null) {
 					if (template.getRemoveFromTermTemplateWhenSlotAbsent() != null) {
 						boolean capitalize = false;
 						for (String part : template.getRemoveFromTermTemplateWhenSlotAbsent()) {
@@ -45,17 +45,15 @@ public class LexicalTemplateTransformService {
 					}
 				} else {
 					String slotValue = slotValueMap.get(template.getTakeFSNFromSlot());
-					if (slotValue != null) {
-						if (template.getRemoveParts() != null) {
-							for (String partToRemove : template.getRemoveParts()) {
-								slotValue = slotValue.replaceAll(partToRemove, "");
-							}
+					if (template.getRemoveParts() != null) {
+						for (String partToRemove : template.getRemoveParts()) {
+							slotValue = slotValue.replaceAll(partToRemove, "");
 						}
-						if (term.startsWith(termSlot)) {
-							term = term.replace(termSlot, slotValue);
-						} else {
-							term = term.replace(termSlot, slotValue.toLowerCase());
-						}
+					}
+					if (term.startsWith(termSlot)) {
+						term = term.replace(termSlot, slotValue);
+					} else {
+						term = term.replace(termSlot, slotValue.toLowerCase());
 					}
 				}
 			}

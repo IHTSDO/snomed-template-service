@@ -161,7 +161,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 						"TimeAspect\t" +
 						"DirectSite\t" +
 						"InheresIn\t" +
-						"ScaleType\t" +
+						"ScaleType(optional)\t" +
 						"LOINC_FSN\t" +
 						"LOINC_Unique_ID",
 				header);
@@ -170,7 +170,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		String lines =
 				header + "\n" + // Header
 				"123037004\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
-				"123037004\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 2\tID 2\n"; // Line 2
+				"123037004\t118598001\t7389001\t123037004\t123037004\tN/A\tLOINC FSN 2\tID 2\n"; // Line 2
 		mockEclQueryResponse(
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("118598001"),

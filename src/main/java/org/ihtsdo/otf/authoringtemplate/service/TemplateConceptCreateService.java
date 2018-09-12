@@ -55,7 +55,7 @@ public class TemplateConceptCreateService {
 		Assert.notNull(inputStream, "Batch file is required.");
 		ConceptTemplate template = templateService.loadOrThrow(templateName);
 		ConceptOutline conceptOutline = template.getConceptOutline();
-		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(conceptOutline.getRelationships());
+		List<SimpleSlot> slotsRequiringInput = TemplateUtil.getSlotsRequiringInput(conceptOutline.getRelationships());
 		List<List<String>> slotColumnValues = getSlotInputValues(inputStream, template);
 		int batchSize = slotColumnValues.get(0).size();
 		logger.info("Validating {} slot value concepts on branch '{}'", batchSize, branchPath);
@@ -105,7 +105,11 @@ public class TemplateConceptCreateService {
 		for (int i = 0; i < generatedConcepts.size(); i++) {
 			List<String> slotRowValues = new ArrayList<>();
 			for (int k = 0; k < slotNames.size(); k ++) {
-				slotRowValues.add(slotColumnValues.get(k).get(i));
+				if (i < slotColumnValues.get(k).size()) {
+					slotRowValues.add(slotColumnValues.get(k).get(i));
+				} else {
+					slotRowValues.add(null);
+				}
 			}
 			Map<String, String> slotValueMap = createSlotValueMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
 			LexicalTemplateTransformService.transformDescriptions(template.getLexicalTemplates(), generatedConcepts.get(i).getDescriptions(), slotValueMap);
@@ -118,7 +122,11 @@ public class TemplateConceptCreateService {
 		SnowOwlRestClient client = terminologyClientFactory.getClient();
 		Map<String, String> coneptFsnMap;
 		try {
-			coneptFsnMap = client.getFsns(branchPath, slotValues.subList(0, slotValues.size() - additionalSlots));
+			List<String> conceptIds = slotValues.subList(0, slotValues.size() - additionalSlots)
+					.stream()
+					.filter(v -> v != null)
+					.collect(Collectors.toList());
+			coneptFsnMap = client.getFsns(branchPath, conceptIds);
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to get FSNs for concepts from branch " + branchPath, e);
 		}
@@ -176,14 +184,15 @@ public class TemplateConceptCreateService {
 	private List<List<String>> getSlotInputValues(InputStream inputStream, ConceptTemplate template) throws IOException {
 		List<List<String>> columnValues = new ArrayList<>();
 		List<String> errorMessages = new ArrayList<>();
-		List<SimpleSlot> slotsRequiringInput = getSlotsRequiringInput(template.getConceptOutline().getRelationships());
+		List<SimpleSlot> slotsRequiringInput = TemplateUtil.getSlotsRequiringInput(template.getConceptOutline().getRelationships());
 		List<String> additionalSlots = template.getAdditionalSlots();
 		int expectedColumnCount = slotsRequiringInput.size() + additionalSlots.size();
 		// Read input file
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 			// Validate header
-			validateHeader(reader.readLine(), expectedColumnCount);
-
+			String header = reader.readLine();
+			validateHeader(header, expectedColumnCount);
+			List<Integer> optionalFieldIndexes = getOptionalFields(header);
 			// Collect values with basic validation
 			LongStream.range(0, expectedColumnCount).forEach(v -> columnValues.add(new ArrayList<>()));
 			String line;
@@ -200,9 +209,12 @@ public class TemplateConceptCreateService {
 				for (int column = 0; column < values.length; column++) {
 					String conceptId = values[column];
 					if (column < slotsRequiringInput.size() && !isValidConceptId(conceptId)) {
-						errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
+						if (!optionalFieldIndexes.contains(column)) {
+							errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
+						}
+					} else {
+						columnValues.get(column).add(conceptId);
 					}
-					columnValues.get(column).add(conceptId);
 				}
 			}
 		}
@@ -218,9 +230,24 @@ public class TemplateConceptCreateService {
 		return columnValues;
 	}
 	
+	private List<Integer> getOptionalFields(String header) {
+		List<Integer> result = new ArrayList<>();
+		String[] columns = header.split("\\t");
+		for (int i=0; i < columns.length; i++) {
+			if (columns[i].endsWith(TemplateService.OPTIONAL)) {
+				result.add(i);
+			}
+		}
+		return result;
+	}
+
 	private void addRelationshipToAllConcepts(Relationship relationship, int slotColumn, List<List<String>> columnValues, List<ConceptOutline> generatedConcepts) {
 		List<String> values = columnValues.get(slotColumn);
+		boolean isOptional = TemplateUtil.isOptional(relationship);
 		for (int i = 0; i < values.size(); i++) {
+			if (values.get(i) == null && isOptional) {
+				continue;
+			}
 			generatedConcepts.get(i).addRelationship(relationship.clone().setTarget(new ConceptMini(values.get(i))));
 		}
 	}
@@ -252,10 +279,5 @@ public class TemplateConceptCreateService {
 		String[] columns = header.split("\\t");
 		int columnCount = columns.length;
 		Assert.isTrue(columnCount == expectedColumnCount, String.format("There are %s slots requiring input in the selected template is but the header line of the input file has %s columns.", expectedColumnCount, columnCount));
-	}
-
-	private List<SimpleSlot> getSlotsRequiringInput(List<Relationship> relationships) {
-		return relationships.stream().filter(r -> templateService.isSlotRequiringInput(r.getTargetSlot()))
-				.map(Relationship::getTargetSlot).collect(Collectors.toList());
 	}
 }
