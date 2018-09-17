@@ -36,9 +36,12 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
+import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.junit.Assert;
@@ -46,6 +49,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
+import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,7 +94,7 @@ public class TemplateConceptTransformServiceTest {
 	private ConceptPojo conceptToTransform;
 	private ConceptPojo conceptTransformed;
 	private Gson gson;
-	private boolean isDebug = false;
+	private boolean isDebug = true;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -151,8 +155,7 @@ public class TemplateConceptTransformServiceTest {
 		Set<String> concepts = new HashSet<>();
 		concepts.add("712839001");
 		mockTerminologyServerClient();
-		when(terminologyServerClient.searchConcepts(anyString(),any()))
-		.thenReturn(Arrays.asList(conceptToTransform));
+		mockSearchConcepts();
 		
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);
@@ -167,6 +170,7 @@ public class TemplateConceptTransformServiceTest {
 		assertEquals(true, !transformed.isEmpty());
 		assertEquals(1, transformed.size());
 		ConceptPojo concept = transformed.get(0);
+		printTransformedConcept(transformed);
 		//validate descriptions transformation
 		assertEquals(3, concept.getDescriptions().size());
 		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
@@ -199,9 +203,37 @@ public class TemplateConceptTransformServiceTest {
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
-		printTransformedConcept(transformed);
 		assertEquals(5, inferred.size());
 		assertEquals(conceptTransformed, concept);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mockSearchConcepts() throws RestClientException {
+		
+		List<ConceptPojo> concepts = new ArrayList<>();
+		Set<ConceptMiniPojo> targets = conceptToTransform.getRelationships().stream().filter(r -> r.isActive()).map(r -> r.getTarget()).collect(Collectors.toSet());
+		for (ConceptMiniPojo targetPojo : targets) {
+			concepts.add(constructConceptPojo(targetPojo));
+		}
+		when(terminologyServerClient.searchConcepts(anyString(),any()))
+		.thenReturn(Arrays.asList(conceptToTransform), concepts);
+	}
+
+	private ConceptPojo constructConceptPojo(ConceptMiniPojo conceptMini) {
+		ConceptPojo pojo = new ConceptPojo();
+		pojo.setActive(true);
+		pojo.setConceptId(conceptMini.getConceptId());
+		pojo.setDefinitionStatus(DefinitionStatus.valueOf(conceptMini.getDefinitionStatus()));
+		pojo.setModuleId(conceptMini.getModuleId());
+		Set<DescriptionPojo> descriptions = new HashSet<>();
+		pojo.setDescriptions(descriptions);
+		DescriptionPojo fsnPojo = new DescriptionPojo();
+		descriptions.add(fsnPojo);
+		fsnPojo.setActive(true);
+		fsnPojo.setTerm(conceptMini.getFsn());
+		fsnPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		fsnPojo.setType(DescriptionType.FSN.name());
+		return pojo;
 	}
 
 	private void printTransformedConcept(List<ConceptPojo> transformed) {
@@ -222,8 +254,7 @@ public class TemplateConceptTransformServiceTest {
 		Set<String> concepts = new HashSet<>();
 		concepts.add("418325008");
 		mockTerminologyServerClient();
-		when(terminologyServerClient.searchConcepts(anyString(),any()))
-		.thenReturn(Arrays.asList(conceptToTransform));
+		mockSearchConcepts();
 		
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);

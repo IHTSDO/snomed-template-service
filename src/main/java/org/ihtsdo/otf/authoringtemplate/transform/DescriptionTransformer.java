@@ -25,14 +25,14 @@ import org.snomed.authoringtemplate.domain.Description;
 
 public class DescriptionTransformer {
 	private ConceptPojo conceptToTransform;
-	private Map<String, String> slotValueMap;
+	private Map<String, Set<DescriptionPojo>> slotValueMap;
 	private String inactivationReason;
 	private ConceptTemplate conceptTemplate;
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTransformer.class);
 	
 	public DescriptionTransformer(ConceptPojo conceptToTransform, ConceptTemplate conceptTemplate,
-			Map<String, String> slotValueMap, String inactivationReason) {
+			Map<String, Set<DescriptionPojo>> slotValueMap, String inactivationReason) {
 		this.conceptToTransform = conceptToTransform;
 		this.conceptTemplate = conceptTemplate;
 		this.slotValueMap = slotValueMap;
@@ -54,6 +54,7 @@ public class DescriptionTransformer {
 		if (conceptTemplate.getConceptOutline().getModuleId() !=null) {
 			moduleId = conceptTemplate.getConceptOutline().getModuleId();
 		}
+		
 		LexicalTemplateTransformService.transformDescriptions(conceptTemplate.getLexicalTemplates(), 
 				conceptOutline.getDescriptions(), slotValueMap);
 		for (Description desc : conceptOutline.getDescriptions()) {
@@ -116,8 +117,6 @@ public class DescriptionTransformer {
 		}
 		conceptToTransform.setDescriptions(descriptions);
 	}
-	
-	
 
 	private void updateAcceptablityMap(Map<String, String> acceptabilityMap, String newValue) {
 		for (String refsetId : acceptabilityMap.keySet()) {

@@ -210,4 +210,22 @@ public class TestDataHelper {
 		}
 		return pojos;
 	}
+
+
+	public static Map<String, Set<DescriptionPojo>> constructSlotDescriptionValuesMap(Map<String, String> slotValueMap,
+			DescriptionType type) {
+		Map<String, Set<DescriptionPojo>> results = new HashMap<>();
+		for (String slot : slotValueMap.keySet()) {
+			results.put(slot, new HashSet<DescriptionPojo>());
+			DescriptionPojo pojo = new DescriptionPojo();
+			pojo.setReleased(true);
+			pojo.setActive(true);
+			pojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			pojo.setTerm(slotValueMap.get(slot));
+			pojo.setType(type.name());
+			pojo.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
+			results.get(slot).add(pojo);
+		}
+		return results;
+	}
 }

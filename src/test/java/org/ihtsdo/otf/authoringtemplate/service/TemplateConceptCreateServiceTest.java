@@ -3,8 +3,8 @@ package org.ihtsdo.otf.authoringtemplate.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyCollection;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -14,8 +14,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,11 +26,16 @@ import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -117,7 +124,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 				Sets.newHashSet("12656001", "63303001", "63124001", "63125000", "24626005"),
 				Sets.newHashSet("419988009", "415186003", "426865009", "426530000", "426413004"));
 		
-		mockGetFsnResponse();
+		mockSearchConceptsResponse();
 
 		List<ConceptOutline> conceptOutlines = conceptCreateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-cols-5-values.txt"));
 		assertEquals(5, conceptOutlines.size());
@@ -178,7 +185,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("30766002"));
-		mockGetFsnResponse();
+		mockSearchConceptsResponse();
 		List<ConceptOutline> generatedConcepts = conceptCreateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
 		assertEquals(2, generatedConcepts.size());
 		ConceptOutline c1 = generatedConcepts.get(0);
@@ -200,17 +207,38 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
 		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
 		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
+		//check optonal attribute ScaleType(370132008);
+		assertOptionalAttribute(c1.getRelationships(), "370132008", true);
+		assertOptionalAttribute(generatedConcepts.get(1).getRelationships(), "370132008", false);
+	}
+	
+	
+	private void assertOptionalAttribute(List<Relationship> relationships, String typeId, boolean mustHave) {
+		boolean isFound = false;
+		for (Relationship rel : relationships) {
+			if (typeId.equals(rel.getType().getConceptId())) {
+				isFound = true;
+				break;
+			}
+		}
+		if (mustHave && !isFound) {
+			Assert.fail("Attribute type of 370132008 should be present but is not");
+		}
+		if (!mustHave && isFound) {
+			Assert.fail("Attribute type of 370132008 should not be present but is");
+		}
 	}
 
 	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 	
-	private void mockGetFsnResponse() {
+	@SuppressWarnings("unchecked")
+	private void mockSearchConceptsResponse() {
 		expectGetTerminologyServerClient();
-		OngoingStubbing<Map<String,String>> when = null;
+		OngoingStubbing<List<ConceptPojo>> when = null;
 		try {
-			when = when(terminologyServerClient.getFsns(anyString(), anyCollection()));
+			when = when(terminologyServerClient.searchConcepts(anyString(), anyList()));
 		} catch (RestClientException e) {
 			throw new RuntimeException(e);
 		}
@@ -229,7 +257,25 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		conceptFsnMap.put("426530000", "Open reduction - action (qualifier value)");
 		conceptFsnMap.put("24626005", "Structure of root of mesentery (body structure)");
 		conceptFsnMap.put("426413004", "Closed reduction - action (qualifier value)");
-		when = when.thenReturn(conceptFsnMap);
+		when = when.thenReturn(mockConceptPojos(conceptFsnMap));
+	}
+
+	private List<ConceptPojo> mockConceptPojos(Map<String, String> conceptFsnMap) {
+		List<ConceptPojo> results = new ArrayList<>();
+		for (String conceptId : conceptFsnMap.keySet()) {
+			ConceptPojo pojo = new ConceptPojo();
+			pojo.setActive(true);
+			pojo.setConceptId(conceptId);
+			DescriptionPojo fsn = new DescriptionPojo();
+			fsn.setTerm(conceptFsnMap.get(conceptId));
+			fsn.setType("FSN");
+			fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			Set<DescriptionPojo> descriptionSet = new HashSet<>();
+			descriptionSet.add(fsn);
+			pojo.setDescriptions(descriptionSet);
+			results.add(pojo);
+		}
+		return results;
 	}
 
 	private void mockEclQueryResponse(Set<String>... conceptIdResults) {

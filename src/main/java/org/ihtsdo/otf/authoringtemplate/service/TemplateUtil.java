@@ -5,16 +5,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
@@ -48,8 +53,8 @@ public class TemplateUtil {
 	}
 	
 	
-	public static Set<String> getSlots(String ... termTemplates) {
-		Set<String> slots = new HashSet<>();
+	public static SortedSet<String> getSlots(String ... termTemplates) {
+		SortedSet<String> slots = new TreeSet<>();
 		for (String termTemplate : termTemplates) {
 			Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
 			while (matcher.find()) {
@@ -224,5 +229,15 @@ public class TemplateUtil {
 			return true;
 		}
 		return false;
+	}
+
+
+	public static String getDescriptionFromFSN(DescriptionPojo fsnPojo) {
+		String term = getDescriptionFromFSN(fsnPojo.getTerm());
+		if (CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
+			return term;
+		} else {
+			return StringUtils.uncapitalize(term);
+		}
 	}
 }

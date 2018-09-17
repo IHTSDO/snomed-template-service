@@ -25,14 +25,10 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @RunWith(SpringJUnit4ClassRunner.class)
 public class DescriptionTransformerTest {
 
-	private DescriptionTransformer transformer;
-	
 	@Test
 	public void testTransform() throws ServiceException {
 		ConceptPojo conceptToTransform = TestDataHelper.createConceptPojo();
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
-		Map<String, String> slotValueMap = new HashMap<>();
-		slotValueMap.put("substance", "Almond");
 		String inactivationReason = "Out_Of_Dated";
 		ConceptTemplate conceptTempalte = new ConceptTemplate();
 		conceptTempalte.setConceptOutline(conceptOutline);
@@ -40,7 +36,10 @@ public class DescriptionTransformerTest {
 		lexical.setName("substance");
 		lexical.setTakeFSNFromSlot("substance");
 		conceptTempalte.addLexicalTemplate(lexical);
-		transformer = new DescriptionTransformer(conceptToTransform, conceptTempalte, slotValueMap, inactivationReason);
+		Map<String, String> slotValueMap = new HashMap<>();
+		slotValueMap.put("substance", "Almond");
+		Map<String, Set<DescriptionPojo>> slotDescriptonValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, DescriptionType.FSN);
+		DescriptionTransformer transformer = new DescriptionTransformer(conceptToTransform, conceptTempalte, slotDescriptonValuesMap, inactivationReason);
 		transformer.transform();
 		assertNotNull(conceptToTransform.getDescriptions());
 		assertEquals(4, conceptToTransform.getDescriptions().size());
@@ -50,6 +49,7 @@ public class DescriptionTransformerTest {
 				.collect(Collectors.toList());
 		assertEquals(3,  activeTerms.size());
 		for (DescriptionPojo pojo : activeTerms) {
+			assertEquals("CASE_INSENSITIVE", pojo.getCaseSignificance());
 			if (DescriptionType.FSN.name().equals(pojo.getType())) {
 				assertEquals("Allergy to almond (finding)", pojo.getTerm());
 			} else if (DescriptionType.SYNONYM.name().equals(pojo.getType())) {

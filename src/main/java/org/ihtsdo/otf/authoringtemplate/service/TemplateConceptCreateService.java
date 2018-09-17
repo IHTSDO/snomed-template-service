@@ -21,11 +21,15 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptMini;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,33 +115,49 @@ public class TemplateConceptCreateService {
 					slotRowValues.add(null);
 				}
 			}
-			Map<String, String> slotValueMap = createSlotValueMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
-			LexicalTemplateTransformService.transformDescriptions(template.getLexicalTemplates(), generatedConcepts.get(i).getDescriptions(), slotValueMap);
+			Map<String, Set<DescriptionPojo>> slotValuesMap = createSlotConceptPojoMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
+			
+			LexicalTemplateTransformService.transformDescriptions(template.getLexicalTemplates(), generatedConcepts.get(i).getDescriptions(), slotValuesMap);
 		}
 		return generatedConcepts;
 	}
 
-	private Map<String, String> createSlotValueMap(String branchPath, List<String> slotNames, List<String> slotValues, int additionalSlots) throws ServiceException {
-		Map<String, String> slotValueMap = new HashMap<>();
+	private Map<String, Set<DescriptionPojo>> createSlotConceptPojoMap(String branchPath, List<String> slotNames, List<String> slotValues, int additionalSlots) throws ServiceException {
+		Map<String, Set<DescriptionPojo>> slotValueMap = new HashMap<>();
 		SnowOwlRestClient client = terminologyClientFactory.getClient();
-		Map<String, String> coneptFsnMap;
+		Map<String, ConceptPojo> coneptIdPojoMap = new HashMap<>();
 		try {
 			List<String> conceptIds = slotValues.subList(0, slotValues.size() - additionalSlots)
 					.stream()
 					.filter(v -> v != null)
 					.collect(Collectors.toList());
-			coneptFsnMap = client.getFsns(branchPath, conceptIds);
+			List<ConceptPojo> conceptPojos = client.searchConcepts(branchPath, conceptIds);
+			for (ConceptPojo pojo : conceptPojos) {
+				coneptIdPojoMap.put(pojo.getConceptId(), pojo);
+			}
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to get FSNs for concepts from branch " + branchPath, e);
 		}
 		for (int i = 0; i < slotNames.size(); i++) {
 			if (i < (slotValues.size() - additionalSlots)) {
-				slotValueMap.put(slotNames.get(i), TemplateUtil.getDescriptionFromFSN(coneptFsnMap.get(slotValues.get(i))));
+				if (coneptIdPojoMap.get(slotValues.get(i)) != null) {
+					slotValueMap.put(slotNames.get(i), coneptIdPojoMap.get(slotValues.get(i)).getDescriptions());
+				} 
 			} else {
-				slotValueMap.put(slotNames.get(i), slotValues.get(i));
+				slotValueMap.put(slotNames.get(i), constructDescriptionPojoSet(slotValues.get(i), DescriptionType.FSN.name()));
 			}
 		}
 		return slotValueMap;
+	}
+
+	private Set<DescriptionPojo> constructDescriptionPojoSet(String term, String type) {
+		Set<DescriptionPojo> result = new HashSet<>();
+		DescriptionPojo pojo = new DescriptionPojo();
+		pojo.setTerm(term);
+		pojo.setType(type);
+		pojo.setCaseSignificance(CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name());
+		result.add(pojo);
+		return result;
 	}
 
 	private void validateSlotValues(String branchPath, List<SimpleSlot> slotsRequiringInput, List<List<String>> slotInputValues) throws ServiceException {
