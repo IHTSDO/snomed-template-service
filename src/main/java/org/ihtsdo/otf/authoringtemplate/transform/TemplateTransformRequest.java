@@ -5,7 +5,6 @@ import java.util.Set;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 
 public class TemplateTransformRequest {
-
 	private Set<String> conceptsToTransform;
 	private String sourceTemplate;
 	private String inactivationReason;

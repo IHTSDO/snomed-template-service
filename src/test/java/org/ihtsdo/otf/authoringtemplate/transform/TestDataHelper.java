@@ -104,7 +104,7 @@ public class TestDataHelper {
 	}
 
 
-	private static Map<String, String> constructAcceptabilityMap(String usValue, String gbValue) {
+	public static Map<String, String> constructAcceptabilityMap(String usValue, String gbValue) {
 		Map<String, String> result = new HashMap<>();
 		result.put("900000000000509007", usValue);
 		result.put("900000000000508004", gbValue);
@@ -213,14 +213,18 @@ public class TestDataHelper {
 
 
 	public static Map<String, Set<DescriptionPojo>> constructSlotDescriptionValuesMap(Map<String, String> slotValueMap,
-			DescriptionType type) {
+			Map<String,CaseSignificance> slotCSMap, DescriptionType type) {
 		Map<String, Set<DescriptionPojo>> results = new HashMap<>();
 		for (String slot : slotValueMap.keySet()) {
 			results.put(slot, new HashSet<DescriptionPojo>());
 			DescriptionPojo pojo = new DescriptionPojo();
 			pojo.setReleased(true);
 			pojo.setActive(true);
-			pojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			if (slotCSMap == null || slotCSMap.isEmpty()) {
+				pojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			} else {
+				pojo.setCaseSignificance(slotCSMap.get(slot).name());
+			}
 			pojo.setTerm(slotValueMap.get(slot));
 			pojo.setType(type.name());
 			pojo.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
@@ -228,4 +232,5 @@ public class TestDataHelper {
 		}
 		return results;
 	}
+
 }

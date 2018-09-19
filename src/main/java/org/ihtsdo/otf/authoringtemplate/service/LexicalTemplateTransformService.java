@@ -7,12 +7,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
@@ -43,8 +43,8 @@ public class LexicalTemplateTransformService {
 		
 		for (Description description : descriptions) {
 			String term = description.getTermTemplate();
-			SortedSet<String> termSlotNames = TemplateUtil.getSlots(term);
-			SortedSet<String> caseSignificanceIdSet = new TreeSet<>();
+			Set<String> termSlotNames = TemplateUtil.getSlots(term);
+			Map<String, String> termAndCaseSignificanceMap = new HashMap<>();
 			for (String slotName : termSlotNames) {
 				LexicalTemplate template = lexicalTemplateMap.get(slotName);
 				String termSlot = TERM_SLOT_INDICATOR + slotName + TERM_SLOT_INDICATOR;
@@ -52,36 +52,40 @@ public class LexicalTemplateTransformService {
 				if (template == null) {
 					//Additional slot
 					fsnPojo = slotFsnValueMap.get(slotName); 
-					term = term.replace(termSlot, TemplateUtil.getDescriptionFromFSN(fsnPojo));
-					caseSignificanceIdSet.add(fsnPojo.getCaseSignificance());
+					String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
+					term = term.replace(termSlot, slotValue);
+					termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
 				} else {
-					term = applyLexicalTemplateTransformation(term, template, slotFsnValueMap, caseSignificanceIdSet, termSlot);
+					term = applyLexicalTemplateTransformation(term, template, slotFsnValueMap, termAndCaseSignificanceMap, termSlot);
 				}
 			}
-			updateFinalCaseSignificanceId(term, caseSignificanceIdSet, description);
+			updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, description);
 		}
 	}
 
-	private static void updateFinalCaseSignificanceId(String term, SortedSet<String> caseSignificanceIdSet,
+	private static void updateFinalCaseSignificanceId(String term, Map<String, String> termAndCaseSignificanceMap,
 			Description description) {
-		//use caseSignificanceIdSet and case significance id from term template to determine the final value
 		//remove extra spaces between words
 		term = term.replaceAll("\\s+"," ").trim();
-		if (ENTIRE_TERM_CASE_SENSITIVE.name().equals(caseSignificanceIdSet.first())) {
-			description.setCaseSignificance(ENTIRE_TERM_CASE_SENSITIVE);
-		} else {
-			if (caseSignificanceIdSet.contains(ENTIRE_TERM_CASE_SENSITIVE.name())
-				|| caseSignificanceIdSet.contains(INITIAL_CHARACTER_CASE_INSENSITIVE.name())) {
-				
+		Set<String> slotValues = termAndCaseSignificanceMap.keySet().stream().collect(Collectors.toSet());
+		for (String value : slotValues) {
+			if (term.startsWith(value) && ENTIRE_TERM_CASE_SENSITIVE.name().equals(termAndCaseSignificanceMap.get(value))) {
+				description.setCaseSignificance(ENTIRE_TERM_CASE_SENSITIVE);
+				break;
+			}
+		}
+		if (ENTIRE_TERM_CASE_SENSITIVE != description.getCaseSignificance()) {
+			term = StringUtils.capitalize(term);
+			if (termAndCaseSignificanceMap.values().contains(ENTIRE_TERM_CASE_SENSITIVE.name())
+					|| termAndCaseSignificanceMap.values().contains(INITIAL_CHARACTER_CASE_INSENSITIVE.name())) {
 				description.setCaseSignificance(INITIAL_CHARACTER_CASE_INSENSITIVE);
 			}
-			term = StringUtils.capitalize(term);
-		}
+		} 
 		description.setTerm(term);
 	}
 
 	private static String applyLexicalTemplateTransformation(String term, LexicalTemplate template, 
-			Map<String, DescriptionPojo> slotFsnValueMap, Set<String> caseSignificanceIdSet, String termSlot) throws ServiceException {
+			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, String> termAndCaseSignificanceMap, String termSlot) throws ServiceException {
 		DescriptionPojo fsnPojo = slotFsnValueMap.get(template.getTakeFSNFromSlot());
 		if (fsnPojo == null) {
 			if (template.getRemoveFromTermTemplateWhenSlotAbsent() == null) {
@@ -93,13 +97,16 @@ public class LexicalTemplateTransformService {
 			}
 		} else {
 			String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
-			caseSignificanceIdSet.add(fsnPojo.getCaseSignificance());
 			if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
-				slotValue = fsnPojo.getTerm();
+				slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo.getTerm());
 				for (String partToRemove : template.getRemoveParts()) {
 					slotValue = slotValue.replaceAll(partToRemove, "");
 				}
+				if (CaseSignificance.CASE_INSENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
+					slotValue = StringUtils.uncapitalize(slotValue);
+				}
 			}
+			termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
 			term = term.replace(termSlot, slotValue);
 		}
 		return term;

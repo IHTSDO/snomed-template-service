@@ -183,6 +183,7 @@ public class TemplateConceptTransformService {
 			if (conceptPojos != null) {
 				List<String> missing = new ArrayList<>(task);
 				for (ConceptPojo pojo : conceptPojos) {
+					missing.remove(pojo.getConceptId());
 					Map<String, ConceptMiniPojo> attributeSlotMap = TemplateUtil.getAttributeSlotValueMap(input.getDestinationAttributeTypeSlotMap(), pojo);
 					ConceptPojo transformed = null;
 					try {
@@ -194,6 +195,7 @@ public class TemplateConceptTransformService {
 						errors.put(pojo.getConceptId(), e.getMessage());
 					}
 				}
+				
 				for (String conceptId : missing) {
 					errors.put(conceptId, String.format("Failed to find concept %s from branch %s ", conceptId, input.getBranchPath()));
 				}

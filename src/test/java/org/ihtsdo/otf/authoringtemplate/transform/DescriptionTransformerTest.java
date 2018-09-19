@@ -38,7 +38,7 @@ public class DescriptionTransformerTest {
 		conceptTempalte.addLexicalTemplate(lexical);
 		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("substance", "Almond");
-		Map<String, Set<DescriptionPojo>> slotDescriptonValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, DescriptionType.FSN);
+		Map<String, Set<DescriptionPojo>> slotDescriptonValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, null, DescriptionType.FSN);
 		DescriptionTransformer transformer = new DescriptionTransformer(conceptToTransform, conceptTempalte, slotDescriptonValuesMap, inactivationReason);
 		transformer.transform();
 		assertNotNull(conceptToTransform.getDescriptions());

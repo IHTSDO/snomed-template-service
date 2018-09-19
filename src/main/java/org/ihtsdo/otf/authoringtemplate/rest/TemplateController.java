@@ -152,6 +152,11 @@ public class TemplateController {
 	public ConceptPojo transformConceptToTemplate(@PathVariable String branchPath,
 									@PathVariable String destinationTemplate,
 									@RequestBody ConceptPojo conceptToTransform) throws ServiceException {
+		if (conceptToTransform == null 
+				|| conceptToTransform.getDescriptions() == null 
+				|| conceptToTransform.getRelationships() == null ) {
+			throw new IllegalArgumentException("Concept to be transformed must not be null and must have descriptions and relationships but got " + conceptToTransform);
+		}
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
 		return transformService.transformConcept(BranchPathUriUtil.parseBranchPath(branchPath),
 				destinationTemplate, conceptToTransform, restClient);

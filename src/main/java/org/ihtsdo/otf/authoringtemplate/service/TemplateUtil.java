@@ -5,8 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -53,8 +51,8 @@ public class TemplateUtil {
 	}
 	
 	
-	public static SortedSet<String> getSlots(String ... termTemplates) {
-		SortedSet<String> slots = new TreeSet<>();
+	public static Set<String> getSlots(String ... termTemplates) {
+		Set<String> slots = new HashSet<>();
 		for (String termTemplate : termTemplates) {
 			Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
 			while (matcher.find()) {
@@ -234,10 +232,9 @@ public class TemplateUtil {
 
 	public static String getDescriptionFromFSN(DescriptionPojo fsnPojo) {
 		String term = getDescriptionFromFSN(fsnPojo.getTerm());
-		if (CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
-			return term;
-		} else {
+		if (CaseSignificance.CASE_INSENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
 			return StringUtils.uncapitalize(term);
-		}
+		} 
+		return term;
 	}
 }
