@@ -11,9 +11,20 @@ public class TransformationInputData {
 	private String branchPath;
 	private ConceptTemplate destinationTemplate;
 	private Map<String, SimpleConceptPojo> conceptIdMap;
-	private String inactivationReason;
 	private Map<String, Set<String>> destinationAttributeTypeSlotMap;
+	private TemplateTransformRequest transformRequest;
 
+	public TransformationInputData(TemplateTransformRequest transformRequest) {
+		this.transformRequest = transformRequest;
+	}
+	
+	public TemplateTransformRequest getTransformRequest() {
+		return transformRequest;
+	}
+
+	public void setTransformRequest(TemplateTransformRequest transformRequest) {
+		this.transformRequest = transformRequest;
+	}
 
 	public void setBranchPath(String branchPath) {
 		this.branchPath = branchPath;
@@ -35,20 +46,12 @@ public class TransformationInputData {
 		this.destinationTemplate = destination;
 	}
 
-	public String getInactivationReason() {
-		return this.inactivationReason;
-	}
-
 	public void setConceptIdMap(Map<String, SimpleConceptPojo> conceptIdMap) {
 		this.conceptIdMap = conceptIdMap;
 	}
 
 	public Map<String, SimpleConceptPojo> getConceptIdMap() {
 		return conceptIdMap;
-	}
-
-	public void setInactivationReason(String inactivationReason) {
-		this.inactivationReason = inactivationReason;
 	}
 
 	public void setDestinationAttributeTypeSlotMap(Map<String, Set<String>> attributeTypeSlotMap) {
@@ -58,5 +61,4 @@ public class TransformationInputData {
 	public Map<String, Set<String>> getDestinationAttributeTypeSlotMap() {
 		return destinationAttributeTypeSlotMap;
 	}
-	
 }

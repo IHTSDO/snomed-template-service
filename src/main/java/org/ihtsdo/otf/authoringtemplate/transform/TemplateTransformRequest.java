@@ -5,9 +5,12 @@ import java.util.Set;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 
 public class TemplateTransformRequest {
+	
 	private Set<String> conceptsToTransform;
 	private String sourceTemplate;
 	private String inactivationReason;
+	private boolean logicalTransform = true;
+	private boolean lexicalTransform = true;
 	
 	public void setConceptsToTransform(Set<String> conceptsToTransform) {
 		this.conceptsToTransform = conceptsToTransform;
@@ -35,6 +38,22 @@ public class TemplateTransformRequest {
 		}
 		return this.inactivationReason;
 	}
+	
+	public boolean isLogicalTransform() {
+		return logicalTransform;
+	}
+
+	public void setLogicalTransform(boolean logicalTransform) {
+		this.logicalTransform = logicalTransform;
+	}
+
+	public boolean isLexicalTransform() {
+		return lexicalTransform;
+	}
+
+	public void setLexicalTransform(boolean lexicalTransform) {
+		this.lexicalTransform = lexicalTransform;
+	}
 
 	@Override
 	public String toString() {
@@ -45,8 +64,52 @@ public class TemplateTransformRequest {
 		if (sourceTemplate != null)
 			builder.append("sourceTemplate=").append(sourceTemplate).append(", ");
 		if (inactivationReason != null)
-			builder.append("inactivationReason=").append(inactivationReason);
-		builder.append("]");
+			builder.append("inactivationReason=").append(inactivationReason).append(", ");
+		builder.append("logicalTransform=").append(logicalTransform).append(", lexicalTransform=")
+				.append(lexicalTransform).append("]");
 		return builder.toString();
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((conceptsToTransform == null) ? 0 : conceptsToTransform.hashCode());
+		result = prime * result + ((inactivationReason == null) ? 0 : inactivationReason.hashCode());
+		result = prime * result + (lexicalTransform ? 1231 : 1237);
+		result = prime * result + (logicalTransform ? 1231 : 1237);
+		result = prime * result + ((sourceTemplate == null) ? 0 : sourceTemplate.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		TemplateTransformRequest other = (TemplateTransformRequest) obj;
+		if (conceptsToTransform == null) {
+			if (other.conceptsToTransform != null)
+				return false;
+		} else if (!conceptsToTransform.equals(other.conceptsToTransform))
+			return false;
+		if (inactivationReason == null) {
+			if (other.inactivationReason != null)
+				return false;
+		} else if (!inactivationReason.equals(other.inactivationReason))
+			return false;
+		if (lexicalTransform != other.lexicalTransform)
+			return false;
+		if (logicalTransform != other.logicalTransform)
+			return false;
+		if (sourceTemplate == null) {
+			if (other.sourceTemplate != null)
+				return false;
+		} else if (!sourceTemplate.equals(other.sourceTemplate))
+			return false;
+		return true;
 	}
 }
