@@ -29,6 +29,7 @@ import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptMini;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
@@ -116,8 +117,8 @@ public class TemplateConceptCreateService {
 				}
 			}
 			Map<String, Set<DescriptionPojo>> slotValuesMap = createSlotConceptPojoMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
-			
-			LexicalTemplateTransformService.transformDescriptions(template.getLexicalTemplates(), generatedConcepts.get(i).getDescriptions(), slotValuesMap);
+			List<Description> transformed = LexicalTemplateTransformService.transformDescriptions(template.getLexicalTemplates(), generatedConcepts.get(i).getDescriptions(), slotValuesMap);
+			generatedConcepts.get(i).setDescriptions(transformed);
 		}
 		return generatedConcepts;
 	}

@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
@@ -65,7 +63,7 @@ public class LexicalTemplateTransformationServiceTest {
 	
 	@Test
 	public void testTermWithInitialCharacterCaseInsensitive() throws ServiceException {
-		SortedMap<String, String> slotValueMap = new TreeMap<>();
+		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("clinicalCourse", "Sudden onset AND short duration (qualifier value)");
 		slotValueMap.put("bodyStructure", "Bone structure of right tibia (body structure)");
 		slotValueMap.put("substance", "DPB1*1401 (substance)");
@@ -74,8 +72,21 @@ public class LexicalTemplateTransformationServiceTest {
 		csMap.put("bodyStructure", CASE_INSENSITIVE);
 		csMap.put("substance", ENTIRE_TERM_CASE_SENSITIVE);
 		Map<String, Set<DescriptionPojo>> slotDescriptionValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, csMap, DescriptionType.FSN);
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, 
-				slotDescriptionValuesMap);
+		
+		Map<String, String> slotPtValueMap = new HashMap<>();
+		slotPtValueMap.put("clinicalCourse", "Sudden onset AND short duration");
+		slotPtValueMap.put("bodyStructure", "Bone structure of right tibia");
+		slotPtValueMap.put("substance", "DPB1*1401");
+		Map<String, CaseSignificance> csPtMap = new HashMap<>();
+		csPtMap.put("clinicalCourse", INITIAL_CHARACTER_CASE_INSENSITIVE);
+		csPtMap.put("bodyStructure", CASE_INSENSITIVE);
+		csPtMap.put("substance", ENTIRE_TERM_CASE_SENSITIVE);
+		Map<String, Set<DescriptionPojo>> slotPtValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotPtValueMap, csPtMap, DescriptionType.SYNONYM);
+		for (String slot : slotPtValuesMap.keySet()) {
+			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
+		}
+		
+		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
 		assertEquals(2, descriptions.size());
 		assertEquals("Sudden onset AND short duration contact dermatitis of bone of right tibia caused by DPB1*1401 (disorder)", descriptions.get(0).getTerm());
 		assertEquals(INITIAL_CHARACTER_CASE_INSENSITIVE, descriptions.get(0).getCaseSignificance());
@@ -83,7 +94,7 @@ public class LexicalTemplateTransformationServiceTest {
 	
 	@Test
 	public void testTermWithEntireTermCaseSensitive() throws ServiceException {
-		SortedMap<String, String> slotValueMap = new TreeMap<>();
+		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("clinicalCourse", "Sudden onset AND short duration (qualifier value)");
 		slotValueMap.put("bodyStructure", "Bone structure of C5-C7 (body structure)");
 		slotValueMap.put("substance", "DPB1*1401 (substance)");
@@ -92,8 +103,22 @@ public class LexicalTemplateTransformationServiceTest {
 		csMap.put("bodyStructure", CASE_INSENSITIVE );
 		csMap.put("substance", INITIAL_CHARACTER_CASE_INSENSITIVE );
 		Map<String, Set<DescriptionPojo>> slotDescriptionValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, csMap, DescriptionType.FSN);
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, 
-				slotDescriptionValuesMap);
+		
+		Map<String, String> slotPtValueMap = new HashMap<>();
+		slotPtValueMap.put("clinicalCourse", "Sudden onset AND short duration");
+		slotPtValueMap.put("bodyStructure", "Bone structure of C5-C7");
+		slotPtValueMap.put("substance", "DPB1*1401");
+		Map<String, CaseSignificance> csPtMap = new HashMap<>();
+		csPtMap.put("clinicalCourse", ENTIRE_TERM_CASE_SENSITIVE);
+		csPtMap.put("bodyStructure", CASE_INSENSITIVE );
+		csPtMap.put("substance", INITIAL_CHARACTER_CASE_INSENSITIVE );
+		
+		Map<String, Set<DescriptionPojo>> slotPtValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotPtValueMap, csPtMap, DescriptionType.SYNONYM);
+		for (String slot : slotPtValuesMap.keySet()) {
+			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
+		}
+		
+		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
 		assertEquals(2, descriptions.size());
 		assertEquals("Sudden onset AND short duration contact dermatitis of bone of C5-C7 caused by DPB1*1401 (disorder)", descriptions.get(0).getTerm());
 		assertEquals(ENTIRE_TERM_CASE_SENSITIVE, descriptions.get(0).getCaseSignificance());
@@ -102,7 +127,7 @@ public class LexicalTemplateTransformationServiceTest {
 	
 	@Test
 	public void testTermWithCaseInSensitive() throws ServiceException {
-		SortedMap<String, String> slotValueMap = new TreeMap<>();
+		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("clinicalCourse", "Chronic aggressive (qualifier value)");
 		slotValueMap.put("bodyStructure", "Transplant (body structure)");
 		slotValueMap.put("substance", "Blood material (substance)");
@@ -111,8 +136,22 @@ public class LexicalTemplateTransformationServiceTest {
 		csMap.put("bodyStructure", CASE_INSENSITIVE );
 		csMap.put("substance", CASE_INSENSITIVE );
 		Map<String, Set<DescriptionPojo>> slotDescriptionValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, csMap, DescriptionType.FSN);
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, 
-				slotDescriptionValuesMap);
+		
+		Map<String, String> slotPtValueMap = new HashMap<>();
+		slotPtValueMap.put("clinicalCourse", "Chronic aggressive");
+		slotPtValueMap.put("bodyStructure", "Transplant");
+		slotPtValueMap.put("substance", "Blood material");
+		Map<String, CaseSignificance> csPtMap = new HashMap<>();
+		csPtMap.put("clinicalCourse", CASE_INSENSITIVE);
+		csPtMap.put("bodyStructure", CASE_INSENSITIVE );
+		csPtMap.put("substance", CASE_INSENSITIVE );
+		
+		Map<String, Set<DescriptionPojo>> slotPtValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotPtValueMap, csPtMap, DescriptionType.SYNONYM);
+		for (String slot : slotPtValuesMap.keySet()) {
+			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
+		}
+		
+		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
 		assertEquals(2, descriptions.size());
 		assertEquals("Chronic aggressive contact dermatitis of transplant caused by blood material (disorder)", descriptions.get(0).getTerm());
 		assertEquals(CASE_INSENSITIVE, descriptions.get(0).getCaseSignificance());
@@ -121,15 +160,27 @@ public class LexicalTemplateTransformationServiceTest {
 	
 	@Test
 	public void testTermWithoutOptionalSlot() throws ServiceException {
-		SortedMap<String, String> slotValueMap = new TreeMap<>();
+		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("bodyStructure", "Transplant (body structure)");
 		slotValueMap.put("substance", "Blood material (substance)");
 		Map<String, CaseSignificance> csMap = new HashMap<>();
 		csMap.put("bodyStructure", CASE_INSENSITIVE );
 		csMap.put("substance", CASE_INSENSITIVE );
 		Map<String, Set<DescriptionPojo>> slotDescriptionValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, csMap, DescriptionType.FSN);
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, 
-				slotDescriptionValuesMap);
+		
+		Map<String, String> slotPtValueMap = new HashMap<>();
+		slotPtValueMap.put("bodyStructure", "Transplant");
+		slotPtValueMap.put("substance", "Blood material");
+		Map<String, CaseSignificance> csPtMap = new HashMap<>();
+		csPtMap.put("bodyStructure", CASE_INSENSITIVE );
+		csPtMap.put("substance", CASE_INSENSITIVE );
+		
+		Map<String, Set<DescriptionPojo>> slotPtValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotPtValueMap, csPtMap, DescriptionType.SYNONYM);
+		for (String slot : slotPtValuesMap.keySet()) {
+			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
+		}
+		
+		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
 		assertEquals(2, descriptions.size());
 		assertEquals("Contact dermatitis of transplant caused by blood material (disorder)", descriptions.get(0).getTerm());
 		assertEquals(CASE_INSENSITIVE, descriptions.get(0).getCaseSignificance());

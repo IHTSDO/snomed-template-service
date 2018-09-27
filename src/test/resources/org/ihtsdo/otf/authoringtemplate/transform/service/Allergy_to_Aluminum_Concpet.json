@@ -1,0 +1,367 @@
+{
+  "effectiveTime": "20030731",
+  "moduleId": "900000000000207008",
+  "active": true,
+  "released": true,
+  "conceptId": "402306009",
+  "fsn": "Allergy to aluminum (disorder)",
+  "definitionStatus": "FULLY_DEFINED",
+  "preferredSynonym": "Allergy to aluminum",
+  "descriptions": [
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1774888010",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Allergy to aluminum",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1783763012",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Aluminium allergy",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "ACCEPTABLE"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1784149019",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Aluminum allergy",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "ACCEPTABLE"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1773602015",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Allergy to aluminium",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "2688318010",
+      "conceptId": "402306009",
+      "type": "FSN",
+      "lang": "en",
+      "term": "Allergy to aluminum (disorder)",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20080131",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "descriptionId": "1770230012",
+      "conceptId": "402306009",
+      "type": "FSN",
+      "lang": "en",
+      "term": "Allergy to aluminium (disorder)",
+      "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+      "acceptabilityMap": {}
+    }
+  ],
+  "relationships": [
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "4704113024",
+      "type": {
+        "conceptId": "255234002",
+        "fsn": "After (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "609327009",
+        "fsn": "Allergic sensitization (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "402306009",
+      "groupId": 1,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "relationshipId": "2286932027",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "12503006",
+        "fsn": "Aluminium (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "4708395029",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "12503006",
+        "fsn": "Aluminium (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "4704111021",
+      "type": {
+        "conceptId": "370135005",
+        "fsn": "Pathological process (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "472964009",
+        "fsn": "Allergic process (qualifier value)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20080731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "4254126020",
+      "type": {
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20030731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "300915004",
+        "fsn": "Metal allergy (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "relationshipId": "4418648020",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "12503006",
+        "fsn": "Aluminium (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "4704112025",
+      "type": {
+        "conceptId": "246075003",
+        "fsn": "Causative agent (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "12503006",
+        "fsn": "Aluminium (substance)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 1,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20060131",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "relationshipId": "2754998027",
+      "type": {
+        "conceptId": "363705008",
+        "fsn": "Has definitional manifestation (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20050131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "106182000",
+        "fsn": "Immune system finding (finding)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20030731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "2248340021",
+      "type": {
+        "conceptId": "116680003",
+        "fsn": "Is a (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20030731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "300915004",
+        "fsn": "Metal allergy (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20130731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "relationshipId": "4707901021",
+      "type": {
+        "conceptId": "255234002",
+        "fsn": "After (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20130731",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "609327009",
+        "fsn": "Allergic sensitization (disorder)",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "sourceId": "402306009",
+      "groupId": 1,
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "effectiveTime": "20050131",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "relationshipId": "2286933021",
+      "type": {
+        "conceptId": "363698007",
+        "fsn": "Finding site (attribute)"
+      },
+      "target": {
+        "effectiveTime": "20020131",
+        "moduleId": "900000000000207008",
+        "active": true,
+        "released": true,
+        "conceptId": "116003000",
+        "fsn": "Structure of immune system (body structure)",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "sourceId": "402306009",
+      "groupId": 0,
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    }
+  ]
+}

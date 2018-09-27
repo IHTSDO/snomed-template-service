@@ -32,9 +32,11 @@ import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
+import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
+import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
@@ -94,7 +96,7 @@ public class TemplateConceptTransformServiceTest {
 	private ConceptPojo conceptToTransform;
 	private ConceptPojo conceptTransformed;
 	private Gson gson;
-	private boolean isDebug = true;
+	private boolean isDebug = false;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -233,6 +235,25 @@ public class TemplateConceptTransformServiceTest {
 		fsnPojo.setTerm(conceptMini.getFsn());
 		fsnPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
 		fsnPojo.setType(DescriptionType.FSN.name());
+		DescriptionPojo ptPojo = new DescriptionPojo();
+		ptPojo.setTerm(TemplateUtil.getDescriptionFromFSN(conceptMini.getFsn()));
+		if (ptPojo.getTerm().equals("Aluminium")) {
+			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.ACCEPTABLE, Constants.PREFERRED));
+			DescriptionPojo usPtPojo = new DescriptionPojo();
+			usPtPojo.setTerm("Aluminum");
+			usPtPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED,Constants.ACCEPTABLE));
+			usPtPojo.setActive(true);
+			usPtPojo.setType(DescriptionType.SYNONYM.name());
+			usPtPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			descriptions.add(usPtPojo);
+			
+		} else {
+			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
+		}
+		ptPojo.setActive(true);
+		ptPojo.setType(DescriptionType.SYNONYM.name());
+		ptPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		descriptions.add(ptPojo);
 		return pojo;
 	}
 
@@ -308,12 +329,50 @@ public class TemplateConceptTransformServiceTest {
 		assertEquals(conceptTransformed.toString().replace(",", ",\n"), concept.toString().replace(",", ",\n"));
 	}
 
+	
+	@Test
+	public void testAllergyToAluminiumTransformation() throws Exception {
+		setUpTestTemplates("Allergy_to_Aluminum_Concpet.json",
+				"Allergy_to_Aluminum_Concpet_Transformed.json");
+		Set<String> concepts = new HashSet<>();
+		concepts.add("402306009");
+		mockTerminologyServerClient();
+		mockSearchConcepts();
+		
+		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
+		transformRequest.setConceptsToTransform(concepts);
+		transformRequest.setSourceTemplate(source);
+		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
+		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
+		assertNotNull(results);
+		
+		List<ConceptPojo> transformed = getTransformationResults(results);
+		assertEquals(true, !transformed.isEmpty());
+		assertEquals(1, transformed.size());
+		ConceptPojo concept = transformed.get(0);
+		//validate descriptions transformation
+		assertEquals(7, concept.getDescriptions().size());
+		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		assertEquals(5, activeTerms.size());
+		printTransformedConcept(transformed);
+		assertEquals(conceptTransformed, concept);
+	}
+	
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {
 		List<ConceptPojo> transformed = new ArrayList<>();
 		Map<String, String> errorMsgMap = new HashMap<>();
 		for (Future<TransformationResult> future : results) {
 			try {
 				TransformationResult transformationResult = future.get();
+				Map<String, String> failures = transformationResult.getFailures();
+				if (failures != null && !failures.isEmpty()) {
+					StringBuilder msgBuilder = new StringBuilder();
+					msgBuilder.append("Unexpected failure \n");
+					for (String conceptId : failures.keySet()) {
+						msgBuilder.append("ConceptId=" + conceptId + " failure msg = " + failures.get(conceptId) + "\n");
+					}
+					fail("Shouldn't have failures!" + msgBuilder.toString());
+				}
 				transformed.addAll(transformationResult.getConcepts());
 				for (String key : transformationResult.getFailures().keySet()) {
 					errorMsgMap.put(key, transformationResult.getFailures().get(key));

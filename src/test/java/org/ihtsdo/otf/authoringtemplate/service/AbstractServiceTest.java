@@ -6,6 +6,7 @@ import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
 import org.junit.After;
@@ -14,6 +15,7 @@ import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
+import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -59,7 +61,13 @@ public abstract class AbstractServiceTest {
 
 		templateRequest.addLexicalTemplate(new LexicalTemplate("procSiteTerm", "X", "procSite", Lists.newArrayList("structure of", "structure", "part of")));
 		templateRequest.addLexicalTemplate(new LexicalTemplate("actionTerm", "Procedure", "action", Lists.newArrayList(" - action")));
-		templateRequest.setConceptOutline(new ConceptOutline().addDescription(new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)")));
+		Description fsn = new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)");
+		fsn.setType(DescriptionType.FSN);
+		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
+		Description pt = new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance");
+		pt.setType(DescriptionType.SYNONYM);
+		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
+		templateRequest.setConceptOutline(new ConceptOutline().addDescription(fsn).addDescription(pt));
 		templateService.create("CT Guided Procedure of X", templateRequest);
 	}
 }

@@ -130,21 +130,21 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertEquals(5, conceptOutlines.size());
 
 		ConceptOutline concept = conceptOutlines.get(0);
-		assertEquals(1, concept.getDescriptions().size());
+		assertEquals(2, concept.getDescriptions().size());
 		assertEquals(6, concept.getRelationships().size());
 		assertEquals("12656001", concept.getRelationships().get(2).getTarget().getConceptId());
 		assertEquals("419988009", concept.getRelationships().get(4).getTarget().getConceptId());
 		assertEquals("12656001", concept.getRelationships().get(5).getTarget().getConceptId());
 
 		concept = conceptOutlines.get(1);
-		assertEquals(1, concept.getDescriptions().size());
+		assertEquals(2, concept.getDescriptions().size());
 		assertEquals(6, concept.getRelationships().size());
 		assertEquals("63303001", concept.getRelationships().get(2).getTarget().getConceptId());
 		assertEquals("415186003", concept.getRelationships().get(4).getTarget().getConceptId());
 		assertEquals("63303001", concept.getRelationships().get(5).getTarget().getConceptId());
 
 		concept = conceptOutlines.get(2);
-		assertEquals(1, concept.getDescriptions().size());
+		assertEquals(2, concept.getDescriptions().size());
 		assertEquals(6, concept.getRelationships().size());
 		assertEquals("63124001", concept.getRelationships().get(2).getTarget().getConceptId());
 		assertEquals("426865009", concept.getRelationships().get(4).getTarget().getConceptId());
@@ -201,13 +201,13 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
 
 		assertEquals("LOINC FSN 1 (procedure)", c1.getDescriptions().get(0).getTerm());
-		assertEquals("LOINC FSN 1", c1.getDescriptions().get(1).getTerm());
-		assertEquals("LOINC Unique ID:ID 1", c1.getDescriptions().get(2).getTerm());
+		assertEquals("LOINC Unique ID:ID 1", c1.getDescriptions().get(1).getTerm());
+		assertEquals("LOINC FSN 1", c1.getDescriptions().get(2).getTerm());
 
 		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
-		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
-		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
-		//check optonal attribute ScaleType(370132008);
+		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
+		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
+		//check optional attribute ScaleType(370132008);
 		assertOptionalAttribute(c1.getRelationships(), "370132008", true);
 		assertOptionalAttribute(generatedConcepts.get(1).getRelationships(), "370132008", false);
 	}

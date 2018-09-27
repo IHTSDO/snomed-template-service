@@ -46,18 +46,18 @@ public class DescriptionTransformer {
 				previousActiveTermMap.put(pojo.getTerm(), pojo);
 			}
 		}
-		List<DescriptionPojo> newDescriptions = new ArrayList<>();
-		String newFsn = null;
-		List<String> newPts = new ArrayList<>();
 		ConceptOutline conceptOutline = conceptTemplate.getConceptOutline();
 		String moduleId = conceptToTransform.getModuleId();
 		if (conceptTemplate.getConceptOutline().getModuleId() !=null) {
 			moduleId = conceptTemplate.getConceptOutline().getModuleId();
 		}
 		
-		LexicalTemplateTransformService.transformDescriptions(conceptTemplate.getLexicalTemplates(), 
+		List<Description> lexicalTransformed = LexicalTemplateTransformService.transformDescriptions(conceptTemplate.getLexicalTemplates(), 
 				conceptOutline.getDescriptions(), slotValueMap);
-		for (Description desc : conceptOutline.getDescriptions()) {
+		List<DescriptionPojo> newDescriptions = new ArrayList<>();
+		String newFsn = null;
+		List<String> newPts = new ArrayList<>();
+		for (Description desc : lexicalTransformed) {
 			String term = desc.getTerm();
 			if (FSN == desc.getType()) {
 				newFsn = term;

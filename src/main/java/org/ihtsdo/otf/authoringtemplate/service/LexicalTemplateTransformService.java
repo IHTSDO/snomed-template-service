@@ -3,6 +3,7 @@ package org.ihtsdo.otf.authoringtemplate.service;
 import static org.snomed.authoringtemplate.domain.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE;
 import static org.snomed.authoringtemplate.domain.CaseSignificance.INITIAL_CHARACTER_CASE_INSENSITIVE;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,7 @@ import org.snomed.authoringtemplate.domain.LexicalTemplate;
 
 public class LexicalTemplateTransformService {
 	private static final String TERM_SLOT_INDICATOR = "$";
-	public static void transformDescriptions(List<LexicalTemplate> lexicalTemplates,
+	public static List<Description> transformDescriptions(List<LexicalTemplate> lexicalTemplates,
 			List<Description> descriptions, Map<String, Set<DescriptionPojo>> slotValueMap) throws ServiceException {
 		
 		Map<String, LexicalTemplate> lexicalTemplateMap = new HashMap<>();
@@ -35,13 +36,34 @@ public class LexicalTemplateTransformService {
 					.findFirst().get();
 			slotFsnValueMap.put(slot, fsnPojo);
 		}
-		performTransformation(descriptions, slotFsnValueMap, lexicalTemplateMap);
+		
+		Map<String, List<DescriptionPojo>> slotPtValueMap = new HashMap<>();
+		for (String slot : slotValueMap.keySet()) {
+			List<DescriptionPojo> ptPojos = slotValueMap.get(slot).stream()
+					.filter(v -> v.isActive())
+					.filter(v -> DescriptionType.SYNONYM.name().equals(v.getType()))
+					.filter(v -> v.getAcceptabilityMap().values().contains(Constants.PREFERRED))
+					.collect(Collectors.toList());
+			slotPtValueMap.put(slot, ptPojos);
+		}
+		return performTransformation(descriptions, slotFsnValueMap, slotPtValueMap, lexicalTemplateMap);
 	}
 	
-	private static void performTransformation(List<Description> descriptions,
-			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, LexicalTemplate> lexicalTemplateMap) throws ServiceException {
+	private static List<Description> performTransformation(List<Description> descriptions,
+			Map<String, DescriptionPojo> slotFsnValueMap,
+			Map<String, List<DescriptionPojo>> slotPtValueMap,
+			Map<String, LexicalTemplate> lexicalTemplateMap) throws ServiceException {
 		
-		for (Description description : descriptions) {
+		List<Description> updated = new ArrayList<>();
+		List<Description> pts = descriptions.stream()
+				.filter(d -> DescriptionType.SYNONYM == d.getType())
+				.filter(d -> d.getAcceptabilityMap() != null)
+				.filter(d -> d.getAcceptabilityMap().values().contains(Constants.PREFERRED))
+				.collect(Collectors.toList());
+		
+		List<Description> others = new ArrayList<>(descriptions);
+		others.removeAll(pts);
+		for (Description description : others) {
 			String term = description.getTermTemplate();
 			Set<String> termSlotNames = TemplateUtil.getSlots(term);
 			Map<String, String> termAndCaseSignificanceMap = new HashMap<>();
@@ -60,7 +82,96 @@ public class LexicalTemplateTransformService {
 				}
 			}
 			updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, description);
+			updated.add(description);
 		}
+		updated.addAll(transformPt(pts, slotFsnValueMap, slotPtValueMap, lexicalTemplateMap));
+		return updated;
+	}
+
+	private static List<Description> transformPt(List<Description> pts,
+			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, List<DescriptionPojo>> slotPtValueMap, Map<String, LexicalTemplate> lexicalTemplateMap) throws ServiceException {
+		List<Description> result = new ArrayList<>();
+		for (Description description : pts) {
+			List<Description> temp = new ArrayList<>();
+			for (String refsetId : description.getAcceptabilityMap().keySet()) {
+				Description pt = description.clone();
+				Map<String, String> acceptabilityMap = new HashMap<>();
+				acceptabilityMap.put(refsetId, Constants.PREFERRED);
+				pt.setAcceptabilityMap(acceptabilityMap);
+				String term = pt.getTermTemplate();
+				Set<String> termSlotNames = TemplateUtil.getSlots(term);
+				Map<String, String> termAndCaseSignificanceMap = new HashMap<>();
+				for (String slotName : termSlotNames) {
+					LexicalTemplate template = lexicalTemplateMap.get(slotName);
+					String termSlot = TERM_SLOT_INDICATOR + slotName + TERM_SLOT_INDICATOR;
+					DescriptionPojo fsnPojo = null;
+					if (template == null) {
+						//Additional slot
+						fsnPojo = slotFsnValueMap.get(slotName); 
+						String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
+						term = term.replace(termSlot, slotValue);
+						termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
+					} else {
+						term = applyPrefferedTermTransformation(term, template, slotPtValueMap, refsetId, termAndCaseSignificanceMap, termSlot);
+					}
+				}
+				updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, pt);
+				temp.add(pt);
+			}
+			//check and merge if the term is same 
+			Set<String> ptTerms = temp.stream().map(d -> d.getTerm()).collect(Collectors.toSet());
+			if (ptTerms.size() == 1) {
+				Map<String, String> acceptabilityMap = new HashMap<>();
+				for (String key : description.getAcceptabilityMap().keySet()) {
+					acceptabilityMap.put(key, Constants.PREFERRED);
+				}
+				Description mergedPt = temp.get(0);
+				mergedPt.setAcceptabilityMap(acceptabilityMap);
+				result.add(mergedPt);
+			} else {
+				result.addAll(temp);
+			}
+		}
+		return result;
+	}
+
+	private static String applyPrefferedTermTransformation(String term, LexicalTemplate template,
+			Map<String, List<DescriptionPojo>> slotPtValueMap, String refsetId, Map<String, String> termAndCaseSignificanceMap,
+			String termSlot) throws ServiceException {
+		
+		DescriptionPojo ptPojo = null;
+		if (slotPtValueMap.containsKey(template.getTakeFSNFromSlot())) {
+			for (DescriptionPojo pojo : slotPtValueMap.get(template.getTakeFSNFromSlot())) {
+				if (pojo.getAcceptabilityMap().keySet().contains(refsetId)) {
+					if (Constants.PREFERRED.equals(pojo.getAcceptabilityMap().get(refsetId))) {
+						ptPojo = pojo;
+						break;
+					}
+				}
+			}
+		}
+		if (ptPojo == null) {
+			if (template.getRemoveFromTermTemplateWhenSlotAbsent() == null) {
+				throw new ServiceException("No logical concept value found for non-optional slot " 
+						+ template.getTakeFSNFromSlot() + " referenced in term slot " + termSlot);
+			}
+			for (String part : template.getRemoveFromTermTemplateWhenSlotAbsent()) {
+				term = term.replace(part, "");
+			}
+		} else {
+			String slotValue = TemplateUtil.getDescriptionFromPT(ptPojo);
+			if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
+				for (String partToRemove : template.getRemoveParts()) {
+					slotValue = slotValue.replaceAll(partToRemove, "");
+				}
+				if (CaseSignificance.CASE_INSENSITIVE.name().equals(ptPojo.getCaseSignificance())) {
+					slotValue = StringUtils.uncapitalize(slotValue);
+				}
+			}
+			termAndCaseSignificanceMap.put(slotValue, ptPojo.getCaseSignificance());
+			term = term.replace(termSlot, slotValue);
+		}
+		return term;
 	}
 
 	private static void updateFinalCaseSignificanceId(String term, Map<String, String> termAndCaseSignificanceMap,
@@ -84,8 +195,12 @@ public class LexicalTemplateTransformService {
 		description.setTerm(term);
 	}
 
+	
+	
 	private static String applyLexicalTemplateTransformation(String term, LexicalTemplate template, 
-			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, String> termAndCaseSignificanceMap, String termSlot) throws ServiceException {
+			Map<String, DescriptionPojo> slotFsnValueMap,
+			Map<String, String> termAndCaseSignificanceMap, 
+			String termSlot) throws ServiceException {
 		DescriptionPojo fsnPojo = slotFsnValueMap.get(template.getTakeFSNFromSlot());
 		if (fsnPojo == null) {
 			if (template.getRemoveFromTermTemplateWhenSlotAbsent() == null) {
@@ -97,8 +212,8 @@ public class LexicalTemplateTransformService {
 			}
 		} else {
 			String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
+			
 			if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
-				slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo.getTerm());
 				for (String partToRemove : template.getRemoveParts()) {
 					slotValue = slotValue.replaceAll(partToRemove, "");
 				}
