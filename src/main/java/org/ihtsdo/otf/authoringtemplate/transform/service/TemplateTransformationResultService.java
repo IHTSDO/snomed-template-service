@@ -85,7 +85,8 @@ public class TemplateTransformationResultService {
 	public void update(TemplateTransformation transformation) throws ServiceException {
 		String statusPath = ResourcePathHelper.getStatusPath(transformation.getTransformationId());
 		transformation.setLastUpdatedDate(Calendar.getInstance().getTime());
-		
+		logger.info("Template transformation id {} for branch {} is {}", transformation.getTransformationId(), transformation.getBranchPath(),
+				transformation.getStatus().toString());
 		try (OutputStream output = transformationResourceManager.writeResourceStream(statusPath);
 				 Writer writer = new OutputStreamWriter(output)) {
 				 writer.write(prettyJson.toJson(transformation));

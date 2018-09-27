@@ -84,11 +84,11 @@ public class LexicalTemplateTransformService {
 			updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, description);
 			updated.add(description);
 		}
-		updated.addAll(transformPt(pts, slotFsnValueMap, slotPtValueMap, lexicalTemplateMap));
+		updated.addAll(transformPreferredTerms(pts, slotFsnValueMap, slotPtValueMap, lexicalTemplateMap));
 		return updated;
 	}
 
-	private static List<Description> transformPt(List<Description> pts,
+	private static List<Description> transformPreferredTerms(List<Description> pts,
 			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, List<DescriptionPojo>> slotPtValueMap, Map<String, LexicalTemplate> lexicalTemplateMap) throws ServiceException {
 		List<Description> result = new ArrayList<>();
 		for (Description description : pts) {
@@ -112,7 +112,7 @@ public class LexicalTemplateTransformService {
 						term = term.replace(termSlot, slotValue);
 						termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
 					} else {
-						term = applyPrefferedTermTransformation(term, template, slotPtValueMap, refsetId, termAndCaseSignificanceMap, termSlot);
+						term = applyPreferredTermTransformation(term, template, slotPtValueMap, refsetId, termAndCaseSignificanceMap, termSlot);
 					}
 				}
 				updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, pt);
@@ -135,7 +135,7 @@ public class LexicalTemplateTransformService {
 		return result;
 	}
 
-	private static String applyPrefferedTermTransformation(String term, LexicalTemplate template,
+	private static String applyPreferredTermTransformation(String term, LexicalTemplate template,
 			Map<String, List<DescriptionPojo>> slotPtValueMap, String refsetId, Map<String, String> termAndCaseSignificanceMap,
 			String termSlot) throws ServiceException {
 		
@@ -212,7 +212,6 @@ public class LexicalTemplateTransformService {
 			}
 		} else {
 			String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
-			
 			if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
 				for (String partToRemove : template.getRemoveParts()) {
 					slotValue = slotValue.replaceAll(partToRemove, "");
