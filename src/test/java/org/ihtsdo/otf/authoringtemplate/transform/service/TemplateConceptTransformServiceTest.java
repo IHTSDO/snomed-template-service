@@ -229,6 +229,14 @@ public class TemplateConceptTransformServiceTest {
 		pojo.setModuleId(conceptMini.getModuleId());
 		Set<DescriptionPojo> descriptions = new HashSet<>();
 		pojo.setDescriptions(descriptions);
+		
+		DescriptionPojo inactiveFsnPojo = new DescriptionPojo();
+		inactiveFsnPojo.setActive(false);
+		inactiveFsnPojo.setTerm("inactive_" + conceptMini.getFsn() );
+		inactiveFsnPojo.setCaseSignificance(CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name());
+		inactiveFsnPojo.setType(DescriptionType.FSN.name());
+		descriptions.add(inactiveFsnPojo);
+		
 		DescriptionPojo fsnPojo = new DescriptionPojo();
 		descriptions.add(fsnPojo);
 		fsnPojo.setActive(true);

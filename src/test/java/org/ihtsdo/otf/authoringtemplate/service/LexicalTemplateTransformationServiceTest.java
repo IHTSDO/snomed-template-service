@@ -86,10 +86,10 @@ public class LexicalTemplateTransformationServiceTest {
 			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
 		}
 		
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
-		assertEquals(2, descriptions.size());
-		assertEquals("Sudden onset AND short duration contact dermatitis of bone of right tibia caused by DPB1*1401 (disorder)", descriptions.get(0).getTerm());
-		assertEquals(INITIAL_CHARACTER_CASE_INSENSITIVE, descriptions.get(0).getCaseSignificance());
+		List<Description> results = LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
+		assertEquals(2, results.size());
+		assertEquals("Sudden onset AND short duration contact dermatitis of bone of right tibia caused by DPB1*1401 (disorder)", results.get(0).getTerm());
+		assertEquals(INITIAL_CHARACTER_CASE_INSENSITIVE, results.get(0).getCaseSignificance());
 	}
 	
 	@Test
@@ -118,10 +118,10 @@ public class LexicalTemplateTransformationServiceTest {
 			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
 		}
 		
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
-		assertEquals(2, descriptions.size());
-		assertEquals("Sudden onset AND short duration contact dermatitis of bone of C5-C7 caused by DPB1*1401 (disorder)", descriptions.get(0).getTerm());
-		assertEquals(ENTIRE_TERM_CASE_SENSITIVE, descriptions.get(0).getCaseSignificance());
+		List<Description> results = LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
+		assertEquals(2, results.size());
+		assertEquals("Sudden onset AND short duration contact dermatitis of bone of C5-C7 caused by DPB1*1401 (disorder)", results.get(0).getTerm());
+		assertEquals(ENTIRE_TERM_CASE_SENSITIVE, results.get(0).getCaseSignificance());
 		
 	}
 	
@@ -151,10 +151,10 @@ public class LexicalTemplateTransformationServiceTest {
 			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
 		}
 		
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
-		assertEquals(2, descriptions.size());
-		assertEquals("Chronic aggressive contact dermatitis of transplant caused by blood material (disorder)", descriptions.get(0).getTerm());
-		assertEquals(CASE_INSENSITIVE, descriptions.get(0).getCaseSignificance());
+		List<Description> results = LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
+		assertEquals(2, results.size());
+		assertEquals("Chronic aggressive contact dermatitis of transplant caused by blood material (disorder)", results.get(0).getTerm());
+		assertEquals(CASE_INSENSITIVE, results.get(0).getCaseSignificance());
 		
 	}
 	
@@ -180,9 +180,9 @@ public class LexicalTemplateTransformationServiceTest {
 			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
 		}
 		
-		LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
-		assertEquals(2, descriptions.size());
-		assertEquals("Contact dermatitis of transplant caused by blood material (disorder)", descriptions.get(0).getTerm());
-		assertEquals(CASE_INSENSITIVE, descriptions.get(0).getCaseSignificance());
+		List<Description> results = LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
+		assertEquals(2, results.size());
+		assertEquals("Contact dermatitis of transplant caused by blood material (disorder)", results.get(0).getTerm());
+		assertEquals(CASE_INSENSITIVE, results.get(0).getCaseSignificance());
 	}
 }

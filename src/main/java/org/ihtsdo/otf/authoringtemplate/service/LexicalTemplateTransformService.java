@@ -36,7 +36,6 @@ public class LexicalTemplateTransformService {
 					.findFirst().get();
 			slotFsnValueMap.put(slot, fsnPojo);
 		}
-		
 		Map<String, List<DescriptionPojo>> slotPtValueMap = new HashMap<>();
 		for (String slot : slotValueMap.keySet()) {
 			List<DescriptionPojo> ptPojos = slotValueMap.get(slot).stream()
@@ -64,7 +63,8 @@ public class LexicalTemplateTransformService {
 		List<Description> others = new ArrayList<>(descriptions);
 		others.removeAll(pts);
 		for (Description description : others) {
-			String term = description.getTermTemplate();
+			Description toTransform = description.clone();
+			String term = toTransform.getTermTemplate();
 			Set<String> termSlotNames = TemplateUtil.getSlots(term);
 			Map<String, String> termAndCaseSignificanceMap = new HashMap<>();
 			for (String slotName : termSlotNames) {
@@ -81,8 +81,8 @@ public class LexicalTemplateTransformService {
 					term = applyLexicalTemplateTransformation(term, template, slotFsnValueMap, termAndCaseSignificanceMap, termSlot);
 				}
 			}
-			updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, description);
-			updated.add(description);
+			updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, toTransform);
+			updated.add(toTransform);
 		}
 		updated.addAll(transformPreferredTerms(pts, slotFsnValueMap, slotPtValueMap, lexicalTemplateMap));
 		return updated;
