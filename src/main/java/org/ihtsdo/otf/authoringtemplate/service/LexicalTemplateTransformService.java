@@ -195,8 +195,6 @@ public class LexicalTemplateTransformService {
 		description.setTerm(term);
 	}
 
-	
-	
 	private static String applyLexicalTemplateTransformation(String term, LexicalTemplate template, 
 			Map<String, DescriptionPojo> slotFsnValueMap,
 			Map<String, String> termAndCaseSignificanceMap, 

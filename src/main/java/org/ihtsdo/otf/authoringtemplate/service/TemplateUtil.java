@@ -231,7 +231,7 @@ public class TemplateUtil {
 
 	public static String getDescriptionFromPT(DescriptionPojo ptPojo) {
 		String term = ptPojo.getTerm();
-		if (CaseSignificance.CASE_INSENSITIVE.name().equals(ptPojo.getCaseSignificance())) {
+		if (!CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name().equals(ptPojo.getCaseSignificance())) {
 			return StringUtils.uncapitalize(term);
 		} 
 		return term;
@@ -239,7 +239,7 @@ public class TemplateUtil {
 
 	public static String getDescriptionFromFSN(DescriptionPojo fsnPojo) {
 		String term = getDescriptionFromFSN(fsnPojo.getTerm());
-		if (CaseSignificance.CASE_INSENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
+		if (!CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
 			return StringUtils.uncapitalize(term);
 		} 
 		return term;
