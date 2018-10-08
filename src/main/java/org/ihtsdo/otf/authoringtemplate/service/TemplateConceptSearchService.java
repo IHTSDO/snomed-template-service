@@ -79,7 +79,6 @@ public class TemplateConceptSearchService {
 		} catch (IOException e) {
 			throw new ServiceException("Failed to load tempate " + templateName);
 		}
-		
 	}
 	
 	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate, LogicalTemplate logical, 
@@ -159,11 +158,7 @@ public class TemplateConceptSearchService {
 			String branchPath, boolean logicalMatch, boolean stated) throws ServiceException {
 		try {
 			List<String> focusConcepts = logical.getFocusConcepts();
-			//domain concept from template is only for inferred search
-			String domainEcl = !stated ? conceptTemplate.getDomain() : null;
-			if (domainEcl == null || domainEcl.isEmpty()) {
-				domainEcl = constructEclQuery(focusConcepts, Collections.emptyList(), Collections.emptyList());
-			}
+			String domainEcl = constructEclQuery(focusConcepts, Collections.emptyList(), Collections.emptyList());
 			LOGGER.debug("Domain ECL=" + domainEcl);
 			List<AttributeGroup> attributeGroups = logical.getAttributeGroups();
 			List<Attribute> unGroupedAttributes = logical.getUngroupedAttributes();
