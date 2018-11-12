@@ -89,16 +89,15 @@ public class TemplateService {
 			return templatesByFocusConcept.entrySet().stream().filter(entry -> {
 				SecurityContextHolder.setContext(securityContext);
 				String focusConcept = entry.getKey();
-				String ecl = "(" + focusConcept + ") AND (";
+				String ecl = "";
 				for (int i = 0; descendantOf != null && i < descendantOf.length; i++) {
 					if (i > 0) ecl += " OR ";
-					ecl += "<<" + descendantOf[i];
+					ecl += "(" + focusConcept + " AND <<" + descendantOf[i] + ")";
 				}
 				for (int i = 0; ancestorOf != null && i < ancestorOf.length; i++) {
 					if (!Arrays.isNullOrEmpty(descendantOf) || i > 0) ecl += " OR ";
-					ecl += ">>" + ancestorOf[i];
+					ecl += "(" + focusConcept + " AND >>" + ancestorOf[i] + ")";
 				}
-				ecl += ")";
 				try {
 					return terminologyClient.eclQueryHasAnyMatches(branchPath, ecl);
 				} catch (RestClientException e) {
