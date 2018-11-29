@@ -11,15 +11,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.spi.LoggerRepository;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
+import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
 
 public class LexicalTemplateTransformService {
 	private static final String TERM_SLOT_INDICATOR = "$";
+	private static final Logger LOGGER = LoggerFactory.getLogger(LexicalTemplateTransformService.class);
 	public static List<Description> transformDescriptions(List<LexicalTemplate> lexicalTemplates,
 			List<Description> descriptions, Map<String, Set<DescriptionPojo>> slotValueMap) throws ServiceException {
 		
@@ -78,7 +83,7 @@ public class LexicalTemplateTransformService {
 					term = term.replace(termSlot, slotValue);
 					termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
 				} else {
-					term = applyLexicalTemplateTransformation(term, template, slotFsnValueMap, termAndCaseSignificanceMap, termSlot);
+					term = applyFsnTransformation(term, template, slotFsnValueMap, termAndCaseSignificanceMap, termSlot);
 				}
 			}
 			updateFinalCaseSignificanceId(term, termAndCaseSignificanceMap, toTransform);
@@ -151,25 +156,23 @@ public class LexicalTemplateTransformService {
 			}
 		}
 		if (ptPojo == null) {
-			if (template.getRemoveFromTermTemplateWhenSlotAbsent() == null) {
-				throw new ServiceException("No logical concept value found for non-optional slot " 
-						+ template.getTakeFSNFromSlot() + " referenced in term slot " + termSlot);
-			}
-			for (String part : template.getRemoveFromTermTemplateWhenSlotAbsent()) {
-				term = term.replace(part, "");
-			}
+			term = performTermReplacementWhenSlotIsAbsent(term, template);
 		} else {
-			String slotValue = TemplateUtil.getDescriptionFromPT(ptPojo);
-			if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
-				for (String partToRemove : template.getRemoveParts()) {
-					slotValue = slotValue.replaceAll(partToRemove, "");
+			if (isAdditionalTermReplacementRequired(template, ptPojo.getConceptId())) {
+				term = performTermReplacement(term, template);
+			} else {
+				String slotValue = TemplateUtil.getDescriptionFromPT(ptPojo);
+				if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
+					for (String partToRemove : template.getRemoveParts()) {
+						slotValue = slotValue.replaceAll(partToRemove, "");
+					}
+					if (CaseSignificance.CASE_INSENSITIVE.name().equals(ptPojo.getCaseSignificance())) {
+						slotValue = StringUtils.uncapitalize(slotValue);
+					}
 				}
-				if (CaseSignificance.CASE_INSENSITIVE.name().equals(ptPojo.getCaseSignificance())) {
-					slotValue = StringUtils.uncapitalize(slotValue);
-				}
+				termAndCaseSignificanceMap.put(slotValue, ptPojo.getCaseSignificance());
+				term = term.replace(termSlot, slotValue);
 			}
-			termAndCaseSignificanceMap.put(slotValue, ptPojo.getCaseSignificance());
-			term = term.replace(termSlot, slotValue);
 		}
 		return term;
 	}
@@ -195,32 +198,74 @@ public class LexicalTemplateTransformService {
 		description.setTerm(term);
 	}
 
-	private static String applyLexicalTemplateTransformation(String term, LexicalTemplate template, 
+	private static String applyFsnTransformation(String term, LexicalTemplate template, 
 			Map<String, DescriptionPojo> slotFsnValueMap,
 			Map<String, String> termAndCaseSignificanceMap, 
 			String termSlot) throws ServiceException {
 		DescriptionPojo fsnPojo = slotFsnValueMap.get(template.getTakeFSNFromSlot());
 		if (fsnPojo == null) {
-			if (template.getRemoveFromTermTemplateWhenSlotAbsent() == null) {
-				throw new ServiceException("No logical concept value found for non-optional slot " 
-						+ template.getTakeFSNFromSlot() + " referenced in term slot " + termSlot);
-			}
-			for (String part : template.getRemoveFromTermTemplateWhenSlotAbsent()) {
-				term = term.replace(part, "");
-			}
+			term = performTermReplacementWhenSlotIsAbsent(term, template);
 		} else {
-			String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
-			if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
-				for (String partToRemove : template.getRemoveParts()) {
-					slotValue = slotValue.replaceAll(partToRemove, "");
+			if (isAdditionalTermReplacementRequired(template, fsnPojo.getConceptId())) {
+				term = performTermReplacement(term, template);
+			} else {
+				String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
+				if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
+					for (String partToRemove : template.getRemoveParts()) {
+						slotValue = slotValue.replaceAll(partToRemove, "");
+					}
+					if (CaseSignificance.CASE_INSENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
+						slotValue = StringUtils.uncapitalize(slotValue);
+					}
 				}
-				if (CaseSignificance.CASE_INSENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
-					slotValue = StringUtils.uncapitalize(slotValue);
-				}
+				termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
+				term = term.replace(termSlot, slotValue);
 			}
-			termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());
-			term = term.replace(termSlot, slotValue);
 		}
 		return term;
+	}
+
+	private static boolean isAdditionalTermReplacementRequired(LexicalTemplate template, String conceptId) {
+		if (template.getTermReplacements() != null) {
+			for (ReplacementRule rule : template.getTermReplacements()) {
+				if (rule.getSlotValues() != null) {
+					if (rule.getSlotValues().contains(conceptId)) {
+						return true;
+					}
+				}
+			}
+		} 
+		return false;
+	}
+
+	private static String performTermReplacement(String term, LexicalTemplate template) {
+		String result = term;
+		if (template.getTermReplacements() != null) {
+			for (ReplacementRule rule : template.getTermReplacements()) {
+				if (rule.getSlotValues() != null) {
+					result = result.replace(rule.getExistingTerm(), rule.getReplacement());
+					LOGGER.info(term + " is replaced by " + result);
+					break;
+				}
+			}
+		} 
+		return result;
+	}
+
+	private static String performTermReplacementWhenSlotIsAbsent(String term, LexicalTemplate template) {
+		
+		LOGGER.info("No logical concept value found for slot " + template.getTakeFSNFromSlot() + " referenced in term slot " + template.getName());
+		String result = term;
+		if (template.getTermReplacements() == null || template.getTermReplacements().isEmpty()) {
+			//perform default replacement
+			result = result.replace(TERM_SLOT_INDICATOR + template.getName() + TERM_SLOT_INDICATOR, "");
+		} else {
+			for (ReplacementRule rule : template.getTermReplacements()) {
+				if (rule.isSlotAbsent()) {
+					result = result.replace(rule.getExistingTerm(), rule.getReplacement());
+				}
+			}
+		}
+		return result;
 	}
 }

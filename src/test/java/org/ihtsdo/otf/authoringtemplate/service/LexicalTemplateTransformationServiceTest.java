@@ -23,6 +23,7 @@ import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
+import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -36,12 +37,16 @@ public class LexicalTemplateTransformationServiceTest {
 		lexicalTemplates = new ArrayList<>();
 		descriptions = new ArrayList<>();
 		LexicalTemplate course = new LexicalTemplate("course", "[course]", "clinicalCourse", Collections.emptyList());
-		course.setRemoveFromTermTemplateWhenSlotAbsent(Arrays.asList("$course$"));
+		
 		LexicalTemplate bodysStructure = new LexicalTemplate("body structure", "[body structure]", "bodyStructure", Arrays.asList("Structure of",
 				"structure"));
-		bodysStructure.setRemoveFromTermTemplateWhenSlotAbsent(Arrays.asList("of $body structure$"));
+		ReplacementRule rule = new ReplacementRule("of $body structure$", "");
+		rule.setSlotAbsent(true);
+		bodysStructure.setTermReplacements(Arrays.asList(rule));
 		LexicalTemplate substance = new LexicalTemplate("substance", "[substance]", "substance", Collections.emptyList());
-		substance.setRemoveFromTermTemplateWhenSlotAbsent(Arrays.asList("caused by $substance$"));
+		ReplacementRule substanceReplacementRule = new ReplacementRule("caused by $substance$", "");
+		substanceReplacementRule.setSlotAbsent(true);
+		substance.setTermReplacements(Arrays.asList(substanceReplacementRule));
 		
 		lexicalTemplates.add(course);
 		lexicalTemplates.add(bodysStructure);

@@ -26,7 +26,7 @@ public class TemplateAuthoringHelper {
 	public static void main(String[] args) throws IOException {
 		String logical = readAndConvertInput();
 		validate(logical);
-		compactScratch();
+//		compactScratch();
 //		expandScratch();
 	}
 

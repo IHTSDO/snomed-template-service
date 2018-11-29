@@ -134,9 +134,12 @@ public class TemplateUtil {
 		return result;
 	}
 
-	public static Map<String, Set<String>>  getAttributeTypeSlotMap(LogicalTemplate logical) {
+	public static Map<String, Set<String>>  getAttributeTypeSlotMap(LogicalTemplate logical, boolean includeOptionalAttribute) {
 		Map<String, Set<String>> attributeSlots = new HashMap<>();
 		for (Attribute attr : logical.getUngroupedAttributes()) {
+			if (!includeOptionalAttribute && ("0".equals(attr.getCardinalityMin()))) {
+				continue;
+			}
 			if (attr.getSlotName() != null) {
 				if (!attributeSlots.containsKey(attr.getType())) {
 					attributeSlots.put(attr.getType(), new HashSet<>());
@@ -147,6 +150,9 @@ public class TemplateUtil {
 
 		for (AttributeGroup attributeGrp : logical.getAttributeGroups()) {
 			for (Attribute attr : attributeGrp.getAttributes()) {
+				if (!includeOptionalAttribute && ("0".equals(attr.getCardinalityMin()))) {
+					continue;
+				}
 				if (attr.getSlotName() != null) {
 					if (!attributeSlots.containsKey(attr.getType())) {
 						attributeSlots.put(attr.getType(), new HashSet<>());

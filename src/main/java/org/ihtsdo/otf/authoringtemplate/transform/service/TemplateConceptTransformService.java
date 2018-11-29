@@ -118,7 +118,7 @@ public class TemplateConceptTransformService {
 		LogicalTemplate logical;
 		try {
 			logical = parser.parseTemplate(destination.getLogicalTemplate());
-			input.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical));
+			input.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical, true));
 			
 		} catch (IOException e) {
 			throw new ServiceException("Failed to parse logical template " + destination.getName(), e);
@@ -256,7 +256,7 @@ public class TemplateConceptTransformService {
 			LogicalTemplate sourcelogical = parser.parseTemplate(source.getLogicalTemplate());
 			LogicalTemplate destinationLogical = parser.parseTemplate(destination.getLogicalTemplate());
 			Set<String> sourceAttributeTypes = TemplateUtil.getAttributeTypes(sourcelogical);
-			Map<String, Set<String>> destinationAttribyteSlotMap = TemplateUtil.getAttributeTypeSlotMap(destinationLogical);
+			Map<String, Set<String>> destinationAttribyteSlotMap = TemplateUtil.getAttributeTypeSlotMap(destinationLogical, false);
 			Set<String> destinationTypes = destinationAttribyteSlotMap.keySet();
 			if (!sourceAttributeTypes.containsAll(destinationTypes)) {
 				StringBuilder msgBuilder = new StringBuilder();
@@ -333,7 +333,7 @@ public class TemplateConceptTransformService {
 		inputData.setBranchPath(branchPath);
 		inputData.setDestinationTemplate(destination);
 		inputData.setConceptIdMap(conceptsMap);
-		inputData.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical));
+		inputData.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical, true));
 		return performTransform(conceptToTransform, inputData, restClient);
 	}
 }
