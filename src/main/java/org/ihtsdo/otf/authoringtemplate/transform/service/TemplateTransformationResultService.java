@@ -18,7 +18,7 @@ import org.ihtsdo.otf.authoringtemplate.transform.ResourcePathHelper;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
-import org.ihtsdo.otf.dao.resources.ResourceManager;
+import org.ihtsdo.otf.resourcemanager.ResourceManager;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
