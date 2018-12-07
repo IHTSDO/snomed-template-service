@@ -176,8 +176,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		// Generate concepts using template
 		String lines =
 				header + "\n" + // Header
-				"N/A\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
-				"123037004\t118598001\t7389001\t123037004\t123037004\tn/a\tLOINC FSN 2\tID 2\n"; // Line 2
+				"\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
+				"123037004\t118598001\t7389001\t123037004\t123037004\t\tLOINC FSN 2\tID 2\n"; // Line 2
 		mockEclQueryResponse(
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("118598001"),

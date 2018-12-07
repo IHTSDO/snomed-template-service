@@ -43,7 +43,7 @@ import com.google.common.collect.Iterables;
 @Service
 public class TemplateConceptCreateService {
 
-	private static final String NOT_AVAILABLE = "N/A";
+	private static final String EMPTY = "";
 
 	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 	
@@ -173,7 +173,7 @@ public class TemplateConceptCreateService {
 				slotIndex++;
 				Set<String> slotValuesToValidate = slotInputValues.get(slotIndex)
 						.stream()
-						.filter(v -> !v.equalsIgnoreCase(NOT_AVAILABLE))
+						.filter(v -> !EMPTY.equals(v))
 						.collect(Collectors.toSet());
 				Set<String> invalidSlotValues = new HashSet<>(slotValuesToValidate);
 				String slotEcl = simpleSlot.getAllowableRangeECL();
@@ -233,7 +233,7 @@ public class TemplateConceptCreateService {
 					errorMessages.add(String.format("Line %s has %s columns, expecting %s", lineNum, values.length, expectedColumnCount));
 				}
 				for (int column = 0; column < values.length; column++) {
-					String conceptId = values[column];
+					String conceptId = values[column].trim();
 					if (column < slotsRequiringInput.size() && !isValidConceptId(conceptId)) {
 						if (!optionalFieldIndexes.contains(column)) {
 							errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
@@ -270,7 +270,7 @@ public class TemplateConceptCreateService {
 		List<String> values = columnValues.get(slotColumn);
 		boolean isOptional = TemplateUtil.isOptional(relationship);
 		for (int i = 0; i < values.size(); i++) {
-			if (isOptional && NOT_AVAILABLE.equalsIgnoreCase(values.get(i))) {
+			if (isOptional && EMPTY.equals(values.get(i).trim())) {
 				continue;
 			}
 			generatedConcepts.get(i).addRelationship(relationship.clone().setTarget(new ConceptMini(values.get(i))));

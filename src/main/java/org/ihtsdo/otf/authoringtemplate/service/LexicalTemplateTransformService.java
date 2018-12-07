@@ -93,7 +93,8 @@ public class LexicalTemplateTransformService {
 	}
 
 	private static List<Description> transformPreferredTerms(List<Description> pts,
-			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, List<DescriptionPojo>> slotPtValueMap, Map<String, LexicalTemplate> lexicalTemplateMap) throws ServiceException {
+			Map<String, DescriptionPojo> slotFsnValueMap, Map<String, List<DescriptionPojo>> slotPtValueMap,
+			Map<String, LexicalTemplate> lexicalTemplateMap) throws ServiceException {
 		List<Description> result = new ArrayList<>();
 		for (Description description : pts) {
 			List<Description> temp = new ArrayList<>();
