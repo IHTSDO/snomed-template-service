@@ -43,6 +43,8 @@ import com.google.common.collect.Iterables;
 @Service
 public class TemplateConceptCreateService {
 
+	private static final String NOT_AVAILABLE = "N/A";
+
 	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 	
 	@Value("${batch.maxSize}")
@@ -169,10 +171,13 @@ public class TemplateConceptCreateService {
 			SnowOwlRestClient client = terminologyClientFactory.getClient();
 			for (SimpleSlot simpleSlot : slotsRequiringInput) {
 				slotIndex++;
-				Set<String> slotValues = new HashSet<>(slotInputValues.get(slotIndex));
-				Set<String> invalidSlotValues = new HashSet<>(slotValues);
+				Set<String> slotValuesToValidate = slotInputValues.get(slotIndex)
+						.stream()
+						.filter(v -> !v.equalsIgnoreCase(NOT_AVAILABLE))
+						.collect(Collectors.toSet());
+				Set<String> invalidSlotValues = new HashSet<>(slotValuesToValidate);
 				String slotEcl = simpleSlot.getAllowableRangeECL();
-				for (List<String> slotValuePartition : Iterables.partition(slotValues, 100)) {
+				for (List<String> slotValuePartition : Iterables.partition(slotValuesToValidate, 100)) {
 					StringBuilder validationEcl = new StringBuilder()
 							.append("(")
 							.append(slotEcl)
@@ -220,7 +225,7 @@ public class TemplateConceptCreateService {
 			int lineNum = 1;
 			while ((line = reader.readLine()) != null) {
 				lineNum++;
-				if (line.isEmpty()) {
+				if (line.trim().isEmpty()) {
 					continue;
 				}
 				String[] values = line.split("\\t");
@@ -233,9 +238,8 @@ public class TemplateConceptCreateService {
 						if (!optionalFieldIndexes.contains(column)) {
 							errorMessages.add(getError(conceptId, "is not a valid concept identifier", lineNum, column));
 						}
-					} else {
-						columnValues.get(column).add(conceptId);
-					}
+					} 
+					columnValues.get(column).add(conceptId);
 				}
 			}
 		}
@@ -266,7 +270,7 @@ public class TemplateConceptCreateService {
 		List<String> values = columnValues.get(slotColumn);
 		boolean isOptional = TemplateUtil.isOptional(relationship);
 		for (int i = 0; i < values.size(); i++) {
-			if (values.get(i) == null && isOptional) {
+			if (isOptional && NOT_AVAILABLE.equalsIgnoreCase(values.get(i))) {
 				continue;
 			}
 			generatedConcepts.get(i).addRelationship(relationship.clone().setTarget(new ConceptMini(values.get(i))));

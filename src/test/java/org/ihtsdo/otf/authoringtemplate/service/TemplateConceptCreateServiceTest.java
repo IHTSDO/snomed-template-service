@@ -163,7 +163,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		ByteArrayOutputStream emptyInputFile = new ByteArrayOutputStream();
 		templateService.writeEmptyInputFile("MAIN", templateName, emptyInputFile);
 		String header = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(emptyInputFile.toByteArray()))).readLine();
-		assertEquals("Component\t" +
+		assertEquals("Component(optional)\t" +
 						"PropertyType\t" +
 						"TimeAspect\t" +
 						"DirectSite\t" +
@@ -176,8 +176,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		// Generate concepts using template
 		String lines =
 				header + "\n" + // Header
-				"123037004\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
-				"123037004\t118598001\t7389001\t123037004\t123037004\tN/A\tLOINC FSN 2\tID 2\n"; // Line 2
+				"N/A\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
+				"123037004\t118598001\t7389001\t123037004\t123037004\tn/a\tLOINC FSN 2\tID 2\n"; // Line 2
 		mockEclQueryResponse(
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("118598001"),
@@ -190,9 +190,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertEquals(2, generatedConcepts.size());
 		ConceptOutline c1 = generatedConcepts.get(0);
 
-		assertEquals(7, c1.getRelationships().size());
+		assertEquals(6, c1.getRelationships().size());
 		int relationship = 0;
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
 		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
 		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
 		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
@@ -211,8 +210,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertOptionalAttribute(c1.getRelationships(), "370132008", true);
 		assertOptionalAttribute(generatedConcepts.get(1).getRelationships(), "370132008", false);
 	}
-	
-	
+
 	private void assertOptionalAttribute(List<Relationship> relationships, String typeId, boolean mustHave) {
 		boolean isFound = false;
 		for (Relationship rel : relationships) {

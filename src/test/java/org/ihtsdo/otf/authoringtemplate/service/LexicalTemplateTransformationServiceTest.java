@@ -34,8 +34,6 @@ public class LexicalTemplateTransformationServiceTest {
 	
 	@Before
 	public void setUp() {
-		lexicalTemplates = new ArrayList<>();
-		descriptions = new ArrayList<>();
 		LexicalTemplate course = new LexicalTemplate("course", "[course]", "clinicalCourse", Collections.emptyList());
 		
 		LexicalTemplate bodysStructure = new LexicalTemplate("body structure", "[body structure]", "bodyStructure", Arrays.asList("Structure of",
@@ -48,6 +46,8 @@ public class LexicalTemplateTransformationServiceTest {
 		substanceReplacementRule.setSlotAbsent(true);
 		substance.setTermReplacements(Arrays.asList(substanceReplacementRule));
 		
+		lexicalTemplates = new ArrayList<>();
+		
 		lexicalTemplates.add(course);
 		lexicalTemplates.add(bodysStructure);
 		lexicalTemplates.add(substance);
@@ -56,6 +56,7 @@ public class LexicalTemplateTransformationServiceTest {
 		fsn.setType(DescriptionType.FSN);
 		fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE);
 		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, PREFERRED));
+		descriptions = new ArrayList<>();
 		descriptions.add(fsn);
 		
 		Description pt = new Description("$course$ contact dermatitis of $body structure$ caused by $substance$");
@@ -164,7 +165,7 @@ public class LexicalTemplateTransformationServiceTest {
 	}
 	
 	@Test
-	public void testTermWithoutOptionalSlot() throws ServiceException {
+	public void testTransformationWithAllSlotsPresent() throws ServiceException {
 		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("bodyStructure", "Transplant (body structure)");
 		slotValueMap.put("substance", "Blood material (substance)");
@@ -188,6 +189,30 @@ public class LexicalTemplateTransformationServiceTest {
 		List<Description> results = LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
 		assertEquals(2, results.size());
 		assertEquals("Contact dermatitis of transplant caused by blood material (disorder)", results.get(0).getTerm());
+		assertEquals(CASE_INSENSITIVE, results.get(0).getCaseSignificance());
+	}
+	
+	@Test
+	public void testTransformationWithOptionalSlot() throws ServiceException {
+		Map<String, String> slotValueMap = new HashMap<>();
+		slotValueMap.put("bodyStructure", "Transplant (body structure)");
+		Map<String, CaseSignificance> csMap = new HashMap<>();
+		csMap.put("bodyStructure", CASE_INSENSITIVE );
+		Map<String, Set<DescriptionPojo>> slotDescriptionValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, csMap, DescriptionType.FSN);
+		
+		Map<String, String> slotPtValueMap = new HashMap<>();
+		slotPtValueMap.put("bodyStructure", "Transplant");
+		Map<String, CaseSignificance> csPtMap = new HashMap<>();
+		csPtMap.put("bodyStructure", CASE_INSENSITIVE );
+		
+		Map<String, Set<DescriptionPojo>> slotPtValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotPtValueMap, csPtMap, DescriptionType.SYNONYM);
+		for (String slot : slotPtValuesMap.keySet()) {
+			slotDescriptionValuesMap.get(slot).addAll(slotPtValuesMap.get(slot));
+		}
+		
+		List<Description> results = LexicalTemplateTransformService.transformDescriptions(lexicalTemplates, descriptions, slotDescriptionValuesMap);
+		assertEquals(2, results.size());
+		assertEquals("Contact dermatitis of transplant (disorder)", results.get(0).getTerm());
 		assertEquals(CASE_INSENSITIVE, results.get(0).getCaseSignificance());
 	}
 }

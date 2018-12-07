@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.spi.LoggerRepository;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.slf4j.Logger;
@@ -159,7 +158,7 @@ public class LexicalTemplateTransformService {
 			term = performTermReplacementWhenSlotIsAbsent(term, template);
 		} else {
 			if (isAdditionalTermReplacementRequired(template, ptPojo.getConceptId())) {
-				term = performTermReplacement(term, template);
+				term = performTermReplacementWithSlotValuesMatched(term, template);
 			} else {
 				String slotValue = TemplateUtil.getDescriptionFromPT(ptPojo);
 				if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
@@ -207,7 +206,7 @@ public class LexicalTemplateTransformService {
 			term = performTermReplacementWhenSlotIsAbsent(term, template);
 		} else {
 			if (isAdditionalTermReplacementRequired(template, fsnPojo.getConceptId())) {
-				term = performTermReplacement(term, template);
+				term = performTermReplacementWithSlotValuesMatched(term, template);
 			} else {
 				String slotValue = TemplateUtil.getDescriptionFromFSN(fsnPojo);
 				if (template.getRemoveParts() != null && !template.getRemoveParts().isEmpty()) {
@@ -226,7 +225,7 @@ public class LexicalTemplateTransformService {
 	}
 
 	private static boolean isAdditionalTermReplacementRequired(LexicalTemplate template, String conceptId) {
-		if (template.getTermReplacements() != null) {
+		if (template.getTermReplacements() != null && !template.getTermReplacements().isEmpty()) {
 			for (ReplacementRule rule : template.getTermReplacements()) {
 				if (rule.getSlotValues() != null) {
 					if (rule.getSlotValues().contains(conceptId)) {
@@ -238,13 +237,13 @@ public class LexicalTemplateTransformService {
 		return false;
 	}
 
-	private static String performTermReplacement(String term, LexicalTemplate template) {
+	private static String performTermReplacementWithSlotValuesMatched(String term, LexicalTemplate template) {
 		String result = term;
 		if (template.getTermReplacements() != null) {
 			for (ReplacementRule rule : template.getTermReplacements()) {
 				if (rule.getSlotValues() != null) {
 					result = result.replace(rule.getExistingTerm(), rule.getReplacement());
-					LOGGER.info(term + " is replaced by " + result);
+					LOGGER.debug(term + " is replaced by " + result);
 					break;
 				}
 			}
@@ -253,8 +252,6 @@ public class LexicalTemplateTransformService {
 	}
 
 	private static String performTermReplacementWhenSlotIsAbsent(String term, LexicalTemplate template) {
-		
-		LOGGER.info("No logical concept value found for slot " + template.getTakeFSNFromSlot() + " referenced in term slot " + template.getName());
 		String result = term;
 		if (template.getTermReplacements() == null || template.getTermReplacements().isEmpty()) {
 			//perform default replacement
@@ -263,9 +260,11 @@ public class LexicalTemplateTransformService {
 			for (ReplacementRule rule : template.getTermReplacements()) {
 				if (rule.isSlotAbsent()) {
 					result = result.replace(rule.getExistingTerm(), rule.getReplacement());
+					break;
 				}
 			}
 		}
+		LOGGER.debug("{} is replaced due to absent slot by {}", term, result);
 		return result;
 	}
 }
