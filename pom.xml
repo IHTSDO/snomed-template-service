@@ -5,7 +5,7 @@
 
 	<groupId>org.snomed.otf</groupId>
 	<artifactId>snomed-template-service</artifactId>
-	<version>1.8.1</version>
+	<version>1.8.2-SNAPSHOT</version>
 
 	<name>Snomed Template Service</name>
 	<description>A service to support SNOMED CT authoring driven by Expression Template Language</description>
