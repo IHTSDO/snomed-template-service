@@ -10,8 +10,8 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -231,7 +231,7 @@ public class TemplateConceptSearchServiceTest {
 		String templateName = "Allergy to [substance] V2";
 		ConceptTemplate template = setUpTemplate(templateName);
 		LogicalTemplate logicalTemplate = logicalTemplateParser.parseTemplate(template.getLogicalTemplate());
-		ConceptPojo concept = gson.fromJson(new FileReader(getClass().getResource("Allergy_to_Aluminium_With_Axiom.json").getFile()), ConceptPojo.class);
+		ConceptPojo concept = gson.fromJson(new InputStreamReader(getClass().getResourceAsStream("Allergy_to_Aluminium_With_Axiom.json")), ConceptPojo.class);
 		Set<String> result = searchService.findConceptsNotMatchExactly(Arrays.asList(concept), logicalTemplate.getAttributeGroups(), logicalTemplate.getUngroupedAttributes(), true);
 		assertTrue(result.isEmpty());
 	}
