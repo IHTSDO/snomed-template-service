@@ -16,6 +16,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,7 +48,6 @@ import org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
@@ -94,33 +94,9 @@ public class TemplateConceptTransformServiceTest {
 	private static final String CT_GUIDED_BODY_STRUCTURE_TEMPLATE = "CT guided [procedure] of [body structure]";
 	
 	private ConceptPojo conceptToTransform;
-	private ConceptPojo conceptTransformed;
-	private Gson gson;
+	private ConceptPojo expectedResult;
+	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	private boolean isDebug = false;
-	
-	@Before
-	public void setUp() throws Exception {
-		gson = new GsonBuilder().setPrettyPrinting().create();
-		setUpTestTemplates("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
-	}
-
-	private void setUpTestTemplates(String conceptToTransfom, String transformed)
-			throws IOException, URISyntaxException, ServiceException, UnsupportedEncodingException {
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
-				jsonStore.getStoreDirectory());
-		
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
-				jsonStore.getStoreDirectory());
-		
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
-				jsonStore.getStoreDirectory());
-		templateService.reloadCache();
-		try (Reader conceptJsonReader = new InputStreamReader(getClass().getResourceAsStream(conceptToTransfom), Constants.UTF_8);
-			 Reader expectedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformed), Constants.UTF_8)) {
-			conceptToTransform = gson.fromJson(conceptJsonReader, ConceptPojo.class);
-			conceptTransformed = gson.fromJson(expectedJsonReader, ConceptPojo.class);
-		}
-	}
 	
 	@Test
 	public void testCreateTemplateTransformation() throws ServiceException {
@@ -147,6 +123,7 @@ public class TemplateConceptTransformServiceTest {
 	
 	@Test(expected=ServiceException.class)
 	public void testValidateWithFailure() throws Exception {
+		setUpTestTemplates("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
 		ConceptTemplate sourceTemplate = templateService.loadOrThrow(CT_GUIDED_BODY_STRUCTURE_TEMPLATE);
 		ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
 		transformService.validate(sourceTemplate, destinationTemplate);
@@ -154,6 +131,7 @@ public class TemplateConceptTransformServiceTest {
 	
 	@Test
 	public void testAllegyToSubstanceTempalteTransformation() throws Exception {
+		setUpTestTemplates("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
 		Set<String> concepts = new HashSet<>();
 		concepts.add("712839001");
 		mockTerminologyServerClient();
@@ -172,7 +150,6 @@ public class TemplateConceptTransformServiceTest {
 		assertEquals(true, !transformed.isEmpty());
 		assertEquals(1, transformed.size());
 		ConceptPojo concept = transformed.get(0);
-		printTransformedConcept(transformed);
 		//validate descriptions transformation
 		assertEquals(3, concept.getDescriptions().size());
 		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
@@ -188,25 +165,19 @@ public class TemplateConceptTransformServiceTest {
 		assertEquals(1, inactiveTerms.size());
 		assertEquals("ERRONEOUS", inactiveTerms.get(0).getInactivationIndicator());
 		
-		assertEquals(12, concept.getRelationships().size());
-		List<RelationshipPojo> stated = concept.getRelationships()
-				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
-				.collect(Collectors.toList());
-		assertEquals(7, stated.size());
+		Collection<RelationshipPojo> stated = concept.getClassAxioms().iterator().next().getRelationships();
+		assertEquals(3, stated.size());
 		for ( RelationshipPojo pojo : stated) {
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
 			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
 		}
-		
-		List<RelationshipPojo> inactiveStated = stated.stream().filter(r -> !r.isActive()).collect(Collectors.toList());
-		assertEquals(4, inactiveStated.size());
-		
+		assertEquals(6, concept.getRelationships().size());
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
 		assertEquals(5, inferred.size());
-		assertEquals(conceptTransformed, concept);
+		verifyTransformation(concept);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -265,15 +236,6 @@ public class TemplateConceptTransformServiceTest {
 		return pojo;
 	}
 
-	private void printTransformedConcept(List<ConceptPojo> transformed) {
-		if (isDebug) {
-			Gson gson =  new GsonBuilder().setPrettyPrinting().create();
-			for (ConceptPojo pojo : transformed) {
-				System.out.println(gson.toJson(pojo));
-			}
-		}
-	}
-
 	@Test
 	public void testAllergicReactionCausedBySubstanceTempalteTransformation() throws Exception {
 		source = "Allergic reaction caused by [substance]";
@@ -309,7 +271,7 @@ public class TemplateConceptTransformServiceTest {
 				assertEquals("Allergic reaction caused by adhesive agent (disorder)", term.getTerm());
 			} else {
 				Arrays.asList(activeSynonyms).contains(term.getTerm());
-				if (term.equals(activeSynonyms[0])) {
+				if (term.getTerm().equals(activeSynonyms[0])) {
 					assertNotNull(term.getAcceptabilityMap());
 					assertTrue(term.getAcceptabilityMap().values().contains(Constants.PREFERRED));
 				}
@@ -317,31 +279,27 @@ public class TemplateConceptTransformServiceTest {
 		}
 		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
 		assertEquals(2, inactiveTerms.size());
-		
-		assertEquals(11, concept.getRelationships().size());
-		List<RelationshipPojo> stated = concept.getRelationships()
-				.stream().filter(r -> r.getCharacteristicType().equals("STATED_RELATIONSHIP"))
-				.collect(Collectors.toList());
-		assertEquals(5, stated.size());
-		for ( RelationshipPojo pojo : stated) {
+		Collection<RelationshipPojo> classAxiomRels = concept.getClassAxioms().iterator().next().getRelationships();
+		assertEquals(3, classAxiomRels.size());
+		for ( RelationshipPojo pojo : classAxiomRels) {
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
 			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
 		}
 		
+		assertEquals(6, concept.getRelationships().size());
 		Set<RelationshipPojo> inferred = concept.getRelationships()
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
-		printTransformedConcept(transformed);
 		assertEquals(6, inferred.size());
-		assertEquals(conceptTransformed.toString().replace(",", ",\n"), concept.toString().replace(",", ",\n"));
+		verifyTransformation(concept);
 	}
 
 	
 	@Test
 	public void testAllergyToAluminiumTransformation() throws Exception {
-		setUpTestTemplates("Allergy_to_Aluminum_Concpet.json",
-				"Allergy_to_Aluminum_Concpet_Transformed.json");
+		setUpTestTemplates("Allergy_to_Aluminium_Concept.json",
+				"Allergy_to_Aluminium_Concept_Transformed.json");
 		Set<String> concepts = new HashSet<>();
 		concepts.add("402306009");
 		mockTerminologyServerClient();
@@ -362,8 +320,7 @@ public class TemplateConceptTransformServiceTest {
 		assertEquals(7, concept.getDescriptions().size());
 		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
 		assertEquals(5, activeTerms.size());
-		printTransformedConcept(transformed);
-		assertEquals(conceptTransformed, concept);
+		verifyTransformation(concept);
 	}
 	
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {
@@ -392,8 +349,35 @@ public class TemplateConceptTransformServiceTest {
 		}
 		return transformed;
 	}
+	
+	private void setUpTestTemplates(String conceptToTransfom, String transformed)
+			throws IOException, URISyntaxException, ServiceException, UnsupportedEncodingException {
+		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
+				jsonStore.getStoreDirectory());
+		
+		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
+				jsonStore.getStoreDirectory());
+		
+		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
+				jsonStore.getStoreDirectory());
+		templateService.reloadCache();
+		try (Reader conceptJsonReader = new InputStreamReader(getClass().getResourceAsStream(conceptToTransfom), Constants.UTF_8);
+			 Reader expectedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformed), Constants.UTF_8)) {
+			conceptToTransform = gson.fromJson(conceptJsonReader, ConceptPojo.class);
+			expectedResult = gson.fromJson(expectedJsonReader, ConceptPojo.class);
+		}
+	}
 
 	private OngoingStubbing<SnowOwlRestClient> mockTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
+	}
+	
+	private void verifyTransformation(ConceptPojo transformed) {
+		if (isDebug) {
+			System.out.println(gson.toJson(transformed));
+		}
+		if (!expectedResult.equals(transformed)) {
+			assertEquals(expectedResult.toString().replace(",", ",\n"), transformed.toString().replace(",", ",\n"));
+		}
 	}
 }

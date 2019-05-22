@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
 import static org.ihtsdo.otf.authoringtemplate.service.Constants.PREFERRED;
+import static org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,7 +9,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
+import org.ihtsdo.otf.rest.client.snowowl.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
@@ -31,11 +34,18 @@ public class TestDataHelper {
 		pojo.setActive(true);
 		pojo.setModuleId("900000000000012004");
 		pojo.setConceptId("123456");
-		pojo.setDefinitionStatus(org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED);
+		pojo.setDefinitionStatus(FULLY_DEFINED);
 		Set<DescriptionPojo> descriptions = createDescriptionPojos();
 		pojo.setDescriptions(descriptions);
 		Set<RelationshipPojo> relationships = createRelationshipPojos("123456", true);
-		pojo.setRelationships(relationships);
+		
+		Set<AxiomPojo> classAxioms = new HashSet<>();
+		AxiomPojo classAxiom = new  AxiomPojo();
+		classAxiom.setAxiomId(UUID.randomUUID().toString());
+		classAxiom.setDefinitionStatusId(FULLY_DEFINED.getConceptId());
+		classAxiom.setRelationships(relationships);
+		classAxioms.add(classAxiom);
+		pojo.setClassAxioms(classAxioms);
 		return pojo;
 	}
 	
@@ -190,9 +200,14 @@ public class TestDataHelper {
 			group2.put("405813007", "442083009");
 			typeAndValues.add(group2);
 		}
-		
+		AxiomPojo axiomPojo = new AxiomPojo();
+		axiomPojo.setActive(true);
+		axiomPojo.setAxiomId(UUID.randomUUID().toString());
 		Set<RelationshipPojo> relationships = createRelationshipPojos("1234445", true, typeAndValues);
-		pojo.setRelationships(relationships);
+		axiomPojo.setRelationships(relationships);
+		Set<AxiomPojo> classAxioms = new HashSet<>();
+		classAxioms.add(axiomPojo);
+		pojo.setClassAxioms(classAxioms);
 		return pojo;
 	}
 	

@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.client.snowowl.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
@@ -36,13 +36,18 @@ public class RelationshipTransformer {
 	}
 
 	public void transform() throws ServiceException {
-		//map relationship by group
-		List<RelationshipPojo> statedRels = conceptToTransform.getRelationships().stream()
-				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
-				.collect(Collectors.toList());
+		if (conceptToTransform.getClassAxioms() == null || conceptToTransform.getClassAxioms().isEmpty()) {
+			throw new ServiceException("No class axioms available to transform for concept " + conceptToTransform.getConceptId() );
+		}
 		
+		if (conceptToTransform.getClassAxioms().size() > 1) {
+			throw new UnsupportedOperationException("Transformation for concepts with multiple class axioms is not implemented yet. Concept id = " + conceptToTransform.getConceptId());
+		}
+		
+		AxiomPojo classAxiom = conceptToTransform.getClassAxioms().iterator().next();
+		//map relationship by group
 		Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap = new HashMap<>();
-		for (RelationshipPojo pojo : statedRels) {
+		for (RelationshipPojo pojo : classAxiom.getRelationships()) {
 			if (pojo.isActive()) {
 				existingRelGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashMap<>())
 				.put(pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId(), pojo);
@@ -73,7 +78,7 @@ public class RelationshipTransformer {
 		}
 		
 		List<List<RelationshipPojo>> mergedSet = constructRelationshipSet(existingRelGroupMap, newRelGroupMap);
-		List<RelationshipPojo> relationships = new ArrayList<>();
+		Set<RelationshipPojo> transformedRels = new HashSet<>();
 		RoleGroupNumberGenerator roleGrpNumberGenerator = new RoleGroupNumberGenerator(mergedSet);
 		for (List<RelationshipPojo> roleGroup : mergedSet ) {
 			int grpNumber = roleGrpNumberGenerator.getRoleGroupNumber(roleGroup);
@@ -84,33 +89,17 @@ public class RelationshipTransformer {
 				if (pojo.getRelationshipId() == null) {
 					pojo.setSourceId(conceptToTransform.getConceptId());
 				}
-				relationships.add(pojo);
+				transformedRels.add(pojo);
 			}
 		}
-		for (RelationshipPojo pojo : statedRels) {
-			if (!relationships.contains(pojo)) {
-				if (pojo.isActive()) {
-					pojo.setActive(false);
-					pojo.setEffectiveTime(null);
-				}
-				// only adding published inactive stated rels
-				if (pojo.isReleased() || pojo.isActive()) {
-					relationships.add(pojo);
-				}
-			}
-		}
-		
-		List<RelationshipPojo> inferred = conceptToTransform.getRelationships().stream()
-				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
-				.collect(Collectors.toList());
-		relationships.addAll(inferred);
-		
 		Set<RelationshipPojo> sortedRels = new TreeSet<RelationshipPojo>(getRelationshipPojoComparator());
-		sortedRels.addAll(relationships);
-		if (relationships.size() != sortedRels.size()) {
-			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",relationships.size(), sortedRels.size()));
+		sortedRels.addAll(transformedRels);
+		if (transformedRels.size() != sortedRels.size()) {
+			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",transformedRels.size(), sortedRels.size()));
 		}
-		conceptToTransform.setRelationships(sortedRels);
+		//Only for one axiom at the moment.
+		classAxiom.setEffectiveTime(null);
+		classAxiom.setRelationships(transformedRels);
 	}
 
 	private List<List<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
