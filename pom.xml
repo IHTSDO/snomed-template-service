@@ -105,6 +105,13 @@
 				<configuration>
 					<mainClass>org.ihtsdo.otf.authoringtemplate.App</mainClass>
 				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>build-info</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
