@@ -7,7 +7,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,6 +67,7 @@ public class Config {
 		return new LogicalTemplateParserService();
 	}
 	
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Bean
 	public FilterRegistrationBean getUrlRewriteFilter() {
 		// Encode branch paths in uri to allow request mapping to work

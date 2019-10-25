@@ -25,9 +25,9 @@ import java.util.Set;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -231,7 +231,6 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 	
-	@SuppressWarnings("unchecked")
 	private void mockSearchConceptsResponse() {
 		expectGetTerminologyServerClient();
 		OngoingStubbing<List<ConceptPojo>> when = null;

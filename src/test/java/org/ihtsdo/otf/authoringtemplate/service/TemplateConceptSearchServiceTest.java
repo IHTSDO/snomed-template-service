@@ -23,10 +23,10 @@ import org.ihtsdo.otf.authoringtemplate.Config;
 import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -89,7 +89,6 @@ public class TemplateConceptSearchServiceTest {
 		assertTrue(concepts.isEmpty());
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Test
 	public void searchConceptsLogicallyWithoutMatchingResults() throws Exception {
 		String templateName = "CT guided [procedure] of [body structure]";
@@ -117,7 +116,6 @@ public class TemplateConceptSearchServiceTest {
 		return template;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Test
 	public void searchConceptsLogicallyWithResults() throws Exception {
 		String templateName = "CT guided [procedure] of [body structure]";
@@ -134,7 +132,6 @@ public class TemplateConceptSearchServiceTest {
 		assertEquals(1, concepts.size());
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Test
 	public void searchConceptsLogicallyWithoutOptionalAttributeType() throws Exception {
 		String templateName = "CT guided [procedure] of [body structure]";

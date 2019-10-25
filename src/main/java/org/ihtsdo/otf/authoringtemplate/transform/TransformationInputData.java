@@ -3,7 +3,7 @@ package org.ihtsdo.otf.authoringtemplate.transform;
 import java.util.Map;
 import java.util.Set;
 
-import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SimpleConceptPojo;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 
 public class TransformationInputData {

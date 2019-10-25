@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
 import static org.ihtsdo.otf.authoringtemplate.service.Constants.PREFERRED;
-import static org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.FULLY_DEFINED;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,10 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.ihtsdo.otf.rest.client.snowowl.pojo.AxiomPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptMini;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
@@ -180,7 +180,7 @@ public class TestDataHelper {
 		pojo.setActive(true);
 		pojo.setModuleId("900000000000012004");
 		pojo.setConceptId("1234445");
-		pojo.setDefinitionStatus(org.ihtsdo.otf.rest.client.snowowl.pojo.DefinitionStatus.FULLY_DEFINED);
+		pojo.setDefinitionStatus(org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.FULLY_DEFINED);
 		Set<DescriptionPojo> descriptions = createDescriptionPojos();
 		pojo.setDescriptions(descriptions);
 		List<Map<String, String>> typeAndValues = new ArrayList<>();
