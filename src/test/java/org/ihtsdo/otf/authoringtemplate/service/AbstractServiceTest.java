@@ -9,8 +9,6 @@ import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -19,10 +17,7 @@ import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.util.FileSystemUtils;
 
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -31,27 +26,11 @@ public abstract class AbstractServiceTest extends AbstractTest {
 	@Autowired
 	protected TemplateService templateService;
 
-	@Autowired
-	protected TemplateStore templateStore;
-
 	@MockBean
 	protected SnowOwlRestClientFactory clientFactory;
 
 	@MockBean
 	protected SnowOwlRestClient terminologyServerClient;
-	
-	@Before
-	public void before() {
-		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("", ""));
-		templateStore.clear();
-	}
-
-	@After
-	public void after() {
-		// Recreate empty template store
-		FileSystemUtils.deleteRecursively(templateStore.getJsonStore().getStoreDirectory());
-		templateStore.getJsonStore().getStoreDirectory().mkdirs();
-	}
 	
 	public void createCtGuidedProcedureOfX() throws IOException, ServiceException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();

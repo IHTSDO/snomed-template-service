@@ -43,6 +43,7 @@ public class TemplateControllerTest extends AbstractTest {
 		conceptTemplate.setLogicalTemplate("71388002 |Procedure|: 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @slotX]]\n");
 		conceptTemplate.setConceptOutline(new ConceptOutline());
 		templateService.create("a%2Fb", conceptTemplate);
+		templateService.create("Allergy to [substance] (finding)", conceptTemplate);
 	}
 
 	@Test
@@ -51,6 +52,13 @@ public class TemplateControllerTest extends AbstractTest {
 				.andExpect(status().isOk());
 	}
 
+	
+	@Test
+	public void getTemplateNameWithBracket() throws Exception {
+		mockMvc.perform(get("/templates/Allergy to [substance] (finding)"))
+				.andExpect(status().isOk());
+	}
+	
 	@After
 	public void tearDown() throws IOException {
 		FileUtils.deleteDirectory(jsonStore.getStoreDirectory());
