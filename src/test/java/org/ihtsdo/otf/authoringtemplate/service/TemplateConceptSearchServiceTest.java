@@ -19,12 +19,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.ihtsdo.otf.authoringtemplate.Config;
-import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.junit.Before;
@@ -38,15 +35,13 @@ import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {Config.class, TestConfig.class})
-public class TemplateConceptSearchServiceTest {
+public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 
 	private static final String TEMPLATES = "/templates/";
 
@@ -57,13 +52,6 @@ public class TemplateConceptSearchServiceTest {
 	
 	@MockBean
 	private TemplateService templateService;
-	
-	
-	@MockBean
-	private SnowOwlRestClientFactory clientFactory;
-
-	@MockBean
-	private SnowOwlRestClient terminologyServerClient;
 	
 	@Autowired
 	private JsonStore jsonStore;

@@ -27,7 +27,7 @@ import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-public class LexicalTemplateTransformationServiceTest {
+public class LexicalTemplateTransformationServiceTest extends AbstractServiceTest {
 	
 	private List<LexicalTemplate> lexicalTemplates;
 	private List<Description> descriptions;

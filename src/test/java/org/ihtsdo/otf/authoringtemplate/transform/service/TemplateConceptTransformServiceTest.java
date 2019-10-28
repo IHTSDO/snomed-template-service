@@ -27,12 +27,10 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
-import org.ihtsdo.otf.authoringtemplate.Config;
-import org.ihtsdo.otf.authoringtemplate.TestConfig;
+import org.ihtsdo.otf.authoringtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
@@ -41,7 +39,6 @@ import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus;
@@ -56,15 +53,13 @@ import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {Config.class, TestConfig.class})
-public class TemplateConceptTransformServiceTest {
+public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	private static final String TEMPLATES = "/templates/";
 
@@ -75,15 +70,6 @@ public class TemplateConceptTransformServiceTest {
 	
 	@Autowired
 	private TemplateConceptTransformService transformService;
-	
-	@MockBean
-	private SnowOwlRestClientFactory clientFactory;
-
-	@MockBean
-	private SnowOwlRestClient terminologyServerClient;
-	
-	@Autowired
-	private TemplateService templateService;
 
 	@Autowired
 	private JsonStore jsonStore;
@@ -94,7 +80,7 @@ public class TemplateConceptTransformServiceTest {
 	private static final String CT_GUIDED_BODY_STRUCTURE_TEMPLATE = "CT guided [procedure] of [body structure]";
 	
 	private ConceptPojo conceptToTransform;
-	private ConceptPojo expectedResult;
+	private ConceptPojo transformedConcept;
 	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	private boolean isDebug = false;
 	
@@ -112,6 +98,12 @@ public class TemplateConceptTransformServiceTest {
 	@Test
 	public void testValidateWithSuccess() {
 		try {
+			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
+					jsonStore.getStoreDirectory());
+			
+			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
+					jsonStore.getStoreDirectory());
+			templateService.reloadCache();
 			ConceptTemplate sourceTemplate = templateService.loadOrThrow(source);
 			ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
 			transformService.validate(sourceTemplate, destinationTemplate);
@@ -350,7 +342,7 @@ public class TemplateConceptTransformServiceTest {
 		return transformed;
 	}
 	
-	private void setUpTestTemplates(String conceptToTransfom, String transformed)
+	private void setUpTestTemplates(String sourceTempalte, String destinationTemplate)
 			throws IOException, URISyntaxException, ServiceException, UnsupportedEncodingException {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
 				jsonStore.getStoreDirectory());
@@ -361,10 +353,10 @@ public class TemplateConceptTransformServiceTest {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
 				jsonStore.getStoreDirectory());
 		templateService.reloadCache();
-		try (Reader conceptJsonReader = new InputStreamReader(getClass().getResourceAsStream(conceptToTransfom), Constants.UTF_8);
-			 Reader expectedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformed), Constants.UTF_8)) {
-			conceptToTransform = gson.fromJson(conceptJsonReader, ConceptPojo.class);
-			expectedResult = gson.fromJson(expectedJsonReader, ConceptPojo.class);
+		try (Reader sourceConceptReader = new InputStreamReader(getClass().getResourceAsStream(sourceTempalte), Constants.UTF_8);
+			 Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(destinationTemplate), Constants.UTF_8)) {
+			conceptToTransform = gson.fromJson(sourceConceptReader, ConceptPojo.class);
+			transformedConcept = gson.fromJson(transformedJsonReader, ConceptPojo.class);
 		}
 	}
 
@@ -376,8 +368,8 @@ public class TemplateConceptTransformServiceTest {
 		if (isDebug) {
 			System.out.println(gson.toJson(transformed));
 		}
-		if (!expectedResult.equals(transformed)) {
-			assertEquals(expectedResult.toString().replace(",", ",\n"), transformed.toString().replace(",", ",\n"));
+		if (!transformedConcept.equals(transformed)) {
+			assertEquals(transformedConcept.toString().replace(",", ",\n"), transformed.toString().replace(",", ",\n"));
 		}
 	}
 }

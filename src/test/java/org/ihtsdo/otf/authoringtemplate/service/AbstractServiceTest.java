@@ -2,9 +2,9 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.io.IOException;
 
+
 import org.assertj.core.util.Lists;
-import org.ihtsdo.otf.authoringtemplate.Config;
-import org.ihtsdo.otf.authoringtemplate.TestConfig;
+import org.ihtsdo.otf.authoringtemplate.AbstractTest;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
@@ -21,13 +21,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.FileSystemUtils;
 
+
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {Config.class, TestConfig.class})
-public abstract class AbstractServiceTest {
+public abstract class AbstractServiceTest extends AbstractTest {
 
 	@Autowired
 	protected TemplateService templateService;

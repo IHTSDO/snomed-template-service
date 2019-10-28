@@ -1,13 +1,10 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import org.ihtsdo.otf.authoringtemplate.Config;
-import org.ihtsdo.otf.authoringtemplate.TestConfig;
 import org.snomed.authoringtemplate.domain.*;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -17,8 +14,7 @@ import java.net.URI;
 import java.util.Set;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {Config.class, TestConfig.class})
-public class JsonStoreTest {
+public class JsonStoreTest extends AbstractServiceTest{
 
 	@Autowired
 	private JsonStore jsonStore;
