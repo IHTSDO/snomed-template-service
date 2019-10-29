@@ -15,12 +15,14 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.firewall.DefaultHttpFirewall;
+import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -34,7 +36,8 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 @Configuration
 @EnableSwagger2
-public class Config {
+@EnableWebSecurity
+public class Config extends WebSecurityConfigurerAdapter {
 	
 	@Bean
 	public ObjectMapper getGeneralMapper() {
@@ -75,6 +78,15 @@ public class Config {
 				"/(.*)/templates/.*"
 		));
 	}
+	
+	@SuppressWarnings("rawtypes")
+	@Bean
+	public FilterRegistrationBean getSingleSignOnFilter() {
+		FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean<>(
+				new RequestHeaderAuthenticationDecorator());
+		filterRegistrationBean.setOrder(1);
+		return filterRegistrationBean;
+	}
 
 	// Swagger Config
 	@Bean
@@ -87,22 +99,30 @@ public class Config {
 	}
 
 	// Security
-	@Configuration
-	@EnableWebSecurity
-	@Order(1)
-	public static class ApiWebSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
-		protected void configure(HttpSecurity http) throws Exception {
-			http.authorizeRequests()
-					.antMatchers("/swagger-ui.html",
-							"/swagger-resources/**",
-							"/v2/api-docs",
-							"/webjars/springfox-swagger-ui/**").permitAll()
-					.anyRequest().authenticated()
-					.and().httpBasic();
-			http.csrf().disable();
-			http.addFilterAfter(new RequestHeaderAuthenticationDecorator(), BasicAuthenticationFilter.class);
-		}
-
+	@Override
+	public void configure(HttpSecurity http) throws Exception {
+		http.authorizeRequests()
+				.antMatchers("/swagger-ui.html",
+						"/swagger-resources/**",
+						"/v2/api-docs",
+						"/webjars/springfox-swagger-ui/**").permitAll()
+				.anyRequest().authenticated()
+				.and().httpBasic();
+		http.csrf().disable();
+		http.addFilterAfter(new RequestHeaderAuthenticationDecorator(), BasicAuthenticationFilter.class);
+	}
+	
+	@Override
+	public void configure(WebSecurity web) {
+		web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
+	}
+	
+	
+	@Bean
+	public HttpFirewall allowUrlEncodedSlashHttpFirewall() {
+		DefaultHttpFirewall firewall = new DefaultHttpFirewall();
+		firewall.setAllowUrlEncodedSlash(true);
+		return firewall;
 	}
 
 }
