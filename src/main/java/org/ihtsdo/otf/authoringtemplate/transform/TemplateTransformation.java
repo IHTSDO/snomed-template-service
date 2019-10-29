@@ -9,16 +9,13 @@ public class TemplateTransformation {
 	private String transformationId;
 	private TransformationStatus status;
 	private String branchPath;
-	private String destinationTemplate;
 	private String errorMsg;
 	private Date createdDate;
 	private Date lastUpdatedDate;
 	private TemplateTransformRequest transformRequest;
 
-	public TemplateTransformation(String branchPath, String destinationTemplate,
-			TemplateTransformRequest transformRequest) {
+	public TemplateTransformation(String branchPath, TemplateTransformRequest transformRequest) {
 		this.branchPath = branchPath;
-		this.destinationTemplate = destinationTemplate;
 		this.transformRequest = transformRequest;
 		transformationId = UUID.randomUUID().toString();
 		this.createdDate = Calendar.getInstance().getTime();
@@ -32,10 +29,6 @@ public class TemplateTransformation {
 		return this.branchPath;
 	}
 
-	public String getDestinationTemplate() {
-		return this.destinationTemplate;
-	}
-	
 	public TemplateTransformRequest getTransformRequest() {
 		return this.transformRequest;
 	}
@@ -50,10 +43,6 @@ public class TemplateTransformation {
 
 	public void setBranchPath(String branchPath) {
 		this.branchPath = branchPath;
-	}
-
-	public void setDestinationTemplate(String destinationTemplate) {
-		this.destinationTemplate = destinationTemplate;
 	}
 
 	public void setTransformRequest(TemplateTransformRequest transformRequest) {
@@ -94,8 +83,6 @@ public class TemplateTransformation {
 		builder.append("TemplateTransformation [");
 		if (branchPath != null)
 			builder.append("branchPath=").append(branchPath).append(", ");
-		if (destinationTemplate != null)
-			builder.append("destinationTemplate=").append(destinationTemplate).append(", ");
 		if (transformRequest != null)
 			builder.append("transformRequest=").append(transformRequest).append(", ");
 		if (transformationId != null)

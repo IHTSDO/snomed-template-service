@@ -45,6 +45,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
@@ -84,14 +85,19 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	private boolean isDebug = false;
 	
+	private TemplateTransformRequest transformRequest;
+	
+	@Before
+	public void setUp() {
+		transformRequest = new TemplateTransformRequest(source, destination);
+	}
+	
 	@Test
 	public void testCreateTemplateTransformation() throws ServiceException {
-		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		Set<String> concepts = new HashSet<>();
 		concepts.add("123555");
 		transformRequest.setConceptsToTransform(concepts);
-		transformRequest.setSourceTemplate(source);
-		TemplateTransformation transformation = transformService.createTemplateTransformation("MAIN", destination, transformRequest);
+		TemplateTransformation transformation = transformService.createTemplateTransformation("MAIN", transformRequest);
 		assertNotNull(transformation);
 	}
 	
@@ -129,11 +135,9 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		mockTerminologyServerClient();
 		mockSearchConcepts();
 		
-		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);
-		transformRequest.setSourceTemplate(source);
 		transformRequest.setInactivationReason("ERRONEOUS");
-		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
+		TemplateTransformation transformation = new TemplateTransformation("MAIN", transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
 		
@@ -239,10 +243,9 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		mockTerminologyServerClient();
 		mockSearchConcepts();
 		
-		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
+		TemplateTransformRequest transformRequest = new TemplateTransformRequest(source, destination);
 		transformRequest.setConceptsToTransform(concepts);
-		transformRequest.setSourceTemplate(source);
-		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
+		TemplateTransformation transformation = new TemplateTransformation("MAIN", transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
 		
@@ -297,10 +300,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		mockTerminologyServerClient();
 		mockSearchConcepts();
 		
-		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		transformRequest.setConceptsToTransform(concepts);
-		transformRequest.setSourceTemplate(source);
-		TemplateTransformation transformation = new TemplateTransformation("MAIN", destination, transformRequest);
+		TemplateTransformation transformation = new TemplateTransformation("MAIN", transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
 		

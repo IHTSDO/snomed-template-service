@@ -130,8 +130,8 @@ public class TemplateConceptTransformService {
 	public List<Future<TransformationResult>> transform(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
 		
 		String branchPath = transformation.getBranchPath();
-		String destinationTemplate = transformation.getDestinationTemplate();
 		TemplateTransformRequest transformRequest = transformation.getTransformRequest();
+		String destinationTemplate = transformRequest.getDestinationTemplate();
 		
 		List<Future<TransformationResult>> results = new ArrayList<>();
 		ConceptTemplate source = null;
@@ -301,12 +301,11 @@ public class TemplateConceptTransformService {
 		return slotDescriptionMap;
 	}
 
-	public TemplateTransformation createTemplateTransformation(String branchPath, String destinationTemplate,
-			TemplateTransformRequest transformRequest) throws ServiceException {
+	public TemplateTransformation createTemplateTransformation(String branchPath, TemplateTransformRequest transformRequest) throws ServiceException {
 		if (!transformRequest.isLexicalTransform() && !transformRequest.isLogicalTransform()) {
 			throw new IllegalArgumentException("Should state at least one type of transformation but got " + transformRequest);
 		}
-		TemplateTransformation templateTransformation = new TemplateTransformation(branchPath, destinationTemplate, transformRequest);
+		TemplateTransformation templateTransformation = new TemplateTransformation(branchPath, transformRequest);
 		return templateTransformation;
 	}
 
@@ -329,7 +328,7 @@ public class TemplateConceptTransformService {
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
 		}
-		TransformationInputData inputData = new TransformationInputData(new TemplateTransformRequest());
+		TransformationInputData inputData = new TransformationInputData(null);
 		inputData.setBranchPath(branchPath);
 		inputData.setDestinationTemplate(destination);
 		inputData.setConceptIdMap(conceptsMap);

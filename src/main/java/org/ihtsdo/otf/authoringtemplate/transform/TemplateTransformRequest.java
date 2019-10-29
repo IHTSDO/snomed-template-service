@@ -8,16 +8,22 @@ public class TemplateTransformRequest {
 	
 	private Set<String> conceptsToTransform;
 	private String sourceTemplate;
+	private String destinationTemplate;
 	private String inactivationReason;
 	private boolean logicalTransform = true;
 	private boolean lexicalTransform = true;
 	
-	public void setConceptsToTransform(Set<String> conceptsToTransform) {
-		this.conceptsToTransform = conceptsToTransform;
+	public TemplateTransformRequest(String source, String destination) {
+		this.sourceTemplate = source;
+		this.destinationTemplate = destination;
+	}
+	
+	public TemplateTransformRequest() {
+		// TODO Auto-generated constructor stub
 	}
 
-	public void setSourceTemplate(String sourceTemplate) {
-		this.sourceTemplate = sourceTemplate;
+	public void setConceptsToTransform(Set<String> conceptsToTransform) {
+		this.conceptsToTransform = conceptsToTransform;
 	}
 
 	public void setInactivationReason(String inactivationReason) {
@@ -26,6 +32,10 @@ public class TemplateTransformRequest {
 	
 	public String getSourceTemplate() {
 		return this.sourceTemplate;
+	}
+	
+	public String getDestinationTemplate() {
+		return destinationTemplate;
 	}
 
 	public Set<String> getConceptsToTransform() {
@@ -63,6 +73,8 @@ public class TemplateTransformRequest {
 			builder.append("conceptsToTransform=").append(conceptsToTransform).append(", ");
 		if (sourceTemplate != null)
 			builder.append("sourceTemplate=").append(sourceTemplate).append(", ");
+		if (destinationTemplate != null)
+			builder.append("destinationTemplate=").append(destinationTemplate).append(", ");
 		if (inactivationReason != null)
 			builder.append("inactivationReason=").append(inactivationReason).append(", ");
 		builder.append("logicalTransform=").append(logicalTransform).append(", lexicalTransform=")
@@ -79,6 +91,7 @@ public class TemplateTransformRequest {
 		result = prime * result + (lexicalTransform ? 1231 : 1237);
 		result = prime * result + (logicalTransform ? 1231 : 1237);
 		result = prime * result + ((sourceTemplate == null) ? 0 : sourceTemplate.hashCode());
+		result = prime * result + ((destinationTemplate == null) ? 0 : destinationTemplate.hashCode());
 		return result;
 	}
 
@@ -109,6 +122,11 @@ public class TemplateTransformRequest {
 			if (other.sourceTemplate != null)
 				return false;
 		} else if (!sourceTemplate.equals(other.sourceTemplate))
+			return false;
+		if (destinationTemplate == null) {
+			if (other.destinationTemplate != null)
+				return false;
+		} else if (!destinationTemplate.equals(other.destinationTemplate))
 			return false;
 		return true;
 	}

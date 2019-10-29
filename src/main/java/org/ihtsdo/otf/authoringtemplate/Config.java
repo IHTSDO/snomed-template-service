@@ -124,5 +124,4 @@ public class Config extends WebSecurityConfigurerAdapter {
 		firewall.setAllowUrlEncodedSlash(true);
 		return firewall;
 	}
-
 }

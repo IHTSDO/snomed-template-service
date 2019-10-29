@@ -131,14 +131,12 @@ public class TemplateController {
 	
 	
 	@SuppressWarnings("rawtypes")
-	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform", method = RequestMethod.POST)
+	@RequestMapping(value = "/{branchPath}/templates/transform", method = RequestMethod.POST)
 	public ResponseEntity createTemplateTransformation(@PathVariable String branchPath,
-									@PathVariable String destinationTemplate,
 									@RequestBody TemplateTransformRequest transformRequest,
 									UriComponentsBuilder uriComponentsBuilder
 									) throws ServiceException {
-		TemplateTransformation transformation = transformService.createTemplateTransformation(
-				BranchPathUriUtil.decodePath(branchPath), destinationTemplate, transformRequest);
+		TemplateTransformation transformation = transformService.createTemplateTransformation(BranchPathUriUtil.decodePath(branchPath), transformRequest);
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
 		transformService.transformAsynchnously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
