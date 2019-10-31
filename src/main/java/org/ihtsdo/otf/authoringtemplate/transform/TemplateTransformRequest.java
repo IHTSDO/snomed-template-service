@@ -18,10 +18,6 @@ public class TemplateTransformRequest {
 		this.destinationTemplate = destination;
 	}
 	
-	public TemplateTransformRequest() {
-		// TODO Auto-generated constructor stub
-	}
-
 	public void setConceptsToTransform(Set<String> conceptsToTransform) {
 		this.conceptsToTransform = conceptsToTransform;
 	}

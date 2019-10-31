@@ -124,14 +124,28 @@
           "sourceId": "402306009",
           "target": {
             "conceptId": "12503006",
-            "fsn": "Aluminium (substance)",
+            "fsn": {
+              "term": "Aluminium (substance)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Aluminium",
+              "lang": "en"
+            },
             "moduleId": "900000000000207008",
             "definitionStatus": "PRIMITIVE"
           },
           "groupId": 1,
           "type": {
             "conceptId": "246075003",
-            "fsn": "Causative agent (attribute)"
+            "fsn": {
+              "term": "Causative agent (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Causative agent",
+              "lang": "en"
+            }
           },
           "characteristicType": "STATED_RELATIONSHIP",
           "modifier": "EXISTENTIAL"
@@ -142,26 +156,60 @@
           "moduleId": "900000000000207008",
           "sourceId": "402306009",
           "target": {
-            "conceptId": "420134006"
-          },
-          "groupId": 0,
-          "type": {
-            "conceptId": "116680003"
-          },
-          "characteristicType": "STATED_RELATIONSHIP",
-          "modifier": "EXISTENTIAL"
-        },
-        {
-          "active": true,
-          "released": false,
-          "moduleId": "900000000000207008",
-          "sourceId": "402306009",
-          "target": {
-            "conceptId": "472964009"
+            "conceptId": "472964009",
+            "fsn": {
+              "term": "Allergic process (qualifier value)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Allergic process",
+              "lang": "en"
+            },
+            "moduleId": "900000000000207008",
+            "definitionStatus": "PRIMITIVE"
           },
           "groupId": 1,
           "type": {
-            "conceptId": "719722006"
+            "conceptId": "719722006",
+            "fsn": {
+              "term": "Has realization (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Has realization",
+              "lang": "en"
+            }
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "402306009",
+          "target": {
+            "conceptId": "420134006",
+            "fsn": {
+              "term": "Propensity to adverse reaction (finding)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Propensity to adverse reaction",
+              "lang": "en"
+            }
+          },
+          "groupId": 0,
+          "type": {
+            "conceptId": "116680003",
+            "fsn": {
+              "term": "Is a (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Is a",
+              "lang": "en"
+            }
           },
           "characteristicType": "STATED_RELATIONSHIP",
           "modifier": "EXISTENTIAL"
@@ -179,14 +227,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "609327009",
-        "fsn": "Allergic sensitization (disorder)",
+        "fsn": {
+          "term": "Allergic sensitization (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergic sensitization",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 1,
       "type": {
         "conceptId": "255234002",
-        "fsn": "After (attribute)"
+        "fsn": {
+          "term": "After (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "After",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -200,14 +262,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "12503006",
-        "fsn": "Aluminium (substance)",
+        "fsn": {
+          "term": "Aluminium (substance)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Aluminium",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
         "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
+        "fsn": {
+          "term": "Causative agent (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Causative agent",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -221,14 +297,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "12503006",
-        "fsn": "Aluminium (substance)",
+        "fsn": {
+          "term": "Aluminium (substance)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Aluminium",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 1,
       "type": {
         "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
+        "fsn": {
+          "term": "Causative agent (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Causative agent",
+          "lang": "en"
+        }
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -242,14 +332,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "472964009",
-        "fsn": "Allergic process (qualifier value)",
+        "fsn": {
+          "term": "Allergic process (qualifier value)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergic process",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
         "conceptId": "370135005",
-        "fsn": "Pathological process (attribute)"
+        "fsn": {
+          "term": "Pathological process (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Pathological process",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -263,14 +367,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "300915004",
-        "fsn": "Metal allergy (disorder)",
+        "fsn": {
+          "term": "Metal allergy (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Metal allergy",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 0,
       "type": {
         "conceptId": "116680003",
-        "fsn": "Is a (attribute)"
+        "fsn": {
+          "term": "Is a (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Is a",
+          "lang": "en"
+        }
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -284,14 +402,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "12503006",
-        "fsn": "Aluminium (substance)",
+        "fsn": {
+          "term": "Aluminium (substance)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Aluminium",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
         "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
+        "fsn": {
+          "term": "Causative agent (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Causative agent",
+          "lang": "en"
+        }
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -305,14 +437,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "12503006",
-        "fsn": "Aluminium (substance)",
+        "fsn": {
+          "term": "Aluminium (substance)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Aluminium",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 1,
       "type": {
         "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
+        "fsn": {
+          "term": "Causative agent (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Causative agent",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -326,14 +472,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "106182000",
-        "fsn": "Immune system finding (finding)",
+        "fsn": {
+          "term": "Immune system finding (finding)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Immune system finding",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
         "conceptId": "363705008",
-        "fsn": "Has definitional manifestation (attribute)"
+        "fsn": {
+          "term": "Has definitional manifestation (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Has definitional manifestation",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -347,14 +507,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "300915004",
-        "fsn": "Metal allergy (disorder)",
+        "fsn": {
+          "term": "Metal allergy (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Metal allergy",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 0,
       "type": {
         "conceptId": "116680003",
-        "fsn": "Is a (attribute)"
+        "fsn": {
+          "term": "Is a (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Is a",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -368,14 +542,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "609327009",
-        "fsn": "Allergic sensitization (disorder)",
+        "fsn": {
+          "term": "Allergic sensitization (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergic sensitization",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 1,
       "type": {
         "conceptId": "255234002",
-        "fsn": "After (attribute)"
+        "fsn": {
+          "term": "After (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "After",
+          "lang": "en"
+        }
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -389,14 +577,28 @@
       "sourceId": "402306009",
       "target": {
         "conceptId": "116003000",
-        "fsn": "Structure of immune system (body structure)",
+        "fsn": {
+          "term": "Structure of immune system (body structure)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Structure of immune system",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
         "conceptId": "363698007",
-        "fsn": "Finding site (attribute)"
+        "fsn": {
+          "term": "Finding site (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Finding site",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"

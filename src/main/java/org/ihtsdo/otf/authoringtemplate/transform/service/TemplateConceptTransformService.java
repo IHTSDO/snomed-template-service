@@ -27,7 +27,6 @@ import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SimpleConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,7 +139,7 @@ public class TemplateConceptTransformService {
 			source = templateService.loadOrThrow(transformRequest.getSourceTemplate());
 			destination = templateService.loadOrThrow(destinationTemplate);
 			validate(source, destination);
-			Map<String, SimpleConceptPojo> conceptMap = null;
+			Map<String, ConceptMiniPojo> conceptMap = null;
 			try {
 				conceptMap = getDestinationConceptsMap(branchPath, restClient, destination);
 			} catch (RestClientException e) {
@@ -230,7 +229,7 @@ public class TemplateConceptTransformService {
 		return transformed;
 	}
 
-	private Map<String, SimpleConceptPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
+	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
 		List<String> conceptIds = new ArrayList<>();
 		for (Relationship rel : destination.getConceptOutline().getRelationships()) {
 			if (rel.getType() != null) {
@@ -241,10 +240,10 @@ public class TemplateConceptTransformService {
 			}
 		}
 		LOGGER.info("Load concepts " + conceptIds  + " from branch " + branchPath);
-		Set<SimpleConceptPojo> results = client.getConcepts(branchPath, null, null, conceptIds, conceptIds.size());
-		Map<String, SimpleConceptPojo> conceptIdMap = new HashMap<>();
-		for (SimpleConceptPojo pojo : results) {
-			conceptIdMap.put(pojo.getId(), pojo);
+		Set<ConceptMiniPojo> results = client.getConceptMinis(branchPath, conceptIds, conceptIds.size());
+		Map<String, ConceptMiniPojo> conceptIdMap = new HashMap<>();
+		for (ConceptMiniPojo pojo : results) {
+			conceptIdMap.put(pojo.getConceptId(), pojo);
 		}
 		return conceptIdMap;
 	}
@@ -322,7 +321,7 @@ public class TemplateConceptTransformService {
 			}
 			throw new ServiceException("Failed to load and parse template " + destinationTemplate, e);
 		}
-		Map<String, SimpleConceptPojo> conceptsMap = null;
+		Map<String, ConceptMiniPojo> conceptsMap = null;
 		try {
 			conceptsMap = getDestinationConceptsMap(branchPath, restClient, destination);
 		} catch (RestClientException e) {

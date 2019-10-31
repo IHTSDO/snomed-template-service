@@ -66,11 +66,29 @@
           "moduleId": "900000000000207008",
           "sourceId": "712839001",
           "target": {
-            "conceptId": "472964009"
+            "conceptId": "472964009",
+            "fsn": {
+              "term": "Allergic process (qualifier value)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Allergic process",
+              "lang": "en"
+            },
+            "moduleId": "900000000000207008",
+            "definitionStatus": "PRIMITIVE"
           },
           "groupId": 1,
           "type": {
-            "conceptId": "719722006"
+            "conceptId": "719722006",
+            "fsn": {
+              "term": "Has realization (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Has realization",
+              "lang": "en"
+            }
           },
           "characteristicType": "STATED_RELATIONSHIP",
           "modifier": "EXISTENTIAL"
@@ -82,14 +100,28 @@
           "sourceId": "712839001",
           "target": {
             "conceptId": "256350002",
-            "fsn": "Almond (substance)",
+            "fsn": {
+              "term": "Almond (substance)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Almond",
+              "lang": "en"
+            },
             "moduleId": "900000000000207008",
             "definitionStatus": "PRIMITIVE"
           },
           "groupId": 1,
           "type": {
             "conceptId": "246075003",
-            "fsn": "Causative agent (attribute)"
+            "fsn": {
+              "term": "Causative agent (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Causative agent",
+              "lang": "en"
+            }
           },
           "characteristicType": "STATED_RELATIONSHIP",
           "modifier": "EXISTENTIAL"
@@ -101,14 +133,28 @@
           "sourceId": "712839001",
           "target": {
             "conceptId": "420134006",
-            "fsn": "Propensity to adverse reactions (disorder)",
+            "fsn": {
+              "term": "Propensity to adverse reactions (disorder)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Propensity to adverse reactions",
+              "lang": "en"
+            },
             "moduleId": "900000000000207008",
             "definitionStatus": "PRIMITIVE"
           },
           "groupId": 0,
           "type": {
             "conceptId": "116680003",
-            "fsn": "Is a (attribute)"
+            "fsn": {
+              "term": "Is a (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Is a",
+              "lang": "en"
+            }
           },
           "characteristicType": "STATED_RELATIONSHIP",
           "modifier": "EXISTENTIAL"
@@ -126,14 +172,28 @@
       "sourceId": "712839001",
       "target": {
         "conceptId": "256350002",
-        "fsn": "Almond (substance)",
+        "fsn": {
+          "term": "Almond (substance)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Almond",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 1,
       "type": {
         "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
+        "fsn": {
+          "term": "Causative agent (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Causative agent",
+          "lang": "en"
+        }
       },
       "characteristicType": "STATED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -147,14 +207,28 @@
       "sourceId": "712839001",
       "target": {
         "conceptId": "472964009",
-        "fsn": "Allergic process (qualifier value)",
+        "fsn": {
+          "term": "Allergic process (qualifier value)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergic process",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 0,
       "type": {
         "conceptId": "370135005",
-        "fsn": "Pathological process (attribute)"
+        "fsn": {
+          "term": "Pathological process (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Pathological process",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -168,14 +242,28 @@
       "sourceId": "712839001",
       "target": {
         "conceptId": "91934008",
-        "fsn": "Allergy to nut (disorder)",
+        "fsn": {
+          "term": "Allergy to nut (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergy to nut",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 0,
       "type": {
         "conceptId": "116680003",
-        "fsn": "Is a (attribute)"
+        "fsn": {
+          "term": "Is a (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Is a",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -189,14 +277,28 @@
       "sourceId": "712839001",
       "target": {
         "conceptId": "256350002",
-        "fsn": "Almond (substance)",
+        "fsn": {
+          "term": "Almond (substance)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Almond",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "PRIMITIVE"
       },
       "groupId": 2,
       "type": {
         "conceptId": "246075003",
-        "fsn": "Causative agent (attribute)"
+        "fsn": {
+          "term": "Causative agent (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Causative agent",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -210,14 +312,28 @@
       "sourceId": "712839001",
       "target": {
         "conceptId": "91934008",
-        "fsn": "Allergy to nut (disorder)",
+        "fsn": {
+          "term": "Allergy to nut (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergy to nut",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 0,
       "type": {
         "conceptId": "116680003",
-        "fsn": "Is a (attribute)"
+        "fsn": {
+          "term": "Is a (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Is a",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"
@@ -231,14 +347,28 @@
       "sourceId": "712839001",
       "target": {
         "conceptId": "609327009",
-        "fsn": "Allergic sensitization (disorder)",
+        "fsn": {
+          "term": "Allergic sensitization (disorder)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "Allergic sensitization",
+          "lang": "en"
+        },
         "moduleId": "900000000000207008",
         "definitionStatus": "FULLY_DEFINED"
       },
       "groupId": 2,
       "type": {
         "conceptId": "255234002",
-        "fsn": "After (attribute)"
+        "fsn": {
+          "term": "After (attribute)",
+          "lang": "en"
+        },
+        "pt": {
+          "term": "After",
+          "lang": "en"
+        }
       },
       "characteristicType": "INFERRED_RELATIONSHIP",
       "modifier": "EXISTENTIAL"

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.LogFactory;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
@@ -16,7 +17,8 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SimpleConceptPojo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.Relationship;
 
@@ -25,10 +27,11 @@ public class RelationshipTransformer {
 	private ConceptPojo conceptToTransform;
 	private ConceptOutline conceptOutline;
 	private Map<String, ConceptMiniPojo> attributeSlotMap;
-	private Map<String, SimpleConceptPojo> conceptIdMap;
+	private Map<String, ConceptMiniPojo> conceptIdMap;
+	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	public RelationshipTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
-			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, SimpleConceptPojo> conceptIdMap) {
+			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, ConceptMiniPojo> conceptIdMap) {
 		this.conceptToTransform = conceptToTransform;
 		this.conceptOutline = conceptOutline;
 		this.attributeSlotMap = attributeSlotMap;
@@ -182,15 +185,12 @@ public class RelationshipTransformer {
 		if (conceptId == null || conceptId.isEmpty()) {
 			throw new IllegalArgumentException("Concept id can't be null or empty");
 		}
-		ConceptMiniPojo miniPojo = new ConceptMiniPojo();
-		miniPojo.setConceptId(conceptId);
-		if (conceptIdMap.get(conceptId) != null) {
-			SimpleConceptPojo concept = conceptIdMap.get(conceptId);
-			miniPojo.setFsn(concept.getFsn().getTerm());
-			miniPojo.setModuleId(concept.getModuleId());
-			miniPojo.setDefinitionStatus(concept.getDefinitionStatus());
+		if (!conceptIdMap.containsKey(conceptId)) {
+			logger.error("Prefetched concepts map doesn't contain concept id " + conceptId);
+			return new ConceptMiniPojo(conceptId);		
+		} else {
+			return conceptIdMap.get(conceptId);
 		}
-		return miniPojo;
 	}
 	
 	public static Comparator<RelationshipPojo> getRelationshipPojoComparator() {

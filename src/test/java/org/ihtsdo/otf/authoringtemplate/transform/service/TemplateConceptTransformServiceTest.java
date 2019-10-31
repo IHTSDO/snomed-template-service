@@ -4,8 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -40,6 +39,7 @@ import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo.DescriptionMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
@@ -83,6 +83,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private ConceptPojo conceptToTransform;
 	private ConceptPojo transformedConcept;
 	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	// set it to true to print out concept in json
 	private boolean isDebug = false;
 	
 	private TemplateTransformRequest transformRequest;
@@ -164,6 +165,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		Collection<RelationshipPojo> stated = concept.getClassAxioms().iterator().next().getRelationships();
 		assertEquals(3, stated.size());
 		for ( RelationshipPojo pojo : stated) {
+			assertNotNull(pojo.getType().getPt());
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
 			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
@@ -184,8 +186,33 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		for (ConceptMiniPojo targetPojo : targets) {
 			concepts.add(constructConceptPojo(targetPojo));
 		}
-		when(terminologyServerClient.searchConcepts(anyString(),any()))
+		when(terminologyServerClient.searchConcepts(anyString(), any()))
 		.thenReturn(Arrays.asList(conceptToTransform), concepts);
+		
+		// add test concepts here
+		Set<ConceptMiniPojo> attributeTypes = conceptToTransform.getRelationships().stream().filter(r -> r.isActive()).map(r -> r.getType()).collect(Collectors.toSet());
+		Set<ConceptMiniPojo> conceptMinis = new HashSet<>();
+		conceptMinis.addAll(targets);
+		conceptMinis.addAll(attributeTypes);
+		conceptMinis.addAll(constructTestData());
+		when(terminologyServerClient.getConceptMinis(anyString(), any(), anyInt()))
+		.thenReturn(conceptMinis);
+	}
+
+	private ConceptMiniPojo constructConceptMiniPojo (String conceptId, String fsn) {
+		ConceptMiniPojo pojo = new ConceptMiniPojo(conceptId);
+		pojo.setFsn(new DescriptionMiniPojo(fsn, "en"));
+		String pt = fsn.substring(0, fsn.indexOf("(")).trim();
+		pojo.setPt(new DescriptionMiniPojo(pt, "en"));
+		return pojo;
+	}
+	
+	private Set<ConceptMiniPojo> constructTestData() {
+		Set<ConceptMiniPojo> concepts = new HashSet<>();
+		concepts.add(constructConceptMiniPojo("719722006", "Has realization (attribute)"));
+		concepts.add(constructConceptMiniPojo("420134006", "Propensity to adverse reaction (finding)"));
+		concepts.add(constructConceptMiniPojo("281647001", "Adverse reaction (disorder)"));
+		return concepts;
 	}
 
 	private ConceptPojo constructConceptPojo(ConceptMiniPojo conceptMini) {
@@ -207,11 +234,11 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		DescriptionPojo fsnPojo = new DescriptionPojo();
 		descriptions.add(fsnPojo);
 		fsnPojo.setActive(true);
-		fsnPojo.setTerm(conceptMini.getFsn());
+		fsnPojo.setTerm(conceptMini.getFsn().getTerm());
 		fsnPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
 		fsnPojo.setType(DescriptionType.FSN.name());
 		DescriptionPojo ptPojo = new DescriptionPojo();
-		ptPojo.setTerm(TemplateUtil.getDescriptionFromFSN(conceptMini.getFsn()));
+		ptPojo.setTerm(TemplateUtil.getDescriptionFromFSN(conceptMini.getFsn().getTerm()));
 		if (ptPojo.getTerm().equals("Aluminium")) {
 			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.ACCEPTABLE, Constants.PREFERRED));
 			DescriptionPojo usPtPojo = new DescriptionPojo();
@@ -277,6 +304,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		Collection<RelationshipPojo> classAxiomRels = concept.getClassAxioms().iterator().next().getRelationships();
 		assertEquals(3, classAxiomRels.size());
 		for ( RelationshipPojo pojo : classAxiomRels) {
+			assertNotNull(pojo.getType().getPt());
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
 			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
