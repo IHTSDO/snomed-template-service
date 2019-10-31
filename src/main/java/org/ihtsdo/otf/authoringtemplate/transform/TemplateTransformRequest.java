@@ -4,6 +4,9 @@ import java.util.Set;
 
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TemplateTransformRequest {
 	
 	private Set<String> conceptsToTransform;
@@ -12,6 +15,10 @@ public class TemplateTransformRequest {
 	private String inactivationReason;
 	private boolean logicalTransform = true;
 	private boolean lexicalTransform = true;
+	
+	public TemplateTransformRequest() {
+		
+	}
 	
 	public TemplateTransformRequest(String source, String destination) {
 		this.sourceTemplate = source;
