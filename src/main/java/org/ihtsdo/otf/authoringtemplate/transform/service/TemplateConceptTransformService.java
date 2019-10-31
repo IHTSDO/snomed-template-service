@@ -308,14 +308,16 @@ public class TemplateConceptTransformService {
 		return templateTransformation;
 	}
 
-	public ConceptPojo transformConcept(String branchPath, String destinationTemplate, ConceptPojo conceptToTransform, SnowOwlRestClient restClient) throws ServiceException {
+	public ConceptPojo transformConcept(String branchPath, TemplateTransformRequest request, ConceptPojo conceptToTransform, SnowOwlRestClient restClient) throws ServiceException {
 		ConceptTemplate destination = null;
 		LogicalTemplate logical = null;
+		String destinationTemplate = request.getDestinationTemplate();
 		try {
 			destination = templateService.loadOrThrow(destinationTemplate);
 			LogicalTemplateParserService parser = new LogicalTemplateParserService();
 			logical = parser.parseTemplate(destination.getLogicalTemplate());
 		} catch (ResourceNotFoundException | IOException e) {
+			
 			if (destination == null) {
 				throw new IllegalArgumentException("No tempalte found with name " + destinationTemplate, e);
 			}
@@ -327,7 +329,7 @@ public class TemplateConceptTransformService {
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
 		}
-		TransformationInputData inputData = new TransformationInputData(null);
+		TransformationInputData inputData = new TransformationInputData(request);
 		inputData.setBranchPath(branchPath);
 		inputData.setDestinationTemplate(destination);
 		inputData.setConceptIdMap(conceptsMap);

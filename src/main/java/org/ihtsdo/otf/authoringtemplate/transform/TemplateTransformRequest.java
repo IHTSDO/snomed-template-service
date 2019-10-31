@@ -17,7 +17,6 @@ public class TemplateTransformRequest {
 	private boolean lexicalTransform = true;
 	
 	public TemplateTransformRequest() {
-		
 	}
 	
 	public TemplateTransformRequest(String source, String destination) {
@@ -39,6 +38,10 @@ public class TemplateTransformRequest {
 	
 	public String getDestinationTemplate() {
 		return destinationTemplate;
+	}
+	
+	public void setDestinationTemplate(String destination) {
+		this.destinationTemplate = destination;
 	}
 
 	public Set<String> getConceptsToTransform() {

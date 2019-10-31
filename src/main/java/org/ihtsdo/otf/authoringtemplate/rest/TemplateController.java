@@ -145,10 +145,10 @@ public class TemplateController {
 				.buildAndExpand(transformation.getTransformationId()).toUri()).build();
 	}
 	
-	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform/concept", method = RequestMethod.POST)
+	@RequestMapping(value = "/{branchPath}/templates/transform/concept", method = RequestMethod.POST)
 	@ResponseBody
 	public ConceptPojo transformConceptToTemplate(@PathVariable String branchPath,
-									@PathVariable String destinationTemplate,
+									@RequestParam String destinationTemplate,
 									@RequestBody ConceptPojo conceptToTransform) throws ServiceException {
 		if (conceptToTransform == null 
 				|| conceptToTransform.getDescriptions() == null 
@@ -156,8 +156,9 @@ public class TemplateController {
 			throw new IllegalArgumentException("Concept to be transformed must not be null and must have descriptions and relationships but got " + conceptToTransform);
 		}
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
-		return transformService.transformConcept(BranchPathUriUtil.decodePath(branchPath),
-				destinationTemplate, conceptToTransform, restClient);
+		TemplateTransformRequest request = new TemplateTransformRequest();
+		request.setDestinationTemplate(destinationTemplate);
+		return transformService.transformConcept(BranchPathUriUtil.decodePath(branchPath), request, conceptToTransform, restClient);
 	}
 	
 	@RequestMapping(value = "/templates/transform/{transformationId}", method = RequestMethod.GET)
