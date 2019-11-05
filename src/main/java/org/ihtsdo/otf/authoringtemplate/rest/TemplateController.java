@@ -150,10 +150,16 @@ public class TemplateController {
 	public ConceptPojo transformConceptToTemplate(@PathVariable String branchPath,
 									@RequestParam String destinationTemplate,
 									@RequestBody ConceptPojo conceptToTransform) throws ServiceException {
-		if (conceptToTransform == null 
-				|| conceptToTransform.getDescriptions() == null 
-				|| conceptToTransform.getRelationships() == null ) {
-			throw new IllegalArgumentException("Concept to be transformed must not be null and must have descriptions and relationships but got " + conceptToTransform);
+		if (conceptToTransform == null) {
+			throw new IllegalArgumentException("Concept to be transformed must not be null " + conceptToTransform);
+		}
+		
+		if (conceptToTransform.getDescriptions() == null) {
+			throw new IllegalArgumentException("Concept to be transformed must not have null descriptions " + conceptToTransform);
+		}
+		
+		if (conceptToTransform.getClassAxioms() == null) {
+			throw new IllegalArgumentException("The class axioms to be transformed must not be null " + conceptToTransform);
 		}
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
 		TemplateTransformRequest request = new TemplateTransformRequest();
