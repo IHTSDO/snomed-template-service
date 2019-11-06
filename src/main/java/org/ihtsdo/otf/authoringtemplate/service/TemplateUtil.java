@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
@@ -121,13 +122,15 @@ public class TemplateUtil {
 	
 	public static Map<String, ConceptMiniPojo> getAttributeSlotValueMap(Map<String, Set<String>> attributeSlots, ConceptPojo conceptPojo) {
 		Map<String, ConceptMiniPojo> result = new HashMap<>();
-		for (RelationshipPojo pojo : conceptPojo.getRelationships()) {
-			if (!pojo.isActive()) {
-				continue;
-			}
-			if (attributeSlots.keySet().contains(pojo.getType().getConceptId())) {
-				for (String slot : attributeSlots.get(pojo.getType().getConceptId())) {
-					result.putIfAbsent(slot, pojo.getTarget());
+		for (AxiomPojo axiom : conceptPojo.getClassAxioms()) {
+			for (RelationshipPojo pojo : axiom.getRelationships()) {
+				if (!pojo.isActive()) {
+					continue;
+				}
+				if (attributeSlots.keySet().contains(pojo.getType().getConceptId())) {
+					for (String slot : attributeSlots.get(pojo.getType().getConceptId())) {
+						result.putIfAbsent(slot, pojo.getTarget());
+					}
 				}
 			}
 		}

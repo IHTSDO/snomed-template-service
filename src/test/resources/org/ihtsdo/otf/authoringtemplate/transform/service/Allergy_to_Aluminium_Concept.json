@@ -310,7 +310,7 @@
       "target": {
         "effectiveTime": "20020131",
         "moduleId": "900000000000207008",
-        "active": true,
+        "active": false,
         "released": true,
         "conceptId": "12503006",
         "definitionStatus": "PRIMITIVE",
@@ -386,7 +386,7 @@
       "target": {
         "effectiveTime": "20030731",
         "moduleId": "900000000000207008",
-        "active": true,
+        "active": false,
         "released": true,
         "conceptId": "300915004",
         "definitionStatus": "FULLY_DEFINED",
@@ -424,7 +424,7 @@
       "target": {
         "effectiveTime": "20020131",
         "moduleId": "900000000000207008",
-        "active": true,
+        "active": false,
         "released": true,
         "conceptId": "12503006",
         "definitionStatus": "PRIMITIVE",
@@ -576,7 +576,7 @@
       "target": {
         "effectiveTime": "20130731",
         "moduleId": "900000000000207008",
-        "active": true,
+        "active": false,
         "released": true,
         "conceptId": "609327009",
         "definitionStatus": "FULLY_DEFINED",

@@ -38,6 +38,7 @@ import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo.DescriptionMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
@@ -84,7 +85,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private ConceptPojo transformedConcept;
 	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	// set it to true to print out concept in json
-	private boolean isDebug = false;
+	private boolean isDebug = true;
 	
 	private TemplateTransformRequest transformRequest;
 	
@@ -182,15 +183,23 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private void mockSearchConcepts() throws RestClientException {
 		
 		List<ConceptPojo> concepts = new ArrayList<>();
-		Set<ConceptMiniPojo> targets = conceptToTransform.getRelationships().stream().filter(r -> r.isActive()).map(r -> r.getTarget()).collect(Collectors.toSet());
+		Set<RelationshipPojo> relationships = new HashSet<>();
+		for (AxiomPojo axiom : conceptToTransform.getClassAxioms()) {
+			relationships.addAll(axiom.getRelationships());
+		}
+		if (conceptToTransform.getRelationships() != null) {
+			relationships.addAll(conceptToTransform.getRelationships().stream().filter(r -> r.isActive()).collect(Collectors.toSet()));
+		}
+		Set<ConceptMiniPojo> targets = relationships.stream().filter(r -> r.isActive()).map(r -> r.getTarget()).collect(Collectors.toSet());
 		for (ConceptMiniPojo targetPojo : targets) {
 			concepts.add(constructConceptPojo(targetPojo));
 		}
+		
 		when(terminologyServerClient.searchConcepts(anyString(), any()))
 		.thenReturn(Arrays.asList(conceptToTransform), concepts);
 		
 		// add test concepts here
-		Set<ConceptMiniPojo> attributeTypes = conceptToTransform.getRelationships().stream().filter(r -> r.isActive()).map(r -> r.getType()).collect(Collectors.toSet());
+		Set<ConceptMiniPojo> attributeTypes = relationships.stream().filter(r -> r.isActive()).map(r -> r.getType()).collect(Collectors.toSet());
 		Set<ConceptMiniPojo> conceptMinis = new HashSet<>();
 		conceptMinis.addAll(targets);
 		conceptMinis.addAll(attributeTypes);
@@ -212,6 +221,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		concepts.add(constructConceptMiniPojo("719722006", "Has realization (attribute)"));
 		concepts.add(constructConceptMiniPojo("420134006", "Propensity to adverse reaction (finding)"));
 		concepts.add(constructConceptMiniPojo("281647001", "Adverse reaction (disorder)"));
+		concepts.add(constructConceptMiniPojo("472964009", "Allergic process (qualifier value)"));
 		return concepts;
 	}
 
@@ -342,6 +352,29 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
 		assertEquals(5, activeTerms.size());
 		verifyTransformation(concept);
+	}
+	
+	
+	@Test
+	public void testSingleConceptTranformation() throws Exception {
+		setUpTestTemplates("Allergy_to_Aluminium_Concept_WithAxiomOnly.json",
+				"Allergy_to_Aluminium_Concept_WithAxiomOnly_Transformed.json");
+		Set<String> concepts = new HashSet<>();
+		concepts.add("402306009");
+		mockTerminologyServerClient();
+		mockSearchConcepts();
+		// invoke the first mock method call
+		terminologyServerClient.searchConcepts("MAIN", new ArrayList<>(concepts));
+		
+		transformRequest = new TemplateTransformRequest(null, destination);
+		ConceptPojo result = transformService.transformConcept("MAIN", transformRequest, conceptToTransform, terminologyServerClient);
+		assertNotNull(result);
+		
+		// validate descriptions transformation
+		assertEquals(7, result.getDescriptions().size());
+		List<DescriptionPojo> activeTerms = result.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		assertEquals(5, activeTerms.size());
+		verifyTransformation(result);
 	}
 	
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {

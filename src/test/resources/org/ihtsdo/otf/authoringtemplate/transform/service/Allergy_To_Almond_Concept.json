@@ -245,7 +245,7 @@
         "effectiveTime": "20020131",
         "moduleId": "900000000000207008",
         "active": true,
-        "released": true,
+        "released": false,
         "conceptId": "256350002",
         "definitionStatus": "PRIMITIVE",
         "fsn": {

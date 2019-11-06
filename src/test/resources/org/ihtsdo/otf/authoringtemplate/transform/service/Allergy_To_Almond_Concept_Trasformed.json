@@ -66,39 +66,6 @@
           "moduleId": "900000000000207008",
           "sourceId": "712839001",
           "target": {
-            "conceptId": "472964009",
-            "fsn": {
-              "term": "Allergic process (qualifier value)",
-              "lang": "en"
-            },
-            "pt": {
-              "term": "Allergic process",
-              "lang": "en"
-            },
-            "moduleId": "900000000000207008",
-            "definitionStatus": "PRIMITIVE"
-          },
-          "groupId": 1,
-          "type": {
-            "conceptId": "719722006",
-            "fsn": {
-              "term": "Has realization (attribute)",
-              "lang": "en"
-            },
-            "pt": {
-              "term": "Has realization",
-              "lang": "en"
-            }
-          },
-          "characteristicType": "STATED_RELATIONSHIP",
-          "modifier": "EXISTENTIAL"
-        },
-        {
-          "active": true,
-          "released": false,
-          "moduleId": "900000000000207008",
-          "sourceId": "712839001",
-          "target": {
             "conceptId": "256350002",
             "fsn": {
               "term": "Almond (substance)",
@@ -153,6 +120,37 @@
             },
             "pt": {
               "term": "Is a",
+              "lang": "en"
+            }
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "712839001",
+          "target": {
+            "conceptId": "472964009",
+            "fsn": {
+              "term": "Allergic process (qualifier value)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Allergic process",
+              "lang": "en"
+            }
+          },
+          "groupId": 1,
+          "type": {
+            "conceptId": "719722006",
+            "fsn": {
+              "term": "Has realization (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Has realization",
               "lang": "en"
             }
           },
