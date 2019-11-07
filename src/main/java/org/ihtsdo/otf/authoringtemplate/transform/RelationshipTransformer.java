@@ -57,7 +57,9 @@ public class RelationshipTransformer {
 		}
 
 		Map<Integer, Map<String, Relationship>> newRelGroupMap = new HashMap<>();
-		for (Relationship rel : conceptOutline.getRelationships()) {
+		List<Relationship> relationships = conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
+		
+		for (Relationship rel : relationships) {
 			Map<String, Relationship> groupMap = newRelGroupMap.computeIfAbsent(rel.getGroupId(), k -> new HashMap<>());
 			if (rel.getTarget() != null) {
 				groupMap.put(rel.getTarget().getConceptId() + "_"  + rel.getType().getConceptId(), rel);

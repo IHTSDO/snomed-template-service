@@ -56,7 +56,7 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		assertEquals(DefinitionStatus.FULLY_DEFINED, conceptOutline.getDefinitionStatus());
 		assertEquals(org.ihtsdo.otf.constants.Concepts.MODULE, conceptOutline.getModuleId());
 
-		final List<Relationship> relationships = conceptOutline.getRelationships();
+		final List<Relationship> relationships = getRelationships(conceptOutline);
 		assertEquals(3, relationships.size());
 		final Relationship relationship = relationships.get(0);
 		assertEquals(Concepts.ISA, relationship.getType().getConceptId());
@@ -92,18 +92,18 @@ public class TemplateServiceTest extends AbstractServiceTest {
 
 		final ConceptTemplate updated = templateService.update("one", templateRequest2);
 
-		final List<Relationship> rel = updated.getConceptOutline().getRelationships();
-		assertEquals(3, rel.size());
+		final List<Relationship> rels = getRelationships(updated.getConceptOutline());
+		assertEquals(3, rels.size());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=0, type=ConceptMini{conceptId='116680003'}, " +
 				"target=ConceptMini{conceptId='71388002'}, targetSlot=null, cardinalityMin='1', cardinalityMax='*'}",
-				rel.get(0).toString());
+				rels.get(0).toString());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=1, type=ConceptMini{conceptId='405813007'}, " +
 				"target=null, targetSlot=SimpleSlot{slotName='proc', " +
 				"allowableRangeECL='<< 442083009 |Anatomical or acquired body structure|', slotReference='null'}, cardinalityMin='1', cardinalityMax='1'}",
-				rel.get(1).toString());
+				rels.get(1).toString());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=1, type=ConceptMini{conceptId='363703001'}, " +
 				"target=ConceptMini{conceptId='429892002'}, targetSlot=null, cardinalityMin='1', cardinalityMax='*'}",
-				rel.get(2).toString());
+				rels.get(2).toString());
 
 		final List<Description> desc = updated.getConceptOutline().getDescriptions();
 		assertEquals(1, desc.size());

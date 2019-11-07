@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.io.IOException;
-
+import java.util.List;
 
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.AbstractTest;
@@ -15,6 +15,7 @@ import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
+import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -47,5 +48,9 @@ public abstract class AbstractServiceTest extends AbstractTest {
 		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
 		templateRequest.setConceptOutline(new ConceptOutline().addDescription(fsn).addDescription(pt));
 		templateService.create("CT Guided Procedure of X", templateRequest);
+	}
+	
+	public List<Relationship> getRelationships(ConceptOutline conceptOutline) {
+		return conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
 	}
 }

@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -167,7 +168,7 @@ public class TemplateUtil {
 		return attributeSlots;
 	}
 	
-	public static List<SimpleSlot> getSlotsRequiringInput(List<Relationship> relationships) {
+	public static List<SimpleSlot> getSlotsRequiringInput(Collection<Relationship> relationships) {
 		return relationships.stream().filter(r -> isSlotRequiringInput(r.getTargetSlot()))
 				.map(Relationship::getTargetSlot).collect(Collectors.toList());
 	}
@@ -217,8 +218,8 @@ public class TemplateUtil {
 			throw new ServiceException(String.format("Template %s has term slot %s that is not defined in the lexical template",
 					conceptTemplate.getName(), slotsNotFound));
 		}
-		
-		Set<String> logicalSlots = getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships())
+		List<Relationship> relationships = conceptTemplate.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
+		Set<String> logicalSlots = getSlotsRequiringInput(relationships)
 				.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
 		
 		Set<String> logicalSlotsReferencedInLexical = new HashSet<>(lexicalTermNameSlotMap.values());

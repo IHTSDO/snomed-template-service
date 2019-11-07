@@ -117,7 +117,14 @@ public class TemplateService {
 		ConceptTemplate template = loadOrThrow(templateName);
 		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, Constants.UTF_8))) {
 			String header = "";
-			for (Relationship relationship : template.getConceptOutline().getRelationships()) {
+			List<Relationship> relationships = template.getConceptOutline()
+					.getClassAxioms()
+					.stream()
+					.findFirst()
+					.get()
+					.getRelationships();
+			
+			for (Relationship relationship : relationships) {
 				SimpleSlot targetSlot = relationship.getTargetSlot();
 				if (isSlotRequiringInput(targetSlot)) {
 					String slotName = targetSlot.getSlotName();

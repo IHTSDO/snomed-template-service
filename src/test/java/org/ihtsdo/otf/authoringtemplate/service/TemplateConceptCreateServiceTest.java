@@ -3,9 +3,9 @@ package org.ihtsdo.otf.authoringtemplate.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
@@ -131,24 +131,27 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 
 		ConceptOutline concept = conceptOutlines.get(0);
 		assertEquals(2, concept.getDescriptions().size());
-		assertEquals(6, concept.getRelationships().size());
-		assertEquals("12656001", concept.getRelationships().get(2).getTarget().getConceptId());
-		assertEquals("419988009", concept.getRelationships().get(4).getTarget().getConceptId());
-		assertEquals("12656001", concept.getRelationships().get(5).getTarget().getConceptId());
+		List<Relationship> relationships = getRelationships(concept);
+		assertEquals(6, relationships.size());
+		assertEquals("12656001", relationships.get(2).getTarget().getConceptId());
+		assertEquals("419988009", relationships.get(4).getTarget().getConceptId());
+		assertEquals("12656001", relationships.get(5).getTarget().getConceptId());
 
 		concept = conceptOutlines.get(1);
 		assertEquals(2, concept.getDescriptions().size());
-		assertEquals(6, concept.getRelationships().size());
-		assertEquals("63303001", concept.getRelationships().get(2).getTarget().getConceptId());
-		assertEquals("415186003", concept.getRelationships().get(4).getTarget().getConceptId());
-		assertEquals("63303001", concept.getRelationships().get(5).getTarget().getConceptId());
+		relationships = getRelationships(concept);
+		assertEquals(6, relationships.size());
+		assertEquals("63303001", relationships.get(2).getTarget().getConceptId());
+		assertEquals("415186003", relationships.get(4).getTarget().getConceptId());
+		assertEquals("63303001", relationships.get(5).getTarget().getConceptId());
 
 		concept = conceptOutlines.get(2);
+		relationships = getRelationships(concept);
 		assertEquals(2, concept.getDescriptions().size());
-		assertEquals(6, concept.getRelationships().size());
-		assertEquals("63124001", concept.getRelationships().get(2).getTarget().getConceptId());
-		assertEquals("426865009", concept.getRelationships().get(4).getTarget().getConceptId());
-		assertEquals("63124001", concept.getRelationships().get(5).getTarget().getConceptId());
+		assertEquals(6, relationships.size());
+		assertEquals("63124001", relationships.get(2).getTarget().getConceptId());
+		assertEquals("426865009", relationships.get(4).getTarget().getConceptId());
+		assertEquals("63124001", relationships.get(5).getTarget().getConceptId());
 	}
 	
 	@Test
@@ -189,15 +192,18 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		List<ConceptOutline> generatedConcepts = conceptCreateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
 		assertEquals(2, generatedConcepts.size());
 		ConceptOutline c1 = generatedConcepts.get(0);
+		List<Relationship> relationships = getRelationships(c1);
 
-		assertEquals(6, c1.getRelationships().size());
+		assertEquals(6, relationships.size());
 		int relationship = 0;
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		
+		assertOptionalAttribute(relationships, "370132008", true);
 
 		assertEquals("LOINC FSN 1 (procedure)", c1.getDescriptions().get(0).getTerm());
 		assertEquals("LOINC Unique ID:ID 1", c1.getDescriptions().get(1).getTerm());
@@ -206,9 +212,10 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
 		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
 		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
+		
 		//check optional attribute ScaleType(370132008);
-		assertOptionalAttribute(c1.getRelationships(), "370132008", true);
-		assertOptionalAttribute(generatedConcepts.get(1).getRelationships(), "370132008", false);
+		relationships = getRelationships(generatedConcepts.get(1));
+		assertOptionalAttribute(relationships, "370132008", false);
 	}
 
 	private void assertOptionalAttribute(List<Relationship> relationships, String typeId, boolean mustHave) {

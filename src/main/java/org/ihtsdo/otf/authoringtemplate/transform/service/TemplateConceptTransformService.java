@@ -231,7 +231,8 @@ public class TemplateConceptTransformService {
 
 	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
 		List<String> conceptIds = new ArrayList<>();
-		for (Relationship rel : destination.getConceptOutline().getRelationships()) {
+		List<Relationship> relationships = destination.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
+		for (Relationship rel : relationships) {
 			if (rel.getType() != null) {
 				conceptIds.add(rel.getType().getConceptId());
 			}
