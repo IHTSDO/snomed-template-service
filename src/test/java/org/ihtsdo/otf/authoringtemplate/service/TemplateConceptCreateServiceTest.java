@@ -104,6 +104,20 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		}
 	}
 
+	
+	@Test
+	public void testGenerateConceptsWithOptionalAttribute() throws IOException, ServiceException {
+		try {
+			createCtGuidedProcedureOfX();
+			conceptCreateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-col-with-optional-conceptId.txt"));
+			fail("Should have thrown exception.");
+		} catch (InputError e) {
+			assertEquals("Value '123' on line 2 column 1 is not a valid concept identifier.\n" +
+					"Value '234' on line 3 column 1 is not a valid concept identifier.\n" + 
+					"Value '345' on line 4 column 1 is not a valid concept identifier.", e.getMessage());
+		}
+	}
+	
 	@Test
 	public void testGenerateConcepts_conceptNotWithinRange() throws IOException, ServiceException {
 		try {
@@ -180,7 +194,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		String lines =
 				header + "\n" + // Header
 				"\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
-				"123037004\t118598001\t7389001\t123037004\t123037004\t\tLOINC FSN 2\tID 2\n"; // Line 2
+				"123037004\t118598001\t7389001\t123037004\t123037004\t\tLOINC FSN 2\tID 2\n"+ // Line 2
+				" \t118598001\t7389001\t123037004\t123037004\t \tLOINC FSN 2\tID 2\n"; // Line 3
 		mockEclQueryResponse(
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("118598001"),
@@ -190,7 +205,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 				Sets.newHashSet("30766002"));
 		mockSearchConceptsResponse();
 		List<ConceptOutline> generatedConcepts = conceptCreateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
-		assertEquals(2, generatedConcepts.size());
+		assertEquals(3, generatedConcepts.size());
 		ConceptOutline c1 = generatedConcepts.get(0);
 		List<Relationship> relationships = getRelationships(c1);
 

@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 import org.assertj.core.util.Lists;
@@ -51,6 +52,9 @@ public abstract class AbstractServiceTest extends AbstractTest {
 	}
 	
 	public List<Relationship> getRelationships(ConceptOutline conceptOutline) {
+		if (conceptOutline.getClassAxioms() == null) {
+			return Collections.emptyList();
+		}
 		return conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
 	}
 }

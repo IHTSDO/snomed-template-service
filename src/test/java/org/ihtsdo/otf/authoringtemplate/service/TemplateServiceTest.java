@@ -1,7 +1,8 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,6 +53,8 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		assertEquals("[entire]", lexicalTemplates.get(0).getRemoveParts().toString());
 
 		final ConceptOutline conceptOutline = template.getConceptOutline();
+		assertNotNull(conceptOutline.getClassAxioms());
+		assertEquals(1, conceptOutline.getClassAxioms().size());
 
 		assertEquals(DefinitionStatus.FULLY_DEFINED, conceptOutline.getDefinitionStatus());
 		assertEquals(org.ihtsdo.otf.constants.Concepts.MODULE, conceptOutline.getModuleId());
@@ -79,6 +82,7 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		templateRequest1.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
 		templateRequest1.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX$")));
 		final String name = templateService.create("one", templateRequest1);
+		assertEquals("one", name);
 
 		final ConceptTemplate templateRequest2 = new ConceptTemplate();
 		templateRequest2.setLogicalTemplate("71388002 |Procedure|:\n" +

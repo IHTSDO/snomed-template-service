@@ -43,8 +43,6 @@ import com.google.common.collect.Iterables;
 @Service
 public class TemplateConceptCreateService {
 
-	private static final String EMPTY = "";
-
 	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 	
 	@Value("${batch.maxSize}")
@@ -133,14 +131,14 @@ public class TemplateConceptCreateService {
 				}
 				if (targetSlot != null) {
 					String slotName = targetSlot.getSlotName();
-					String slotValue = "";
+					int valueIndex = -1;
 					if (slotName != null) {
-						slotValue = slotValues.get(slotNames.indexOf(slotName));
+						valueIndex = slotNames.indexOf(slotName);
 					} else {
-						slotValue = slotValues.get(slotNames.indexOf(targetSlot.getSlotReference()));
+						valueIndex = slotNames.indexOf(targetSlot.getSlotReference());
 					}
-					boolean isOptional = TemplateUtil.isOptional(relationship);
-					if (isOptional && EMPTY.equals(slotValue)) {
+					String slotValue = valueIndex == -1 ? "" : slotValues.get(valueIndex);
+					if (slotValue.trim().isEmpty() && TemplateUtil.isOptional(relationship)) {
 						// skip as it is optional 
 					} else {
 						relationships.add(relationship.clone().setTarget(new ConceptMini(slotValue)));
@@ -202,7 +200,7 @@ public class TemplateConceptCreateService {
 				slotIndex++;
 				Set<String> slotValuesToValidate = slotInputValues.get(slotIndex)
 						.stream()
-						.filter(v -> !EMPTY.equals(v))
+						.filter(v -> !v.trim().isEmpty())
 						.collect(Collectors.toSet());
 				Set<String> invalidSlotValues = new HashSet<>(slotValuesToValidate);
 				String slotEcl = simpleSlot.getAllowableRangeECL();
@@ -287,7 +285,7 @@ public class TemplateConceptCreateService {
 	
 	private List<Integer> getOptionalFields(String header) {
 		List<Integer> result = new ArrayList<>();
-		String[] columns = header.split("\\t");
+		String[] columns = header.split("\\t", -1);
 		for (int i=0; i < columns.length; i++) {
 			if (columns[i].endsWith(TemplateService.OPTIONAL)) {
 				result.add(i);
