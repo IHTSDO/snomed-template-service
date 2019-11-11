@@ -51,8 +51,7 @@ public class TemplateConceptSearchService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateConceptSearchService.class);
 
-	// 200000
-	private static final int MAX = 10;
+	private static final int MAX = 200000;
 	
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
 			Boolean logicalMatch, Boolean lexicalMatch, boolean stated) throws ServiceException, ResourceNotFoundException {

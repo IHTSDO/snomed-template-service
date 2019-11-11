@@ -93,8 +93,6 @@ public class TemplateConceptCreateService {
 			for (int k = 0; k < slotNames.size(); k ++) {
 				if (i < slotColumnValues.get(k).size()) {
 					slotRowValues.add(slotColumnValues.get(k).get(i));
-				} else {
-					slotRowValues.add(null);
 				}
 			}
 			Map<String, Set<DescriptionPojo>> slotValuesMap = createSlotConceptPojoMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
