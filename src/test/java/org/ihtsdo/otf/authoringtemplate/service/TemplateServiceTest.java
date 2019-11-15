@@ -149,6 +149,44 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		assertEquals("procSite\taction\n", new String(stream.toByteArray()));
 	}
 	
+	
+	@Test
+	public void testCreateTemplateWithSelfGroupedAttribute() throws Exception {
+		String logicTemplate = "64572001 |Disease (disorder)|:\n" + 
+		"	[[~0..1]] {\n" + 
+		"		263502005 |Clinical course (attribute)| = [[+id(<288524001 |Courses (qualifier value)|) @course]]\n" + 
+		"	}, \n" + 
+		"	[[~1..1]] {\n" + 
+		"		[[~1..1]] 370135005 |Pathological process (attribute)| = 441862004 |Infectious process (qualifier value)|,\n" + 
+		"		[[~0..1]] 363698007 |Finding site (attribute)| = [[+id(<<442083009 |Anatomical or acquired body structure (body structure)|) @bodyStructure]],\n" + 
+		"		[[~0..1]] 116676008 |Associated morphology (attribute)| = [[+id(<<49755003 |Morphologically abnormal structure (morphologic abnormality)|) @morphology]],\n" + 
+		"		[[~1..1]] 246075003 |Causative agent (attribute)| = [[+id(<<409822003 |Superkingdom Bacteria (organism)|) @bacteria]],\n" + 
+		"		[[~0..1]] 246454002 |Occurrence (attribute)| = [[+id(<282032007 |Periods of life (qualifier value)|) @periodsOfLife]]\n" + 
+		"	}\n";
+		ConceptTemplate templateRequest = new ConceptTemplate();
+		templateRequest.setLogicalTemplate(logicTemplate);
+		templateRequest.addLexicalTemplate(new LexicalTemplate("course", "[course]", "course", null));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("periodsOfLife", "[periodsOfLife]", "periodsOfLife",null));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("morphology", "[morphology]", "morphology", null));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("bodyStructure", "[bodyStructure]", "bodyStructure", Lists.newArrayList("entire")));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("bacteria", "[bacteria]", "bacteria", null));
+		
+		templateRequest.setConceptOutline(new ConceptOutline(DefinitionStatus.PRIMITIVE)
+				.addDescription(new Description("$course$ $periodsOfLife$ $morphology$ of $bodyStructure$ caused by $bacteria$ (disorder)"))
+				.setModuleId(org.ihtsdo.otf.constants.Concepts.MODULE));
+
+		String name = templateService.create("TemplateWithSelfGroupTest", templateRequest);
+		ConceptTemplate template = templateService.load(name);
+		List<Relationship> relationships = getRelationships(template.getConceptOutline());
+		assertEquals(7, relationships.size());
+		assertEquals(0, relationships.get(0).getGroupId());
+		
+		assertEquals(1, relationships.get(1).getGroupId());
+		
+		assertEquals(2, relationships.get(2).getGroupId());
+		
+	}
+	
 	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}

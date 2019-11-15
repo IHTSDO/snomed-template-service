@@ -82,7 +82,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		String templateName = "CT guided [procedure] of [body structure]";
 		setUpTemplate(templateName);
 		ConceptPojo testConcept = TestDataHelper.createCTGuidedProcedureConcept(true);
-		RelationshipPojo additionalRel = new RelationshipPojo(0, "246075003", "6543217", TestDataHelper.STATED_RELATIONSHIP);
+		RelationshipPojo additionalRel = new RelationshipPojo(2, "246075003", "6543217", TestDataHelper.STATED_RELATIONSHIP);
 		testConcept.getClassAxioms().iterator().next().getRelationships().add(additionalRel);
 		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
 		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
