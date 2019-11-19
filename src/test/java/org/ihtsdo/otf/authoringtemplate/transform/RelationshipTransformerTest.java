@@ -1,7 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
@@ -11,10 +10,10 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
@@ -28,22 +27,22 @@ private RelationshipTransformer transformer;
 	@Test
 	public void testTransform() throws ServiceException {
 		ConceptPojo conceptToTransform = TestDataHelper.createConceptPojo();
+		assertEquals(1, conceptToTransform.getClassAxioms().size());
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
 		Map<String, ConceptMiniPojo> attributeSlotMap = new HashMap<>();
 		attributeSlotMap.put("substance", new ConceptMiniPojo("256350002"));
-		Map<String, SimpleConceptPojo> conceptIdMap = new HashMap<>();
-		transformer = new RelationshipTransformer(conceptToTransform, conceptOutline, attributeSlotMap, conceptIdMap);
+		transformer = new RelationshipTransformer(conceptToTransform, conceptOutline, attributeSlotMap, new HashMap<String, ConceptMiniPojo>());
 		transformer.transform();
-		assertNotNull(conceptToTransform.getRelationships());
-		assertEquals(4, conceptToTransform.getRelationships().size());
+		AxiomPojo classAxiom = conceptToTransform.getClassAxioms().iterator().next();
+		assertEquals(4, classAxiom.getRelationships().size());
 		
-		List<RelationshipPojo> inActiveRels = conceptToTransform.getRelationships()
+		List<RelationshipPojo> inActiveRels = classAxiom.getRelationships()
 				.stream()
 				.filter(r -> !r.isActive())
 				.collect(Collectors.toList());
 		assertEquals(0, inActiveRels.size());
 		
-		List<RelationshipPojo> activeRels = conceptToTransform.getRelationships()
+		List<RelationshipPojo> activeRels = classAxiom.getRelationships()
 				.stream()
 				.filter(r -> r.isActive())
 				.collect(Collectors.toList());

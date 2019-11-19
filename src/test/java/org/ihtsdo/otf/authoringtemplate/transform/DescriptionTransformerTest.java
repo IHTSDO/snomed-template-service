@@ -12,8 +12,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;

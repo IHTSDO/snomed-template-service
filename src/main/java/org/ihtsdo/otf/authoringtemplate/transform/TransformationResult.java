@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 
 public class TransformationResult {
 	

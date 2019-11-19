@@ -15,7 +15,7 @@ import java.util.Set;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,7 +27,7 @@ import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-public class LexicalTemplateTransformationServiceTest {
+public class LexicalTemplateTransformationServiceTest extends AbstractServiceTest {
 	
 	private List<LexicalTemplate> lexicalTemplates;
 	private List<Description> descriptions;

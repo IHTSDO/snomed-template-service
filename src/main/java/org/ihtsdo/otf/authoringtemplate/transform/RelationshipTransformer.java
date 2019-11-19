@@ -8,15 +8,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.Relationship;
 
@@ -25,10 +26,11 @@ public class RelationshipTransformer {
 	private ConceptPojo conceptToTransform;
 	private ConceptOutline conceptOutline;
 	private Map<String, ConceptMiniPojo> attributeSlotMap;
-	private Map<String, SimpleConceptPojo> conceptIdMap;
+	private Map<String, ConceptMiniPojo> conceptIdMap;
+	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	public RelationshipTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
-			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, SimpleConceptPojo> conceptIdMap) {
+			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, ConceptMiniPojo> conceptIdMap) {
 		this.conceptToTransform = conceptToTransform;
 		this.conceptOutline = conceptOutline;
 		this.attributeSlotMap = attributeSlotMap;
@@ -36,13 +38,18 @@ public class RelationshipTransformer {
 	}
 
 	public void transform() throws ServiceException {
-		//map relationship by group
-		List<RelationshipPojo> statedRels = conceptToTransform.getRelationships().stream()
-				.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
-				.collect(Collectors.toList());
+		if (conceptToTransform.getClassAxioms() == null || conceptToTransform.getClassAxioms().isEmpty()) {
+			throw new ServiceException("No class axioms available to transform for concept " + conceptToTransform.getConceptId() );
+		}
 		
+		if (conceptToTransform.getClassAxioms().size() > 1) {
+			throw new UnsupportedOperationException("Transformation for concepts with multiple class axioms is not implemented yet. Concept id = " + conceptToTransform.getConceptId());
+		}
+		
+		AxiomPojo classAxiom = conceptToTransform.getClassAxioms().iterator().next();
+		//map relationship by group
 		Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap = new HashMap<>();
-		for (RelationshipPojo pojo : statedRels) {
+		for (RelationshipPojo pojo : classAxiom.getRelationships()) {
 			if (pojo.isActive()) {
 				existingRelGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashMap<>())
 				.put(pojo.getTarget().getConceptId() + "_" +  pojo.getType().getConceptId(), pojo);
@@ -50,7 +57,9 @@ public class RelationshipTransformer {
 		}
 
 		Map<Integer, Map<String, Relationship>> newRelGroupMap = new HashMap<>();
-		for (Relationship rel : conceptOutline.getRelationships()) {
+		List<Relationship> relationships = conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
+		
+		for (Relationship rel : relationships) {
 			Map<String, Relationship> groupMap = newRelGroupMap.computeIfAbsent(rel.getGroupId(), k -> new HashMap<>());
 			if (rel.getTarget() != null) {
 				groupMap.put(rel.getTarget().getConceptId() + "_"  + rel.getType().getConceptId(), rel);
@@ -73,7 +82,7 @@ public class RelationshipTransformer {
 		}
 		
 		List<List<RelationshipPojo>> mergedSet = constructRelationshipSet(existingRelGroupMap, newRelGroupMap);
-		List<RelationshipPojo> relationships = new ArrayList<>();
+		Set<RelationshipPojo> transformedRels = new HashSet<>();
 		RoleGroupNumberGenerator roleGrpNumberGenerator = new RoleGroupNumberGenerator(mergedSet);
 		for (List<RelationshipPojo> roleGroup : mergedSet ) {
 			int grpNumber = roleGrpNumberGenerator.getRoleGroupNumber(roleGroup);
@@ -84,33 +93,17 @@ public class RelationshipTransformer {
 				if (pojo.getRelationshipId() == null) {
 					pojo.setSourceId(conceptToTransform.getConceptId());
 				}
-				relationships.add(pojo);
+				transformedRels.add(pojo);
 			}
 		}
-		for (RelationshipPojo pojo : statedRels) {
-			if (!relationships.contains(pojo)) {
-				if (pojo.isActive()) {
-					pojo.setActive(false);
-					pojo.setEffectiveTime(null);
-				}
-				// only adding published inactive stated rels
-				if (pojo.isReleased() || pojo.isActive()) {
-					relationships.add(pojo);
-				}
-			}
-		}
-		
-		List<RelationshipPojo> inferred = conceptToTransform.getRelationships().stream()
-				.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
-				.collect(Collectors.toList());
-		relationships.addAll(inferred);
-		
 		Set<RelationshipPojo> sortedRels = new TreeSet<RelationshipPojo>(getRelationshipPojoComparator());
-		sortedRels.addAll(relationships);
-		if (relationships.size() != sortedRels.size()) {
-			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",relationships.size(), sortedRels.size()));
+		sortedRels.addAll(transformedRels);
+		if (transformedRels.size() != sortedRels.size()) {
+			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",transformedRels.size(), sortedRels.size()));
 		}
-		conceptToTransform.setRelationships(sortedRels);
+		//Only for one axiom at the moment.
+		classAxiom.setEffectiveTime(null);
+		classAxiom.setRelationships(transformedRels);
 	}
 
 	private List<List<RelationshipPojo>> constructRelationshipSet(Map<Integer, Map<String, RelationshipPojo>> existingRelGroupMap,
@@ -193,15 +186,12 @@ public class RelationshipTransformer {
 		if (conceptId == null || conceptId.isEmpty()) {
 			throw new IllegalArgumentException("Concept id can't be null or empty");
 		}
-		ConceptMiniPojo miniPojo = new ConceptMiniPojo();
-		miniPojo.setConceptId(conceptId);
-		if (conceptIdMap.get(conceptId) != null) {
-			SimpleConceptPojo concept = conceptIdMap.get(conceptId);
-			miniPojo.setFsn(concept.getFsn().getTerm());
-			miniPojo.setModuleId(concept.getModuleId());
-			miniPojo.setDefinitionStatus(concept.getDefinitionStatus());
+		if (!conceptIdMap.containsKey(conceptId)) {
+			logger.error("Prefetched concepts map doesn't contain concept id " + conceptId);
+			return new ConceptMiniPojo(conceptId);		
+		} else {
+			return conceptIdMap.get(conceptId);
 		}
-		return miniPojo;
 	}
 	
 	public static Comparator<RelationshipPojo> getRelationshipPojoComparator() {

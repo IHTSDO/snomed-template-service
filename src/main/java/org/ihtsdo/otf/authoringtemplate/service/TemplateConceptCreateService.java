@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -19,12 +18,13 @@ import java.util.stream.LongStream;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.Axiom;
 import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptMini;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
@@ -43,8 +43,6 @@ import com.google.common.collect.Iterables;
 @Service
 public class TemplateConceptCreateService {
 
-	private static final String EMPTY = "";
-
 	private static final Pattern SIX_TO_EIGHTEEN_DIGITS = Pattern.compile("\\d{6,18}");
 	
 	@Value("${batch.maxSize}")
@@ -62,7 +60,8 @@ public class TemplateConceptCreateService {
 		Assert.notNull(inputStream, "Batch file is required.");
 		ConceptTemplate template = templateService.loadOrThrow(templateName);
 		ConceptOutline conceptOutline = template.getConceptOutline();
-		List<SimpleSlot> slotsRequiringInput = TemplateUtil.getSlotsRequiringInput(conceptOutline.getRelationships());
+		List<Relationship> relationships = conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
+		List<SimpleSlot> slotsRequiringInput = TemplateUtil.getSlotsRequiringInput(relationships);
 		List<List<String>> slotColumnValues = getSlotInputValues(inputStream, template);
 		int batchSize = slotColumnValues.get(0).size();
 		logger.info("Validating {} slot value concepts on branch '{}'", batchSize, branchPath);
@@ -74,36 +73,16 @@ public class TemplateConceptCreateService {
 
 	private List<ConceptOutline> createConceptsWithSlotValues(String branchPath, List<SimpleSlot> slotsRequiringInput,
 			List<List<String>> slotColumnValues, ConceptTemplate template) throws ServiceException {
-		List<ConceptOutline> generatedConcepts = new ArrayList<>();
 		List<String> additionalSlots = template.getAdditionalSlots();
 		// Generate unsaved concepts
 		List<String> slotNames = slotsRequiringInput.stream()
 						.filter(slot -> slot.getSlotName() != null)
 						.map(SimpleSlot::getSlotName)
 						.collect(Collectors.toList());
-				slotNames.addAll(additionalSlots);
-
-		// Create x blank concepts
-		IntStream.range(0, slotColumnValues.get(0).size()).forEach(i -> generatedConcepts.add(new ConceptOutline()));
-
-		// Push each template relationship into all concepts
-		AtomicInteger column = new AtomicInteger(0);
-		template.getConceptOutline().getRelationships().forEach(relationship -> {
-			SimpleSlot targetSlot = relationship.getTargetSlot();
-			if (targetSlot == null) {
-				generatedConcepts.forEach(concept -> concept.addRelationship(relationship));
-			}
-			if (targetSlot != null) {
-				String slotName = targetSlot.getSlotName();
-				if (slotName != null) {
-					int slotColumn = column.getAndIncrement();
-					addRelationshipToAllConcepts(relationship, slotColumn, slotColumnValues, generatedConcepts);
-				} else {
-					addRelationshipToAllConcepts(relationship, slotNames.indexOf(targetSlot.getSlotReference()), slotColumnValues, generatedConcepts);
-				}
-			}
-		});
-
+		slotNames.addAll(additionalSlots);
+		
+		List<ConceptOutline> generatedConcepts = constructConceptOutlines(template, slotColumnValues, slotNames);
+				
 		// clone each template description into all concepts
 		template.getConceptOutline().getDescriptions().forEach(description -> {
 			generatedConcepts.forEach(concept -> concept.addDescription(description.clone()));
@@ -114,8 +93,6 @@ public class TemplateConceptCreateService {
 			for (int k = 0; k < slotNames.size(); k ++) {
 				if (i < slotColumnValues.get(k).size()) {
 					slotRowValues.add(slotColumnValues.get(k).get(i));
-				} else {
-					slotRowValues.add(null);
 				}
 			}
 			Map<String, Set<DescriptionPojo>> slotValuesMap = createSlotConceptPojoMap(branchPath, slotNames, slotRowValues, additionalSlots.size());
@@ -123,6 +100,54 @@ public class TemplateConceptCreateService {
 			generatedConcepts.get(i).setDescriptions(transformed);
 		}
 		return generatedConcepts;
+	}
+	
+	private List<ConceptOutline> constructConceptOutlines(ConceptTemplate template, List<List<String>> slotColumnValues, List<String> slotNames) {
+		// convert columnValues into values by row
+		List<List<String>> slotValuesByRow = new ArrayList<List<String>>();
+		for (int i =0; i < slotColumnValues.get(0).size(); i++) {
+			List<String> values = new ArrayList<>();
+			for (int k=0; k < slotColumnValues.size(); k++) {
+				values.add(slotColumnValues.get(k).get(i));
+			}
+			slotValuesByRow.add(values);
+		}
+		List<ConceptOutline> generatedConcepts = new ArrayList<>();
+		IntStream.range(0, slotValuesByRow.size()).forEach(i -> generatedConcepts.add(constructConceptOutline(template, slotValuesByRow.get(i), slotNames)));
+		return generatedConcepts;
+	}
+	
+	private ConceptOutline constructConceptOutline(ConceptTemplate template, List<String> slotValues, List<String> slotNames) {
+		ConceptOutline conceptOutline = new ConceptOutline();
+		
+		for (Axiom axiom : template.getConceptOutline().getClassAxioms()) {
+			List<Relationship> relationships = new ArrayList<>();
+			for (Relationship relationship : axiom.getRelationships()) {
+				SimpleSlot targetSlot = relationship.getTargetSlot();
+				if (targetSlot == null) {
+					relationships.add(relationship.clone());
+				}
+				if (targetSlot != null) {
+					String slotName = targetSlot.getSlotName();
+					int valueIndex = -1;
+					if (slotName != null) {
+						valueIndex = slotNames.indexOf(slotName);
+					} else {
+						valueIndex = slotNames.indexOf(targetSlot.getSlotReference());
+					}
+					String slotValue = valueIndex == -1 ? "" : slotValues.get(valueIndex);
+					if (slotValue.trim().isEmpty() && TemplateUtil.isOptional(relationship)) {
+						// skip as it is optional 
+					} else {
+						relationships.add(relationship.clone().setTarget(new ConceptMini(slotValue)));
+					}
+				}
+			}
+			Axiom generated = new Axiom();
+			generated.setRelationships(relationships);
+			conceptOutline.addAxiom(generated);
+		}
+		return conceptOutline;
 	}
 
 	private Map<String, Set<DescriptionPojo>> createSlotConceptPojoMap(String branchPath, List<String> slotNames, List<String> slotValues, int additionalSlots) throws ServiceException {
@@ -173,7 +198,7 @@ public class TemplateConceptCreateService {
 				slotIndex++;
 				Set<String> slotValuesToValidate = slotInputValues.get(slotIndex)
 						.stream()
-						.filter(v -> !EMPTY.equals(v))
+						.filter(v -> !v.trim().isEmpty())
 						.collect(Collectors.toSet());
 				Set<String> invalidSlotValues = new HashSet<>(slotValuesToValidate);
 				String slotEcl = simpleSlot.getAllowableRangeECL();
@@ -210,7 +235,8 @@ public class TemplateConceptCreateService {
 	private List<List<String>> getSlotInputValues(InputStream inputStream, ConceptTemplate template) throws IOException {
 		List<List<String>> columnValues = new ArrayList<>();
 		List<String> errorMessages = new ArrayList<>();
-		List<SimpleSlot> slotsRequiringInput = TemplateUtil.getSlotsRequiringInput(template.getConceptOutline().getRelationships());
+		List<Relationship> relationships = template.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
+		List<SimpleSlot> slotsRequiringInput = TemplateUtil.getSlotsRequiringInput(relationships);
 		List<String> additionalSlots = template.getAdditionalSlots();
 		int expectedColumnCount = slotsRequiringInput.size() + additionalSlots.size();
 		// Read input file
@@ -228,7 +254,7 @@ public class TemplateConceptCreateService {
 				if (line.trim().isEmpty()) {
 					continue;
 				}
-				String[] values = line.split("\\t");
+				String[] values = line.split("\\t", -1);
 				if (values.length != expectedColumnCount) {
 					errorMessages.add(String.format("Line %s has %s columns, expecting %s", lineNum, values.length, expectedColumnCount));
 				}
@@ -257,24 +283,13 @@ public class TemplateConceptCreateService {
 	
 	private List<Integer> getOptionalFields(String header) {
 		List<Integer> result = new ArrayList<>();
-		String[] columns = header.split("\\t");
+		String[] columns = header.split("\\t", -1);
 		for (int i=0; i < columns.length; i++) {
 			if (columns[i].endsWith(TemplateService.OPTIONAL)) {
 				result.add(i);
 			}
 		}
 		return result;
-	}
-
-	private void addRelationshipToAllConcepts(Relationship relationship, int slotColumn, List<List<String>> columnValues, List<ConceptOutline> generatedConcepts) {
-		List<String> values = columnValues.get(slotColumn);
-		boolean isOptional = TemplateUtil.isOptional(relationship);
-		for (int i = 0; i < values.size(); i++) {
-			if (isOptional && EMPTY.equals(values.get(i).trim())) {
-				continue;
-			}
-			generatedConcepts.get(i).addRelationship(relationship.clone().setTarget(new ConceptMini(values.get(i))));
-		}
 	}
 
 	private void throwAnyInputErrors(List<String> errorMessages) {

@@ -3,9 +3,9 @@ package org.ihtsdo.otf.authoringtemplate.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
@@ -25,9 +25,9 @@ import java.util.Set;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -104,6 +104,20 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		}
 	}
 
+	
+	@Test
+	public void testGenerateConceptsWithOptionalAttribute() throws IOException, ServiceException {
+		try {
+			createCtGuidedProcedureOfX();
+			conceptCreateService.generateConcepts("MAIN/test", "CT Guided Procedure of X", getClass().getResourceAsStream("2-col-with-optional-conceptId.txt"));
+			fail("Should have thrown exception.");
+		} catch (InputError e) {
+			assertEquals("Value '123' on line 2 column 1 is not a valid concept identifier.\n" +
+					"Value '234' on line 3 column 1 is not a valid concept identifier.\n" + 
+					"Value '345' on line 4 column 1 is not a valid concept identifier.", e.getMessage());
+		}
+	}
+	
 	@Test
 	public void testGenerateConcepts_conceptNotWithinRange() throws IOException, ServiceException {
 		try {
@@ -131,24 +145,27 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 
 		ConceptOutline concept = conceptOutlines.get(0);
 		assertEquals(2, concept.getDescriptions().size());
-		assertEquals(6, concept.getRelationships().size());
-		assertEquals("12656001", concept.getRelationships().get(2).getTarget().getConceptId());
-		assertEquals("419988009", concept.getRelationships().get(4).getTarget().getConceptId());
-		assertEquals("12656001", concept.getRelationships().get(5).getTarget().getConceptId());
+		List<Relationship> relationships = getRelationships(concept);
+		assertEquals(6, relationships.size());
+		assertEquals("12656001", relationships.get(2).getTarget().getConceptId());
+		assertEquals("419988009", relationships.get(4).getTarget().getConceptId());
+		assertEquals("12656001", relationships.get(5).getTarget().getConceptId());
 
 		concept = conceptOutlines.get(1);
 		assertEquals(2, concept.getDescriptions().size());
-		assertEquals(6, concept.getRelationships().size());
-		assertEquals("63303001", concept.getRelationships().get(2).getTarget().getConceptId());
-		assertEquals("415186003", concept.getRelationships().get(4).getTarget().getConceptId());
-		assertEquals("63303001", concept.getRelationships().get(5).getTarget().getConceptId());
+		relationships = getRelationships(concept);
+		assertEquals(6, relationships.size());
+		assertEquals("63303001", relationships.get(2).getTarget().getConceptId());
+		assertEquals("415186003", relationships.get(4).getTarget().getConceptId());
+		assertEquals("63303001", relationships.get(5).getTarget().getConceptId());
 
 		concept = conceptOutlines.get(2);
+		relationships = getRelationships(concept);
 		assertEquals(2, concept.getDescriptions().size());
-		assertEquals(6, concept.getRelationships().size());
-		assertEquals("63124001", concept.getRelationships().get(2).getTarget().getConceptId());
-		assertEquals("426865009", concept.getRelationships().get(4).getTarget().getConceptId());
-		assertEquals("63124001", concept.getRelationships().get(5).getTarget().getConceptId());
+		assertEquals(6, relationships.size());
+		assertEquals("63124001", relationships.get(2).getTarget().getConceptId());
+		assertEquals("426865009", relationships.get(4).getTarget().getConceptId());
+		assertEquals("63124001", relationships.get(5).getTarget().getConceptId());
 	}
 	
 	@Test
@@ -177,7 +194,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		String lines =
 				header + "\n" + // Header
 				"\t118598001\t7389001\t123037004\t123037004\t30766002\tLOINC FSN 1\tID 1\n" + // Line 1
-				"123037004\t118598001\t7389001\t123037004\t123037004\t\tLOINC FSN 2\tID 2\n"; // Line 2
+				"123037004\t118598001\t7389001\t123037004\t123037004\t\tLOINC FSN 2\tID 2\n"+ // Line 2
+				" \t118598001\t7389001\t123037004\t123037004\t \tLOINC FSN 2\tID 2\n"; // Line 3
 		mockEclQueryResponse(
 				Sets.newHashSet("123037004"),
 				Sets.newHashSet("118598001"),
@@ -187,17 +205,20 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 				Sets.newHashSet("30766002"));
 		mockSearchConceptsResponse();
 		List<ConceptOutline> generatedConcepts = conceptCreateService.generateConcepts("MAIN", templateName, new ByteArrayInputStream(lines.getBytes()));
-		assertEquals(2, generatedConcepts.size());
+		assertEquals(3, generatedConcepts.size());
 		ConceptOutline c1 = generatedConcepts.get(0);
+		List<Relationship> relationships = getRelationships(c1);
 
-		assertEquals(6, c1.getRelationships().size());
+		assertEquals(6, relationships.size());
 		int relationship = 0;
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
-		assertEquals(0, c1.getRelationships().get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		assertEquals(0, relationships.get(relationship++).getGroupId());
+		
+		assertOptionalAttribute(relationships, "370132008", true);
 
 		assertEquals("LOINC FSN 1 (procedure)", c1.getDescriptions().get(0).getTerm());
 		assertEquals("LOINC Unique ID:ID 1", c1.getDescriptions().get(1).getTerm());
@@ -206,9 +227,10 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		assertEquals("LOINC FSN 2 (procedure)", generatedConcepts.get(1).getDescriptions().get(0).getTerm());
 		assertEquals("LOINC Unique ID:ID 2", generatedConcepts.get(1).getDescriptions().get(1).getTerm());
 		assertEquals("LOINC FSN 2", generatedConcepts.get(1).getDescriptions().get(2).getTerm());
+		
 		//check optional attribute ScaleType(370132008);
-		assertOptionalAttribute(c1.getRelationships(), "370132008", true);
-		assertOptionalAttribute(generatedConcepts.get(1).getRelationships(), "370132008", false);
+		relationships = getRelationships(generatedConcepts.get(1));
+		assertOptionalAttribute(relationships, "370132008", false);
 	}
 
 	private void assertOptionalAttribute(List<Relationship> relationships, String typeId, boolean mustHave) {
@@ -231,7 +253,6 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 	
-	@SuppressWarnings("unchecked")
 	private void mockSearchConceptsResponse() {
 		expectGetTerminologyServerClient();
 		OngoingStubbing<List<ConceptPojo>> when = null;

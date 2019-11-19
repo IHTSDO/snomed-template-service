@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,9 +14,12 @@ import javax.annotation.PostConstruct;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.authoringtemplate.domain.Axiom;
 import org.snomed.authoringtemplate.domain.ConceptMini;
+import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Concepts;
+import org.snomed.authoringtemplate.domain.DefinitionStatus;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.snomed.authoringtemplate.domain.Relationship;
@@ -92,21 +96,35 @@ public class TemplateStore {
 
 	private void stripTemporalParts(ConceptTemplate conceptTemplate) {
 		conceptTemplate.setFocusConcept(null);
-		conceptTemplate.getConceptOutline().getRelationships().clear();
+		conceptTemplate.getConceptOutline().getClassAxioms().clear();
 		conceptTemplate.getConceptOutline().getDescriptions().forEach(d -> d.setInitialTerm(null));
 	}
 
 	private void generateTemporalParts(ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		final LogicalTemplate logicalTemplate = logicalParserService.parseTemplate(conceptTemplate.getLogicalTemplate());
 		conceptTemplate.setFocusConcept(logicalTemplate.getFocusConcepts().isEmpty() ? null : logicalTemplate.getFocusConcepts().get(0));
-		updateRelationships(conceptTemplate.getConceptOutline().getRelationships(), logicalTemplate);
+		updateConceptOutlineWithClassAxioms(conceptTemplate.getConceptOutline(), logicalTemplate);
 		TemplateUtil.validateTermSlots(conceptTemplate, true);
 		updateDescriptions(conceptTemplate.getLexicalTemplates(), conceptTemplate.getConceptOutline().getDescriptions(), conceptTemplate.getAdditionalSlots());
 	}
 
-	private void updateRelationships(List<Relationship> relationships, LogicalTemplate logicalTemplate) {
-		relationships.clear();
+	private void updateConceptOutlineWithClassAxioms(ConceptOutline conceptOutline, LogicalTemplate logicalTemplate) {
+		conceptOutline.getClassAxioms().clear();
+		
+		Axiom axiom = new Axiom();
+		axiom.setRelationships(constructRelationships(logicalTemplate));
+		axiom.setModuleId(conceptOutline.getModuleId());
+		
+		String definitionStatus = Concepts.PRIMITIVE;
+		if (DefinitionStatus.FULLY_DEFINED == conceptOutline.getDefinitionStatus()) {
+			definitionStatus = Concepts.FULLY_DEFINED;
+		}
+		axiom.setDefinitionStatusId(definitionStatus);
+		conceptOutline.getClassAxioms().add(axiom);
+	}
 
+	private List<Relationship> constructRelationships(LogicalTemplate logicalTemplate) {
+		List<Relationship> relationships = new ArrayList<Relationship>();
 		// Add Parents
 		for (String focusConcept : logicalTemplate.getFocusConcepts()) {
 			final Relationship relationship = new Relationship();
@@ -137,6 +155,7 @@ public class TemplateStore {
 				relationships.add(relationship);
 			}
 		}
+		return relationships;
 	}
 
 	private Relationship setRelationshipTypeAndTarget(Attribute attribute, Relationship relationship) {

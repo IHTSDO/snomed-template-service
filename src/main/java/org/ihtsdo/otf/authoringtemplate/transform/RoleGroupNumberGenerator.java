@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 
 public class RoleGroupNumberGenerator {
 	

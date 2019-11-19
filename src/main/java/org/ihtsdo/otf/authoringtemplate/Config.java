@@ -7,22 +7,22 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.firewall.DefaultHttpFirewall;
+import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -32,10 +32,12 @@ import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-@SpringBootApplication
-@EnableAsync
-public class Config {
+@Configuration
+@EnableSwagger2
+@EnableWebSecurity
+public class Config extends WebSecurityConfigurerAdapter {
 	
 	@Bean
 	public ObjectMapper getGeneralMapper() {
@@ -67,6 +69,7 @@ public class Config {
 		return new LogicalTemplateParserService();
 	}
 	
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Bean
 	public FilterRegistrationBean getUrlRewriteFilter() {
 		// Encode branch paths in uri to allow request mapping to work
@@ -74,6 +77,15 @@ public class Config {
 				"/(.*)/templates",
 				"/(.*)/templates/.*"
 		));
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@Bean
+	public FilterRegistrationBean getSingleSignOnFilter() {
+		FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean<>(
+				new RequestHeaderAuthenticationDecorator());
+		filterRegistrationBean.setOrder(1);
+		return filterRegistrationBean;
 	}
 
 	// Swagger Config
@@ -87,22 +99,29 @@ public class Config {
 	}
 
 	// Security
-	@Configuration
-	@EnableWebSecurity
-	@Order(1)
-	public static class ApiWebSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
-		protected void configure(HttpSecurity http) throws Exception {
-			http.authorizeRequests()
-					.antMatchers("/swagger-ui.html",
-							"/swagger-resources/**",
-							"/v2/api-docs",
-							"/webjars/springfox-swagger-ui/**").permitAll()
-					.anyRequest().authenticated()
-					.and().httpBasic();
-			http.csrf().disable();
-			http.addFilterAfter(new RequestHeaderAuthenticationDecorator(), BasicAuthenticationFilter.class);
-		}
-
+	@Override
+	public void configure(HttpSecurity http) throws Exception {
+		http.authorizeRequests()
+				.antMatchers("/swagger-ui.html",
+						"/swagger-resources/**",
+						"/v2/api-docs",
+						"/webjars/springfox-swagger-ui/**").permitAll()
+				.anyRequest().authenticated()
+				.and().httpBasic();
+		http.csrf().disable();
+		http.addFilterAfter(new RequestHeaderAuthenticationDecorator(), BasicAuthenticationFilter.class);
 	}
-
+	
+	@Override
+	public void configure(WebSecurity web) {
+		web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
+	}
+	
+	
+	@Bean
+	public HttpFirewall allowUrlEncodedSlashHttpFirewall() {
+		DefaultHttpFirewall firewall = new DefaultHttpFirewall();
+		firewall.setAllowUrlEncodedSlash(true);
+		return firewall;
+	}
 }

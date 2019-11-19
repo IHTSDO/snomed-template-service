@@ -1,0 +1,464 @@
+{
+  "conceptId": "402306009",
+  "effectiveTime": "20030731",
+  "released": true,
+  "active": true,
+  "moduleId": "900000000000207008",
+  "definitionStatus": "FULLY_DEFINED",
+  "descriptions": [
+    {
+      "descriptionId": "3754230018",
+      "active": true,
+      "effectiveTime": "20190131",
+      "released": true,
+      "term": "Allergy to aluminium (finding)",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "FSN",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "descriptionId": "1770230012",
+      "active": false,
+      "effectiveTime": "20080131",
+      "released": true,
+      "term": "Allergy to aluminium (disorder)",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "FSN",
+      "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+      "acceptabilityMap": {}
+    },
+    {
+      "descriptionId": "1774888010",
+      "active": true,
+      "effectiveTime": "20170731",
+      "released": true,
+      "term": "Allergy to aluminum",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED"
+      }
+    },
+    {
+      "descriptionId": "1784149019",
+      "active": true,
+      "effectiveTime": "20170731",
+      "released": true,
+      "term": "Aluminum allergy",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "ACCEPTABLE"
+      }
+    },
+    {
+      "descriptionId": "1783763012",
+      "active": true,
+      "effectiveTime": "20170731",
+      "released": true,
+      "term": "Aluminium allergy",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "ACCEPTABLE"
+      }
+    },
+    {
+      "descriptionId": "1773602015",
+      "active": true,
+      "effectiveTime": "20170731",
+      "released": true,
+      "term": "Allergy to aluminium",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "descriptionId": "2688318010",
+      "active": false,
+      "effectiveTime": "20190131",
+      "released": true,
+      "term": "Allergy to aluminum (disorder)",
+      "conceptId": "402306009",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "FSN",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {},
+      "inactivationIndicator": "NONCONFORMANCE_TO_EDITORIAL_POLICY"
+    }
+  ],
+  "classAxioms": [
+    {
+      "axiomId": "fe01c193-eb94-4dfa-8406-97efa5430214",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "definitionStatusId": "900000000000073002",
+      "relationships": [
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "402306009",
+          "target": {
+            "conceptId": "472964009",
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 1,
+          "type": {
+            "conceptId": "719722006",
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "402306009",
+          "target": {
+            "conceptId": "420134006",
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 0,
+          "type": {
+            "conceptId": "116680003",
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "402306009",
+          "target": {
+            "conceptId": "12503006",
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 1,
+          "type": {
+            "conceptId": "246075003",
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        }
+      ],
+      "effectiveTime": "20190509"
+    }
+  ],
+  "gciAxioms": [],
+  "relationships": [
+    {
+      "relationshipId": "4254126020",
+      "active": false,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "300915004",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "116680003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4418648020",
+      "active": false,
+      "effectiveTime": "20130731",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "12503006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "246075003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4704111021",
+      "active": false,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "472964009",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "370135005",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "10716050024",
+      "active": true,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "419199007",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "116680003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4704112025",
+      "active": true,
+      "effectiveTime": "20130731",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "12503006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "246075003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "2286933021",
+      "active": false,
+      "effectiveTime": "20050131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "116003000",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "363698007",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "2286932027",
+      "active": false,
+      "effectiveTime": "20130731",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "12503006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "246075003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "2754998027",
+      "active": false,
+      "effectiveTime": "20060131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "106182000",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "363705008",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "11169256024",
+      "active": false,
+      "effectiveTime": "20190509",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "472964009",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "719722006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "11140010021",
+      "active": true,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "472964009",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "719722006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "11169257026",
+      "active": false,
+      "effectiveTime": "20190509",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "420134006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "116680003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4708395029",
+      "active": false,
+      "effectiveTime": "20190509",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "12503006",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "246075003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4704113024",
+      "active": false,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "609327009",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "255234002",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "2248340021",
+      "active": false,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "300915004",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "groupId": 0,
+      "type": {
+        "conceptId": "116680003",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "INFERRED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    },
+    {
+      "relationshipId": "4707901021",
+      "active": false,
+      "effectiveTime": "20190131",
+      "released": true,
+      "moduleId": "900000000000207008",
+      "sourceId": "402306009",
+      "target": {
+        "conceptId": "609327009",
+        "definitionStatus": "FULLY_DEFINED"
+      },
+      "groupId": 1,
+      "type": {
+        "conceptId": "255234002",
+        "definitionStatus": "PRIMITIVE"
+      },
+      "characteristicType": "STATED_RELATIONSHIP",
+      "modifier": "EXISTENTIAL"
+    }
+  ]
+}

@@ -1,58 +1,38 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 import org.assertj.core.util.Lists;
-import org.ihtsdo.otf.authoringtemplate.Config;
-import org.ihtsdo.otf.authoringtemplate.TestConfig;
+import org.ihtsdo.otf.authoringtemplate.AbstractTest;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.junit.After;
-import org.junit.Before;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
+import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.util.FileSystemUtils;
+
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {Config.class, TestConfig.class})
-public abstract class AbstractServiceTest {
+public abstract class AbstractServiceTest extends AbstractTest {
 
 	@Autowired
 	protected TemplateService templateService;
-
-	@Autowired
-	protected TemplateStore templateStore;
 
 	@MockBean
 	protected SnowOwlRestClientFactory clientFactory;
 
 	@MockBean
 	protected SnowOwlRestClient terminologyServerClient;
-	
-	@Before
-	public void before() {
-		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("", ""));
-		templateStore.clear();
-	}
-
-	@After
-	public void after() {
-		// Recreate empty template store
-		FileSystemUtils.deleteRecursively(templateStore.getJsonStore().getStoreDirectory());
-		templateStore.getJsonStore().getStoreDirectory().mkdirs();
-	}
 	
 	public void createCtGuidedProcedureOfX() throws IOException, ServiceException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
@@ -69,5 +49,12 @@ public abstract class AbstractServiceTest {
 		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
 		templateRequest.setConceptOutline(new ConceptOutline().addDescription(fsn).addDescription(pt));
 		templateService.create("CT Guided Procedure of X", templateRequest);
+	}
+	
+	public List<Relationship> getRelationships(ConceptOutline conceptOutline) {
+		if (conceptOutline.getClassAxioms() == null) {
+			return Collections.emptyList();
+		}
+		return conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
 	}
 }

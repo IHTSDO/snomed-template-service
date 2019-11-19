@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,10 +12,11 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptMiniPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.CaseSignificance;
@@ -121,13 +123,15 @@ public class TemplateUtil {
 	
 	public static Map<String, ConceptMiniPojo> getAttributeSlotValueMap(Map<String, Set<String>> attributeSlots, ConceptPojo conceptPojo) {
 		Map<String, ConceptMiniPojo> result = new HashMap<>();
-		for (RelationshipPojo pojo : conceptPojo.getRelationships()) {
-			if (!pojo.isActive()) {
-				continue;
-			}
-			if (attributeSlots.keySet().contains(pojo.getType().getConceptId())) {
-				for (String slot : attributeSlots.get(pojo.getType().getConceptId())) {
-					result.putIfAbsent(slot, pojo.getTarget());
+		for (AxiomPojo axiom : conceptPojo.getClassAxioms()) {
+			for (RelationshipPojo pojo : axiom.getRelationships()) {
+				if (!pojo.isActive()) {
+					continue;
+				}
+				if (attributeSlots.keySet().contains(pojo.getType().getConceptId())) {
+					for (String slot : attributeSlots.get(pojo.getType().getConceptId())) {
+						result.putIfAbsent(slot, pojo.getTarget());
+					}
 				}
 			}
 		}
@@ -164,7 +168,7 @@ public class TemplateUtil {
 		return attributeSlots;
 	}
 	
-	public static List<SimpleSlot> getSlotsRequiringInput(List<Relationship> relationships) {
+	public static List<SimpleSlot> getSlotsRequiringInput(Collection<Relationship> relationships) {
 		return relationships.stream().filter(r -> isSlotRequiringInput(r.getTargetSlot()))
 				.map(Relationship::getTargetSlot).collect(Collectors.toList());
 	}
@@ -214,8 +218,8 @@ public class TemplateUtil {
 			throw new ServiceException(String.format("Template %s has term slot %s that is not defined in the lexical template",
 					conceptTemplate.getName(), slotsNotFound));
 		}
-		
-		Set<String> logicalSlots = getSlotsRequiringInput(conceptTemplate.getConceptOutline().getRelationships())
+		List<Relationship> relationships = conceptTemplate.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
+		Set<String> logicalSlots = getSlotsRequiringInput(relationships)
 				.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
 		
 		Set<String> logicalSlotsReferencedInLexical = new HashSet<>(lexicalTermNameSlotMap.values());

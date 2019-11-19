@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 import org.assertj.core.util.Arrays;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,7 +117,14 @@ public class TemplateService {
 		ConceptTemplate template = loadOrThrow(templateName);
 		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, Constants.UTF_8))) {
 			String header = "";
-			for (Relationship relationship : template.getConceptOutline().getRelationships()) {
+			List<Relationship> relationships = template.getConceptOutline()
+					.getClassAxioms()
+					.stream()
+					.findFirst()
+					.get()
+					.getRelationships();
+			
+			for (Relationship relationship : relationships) {
 				SimpleSlot targetSlot = relationship.getTargetSlot();
 				if (isSlotRequiringInput(targetSlot)) {
 					String slotName = targetSlot.getSlotName();

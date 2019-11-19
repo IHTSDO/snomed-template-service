@@ -1,7 +1,8 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,7 +14,7 @@ import java.util.List;
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.OngoingStubbing;
@@ -52,11 +53,13 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		assertEquals("[entire]", lexicalTemplates.get(0).getRemoveParts().toString());
 
 		final ConceptOutline conceptOutline = template.getConceptOutline();
+		assertNotNull(conceptOutline.getClassAxioms());
+		assertEquals(1, conceptOutline.getClassAxioms().size());
 
 		assertEquals(DefinitionStatus.FULLY_DEFINED, conceptOutline.getDefinitionStatus());
 		assertEquals(org.ihtsdo.otf.constants.Concepts.MODULE, conceptOutline.getModuleId());
 
-		final List<Relationship> relationships = conceptOutline.getRelationships();
+		final List<Relationship> relationships = getRelationships(conceptOutline);
 		assertEquals(3, relationships.size());
 		final Relationship relationship = relationships.get(0);
 		assertEquals(Concepts.ISA, relationship.getType().getConceptId());
@@ -79,6 +82,7 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		templateRequest1.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
 		templateRequest1.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX$")));
 		final String name = templateService.create("one", templateRequest1);
+		assertEquals("one", name);
 
 		final ConceptTemplate templateRequest2 = new ConceptTemplate();
 		templateRequest2.setLogicalTemplate("71388002 |Procedure|:\n" +
@@ -92,18 +96,18 @@ public class TemplateServiceTest extends AbstractServiceTest {
 
 		final ConceptTemplate updated = templateService.update("one", templateRequest2);
 
-		final List<Relationship> rel = updated.getConceptOutline().getRelationships();
-		assertEquals(3, rel.size());
+		final List<Relationship> rels = getRelationships(updated.getConceptOutline());
+		assertEquals(3, rels.size());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=0, type=ConceptMini{conceptId='116680003'}, " +
 				"target=ConceptMini{conceptId='71388002'}, targetSlot=null, cardinalityMin='1', cardinalityMax='*'}",
-				rel.get(0).toString());
+				rels.get(0).toString());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=1, type=ConceptMini{conceptId='405813007'}, " +
 				"target=null, targetSlot=SimpleSlot{slotName='proc', " +
 				"allowableRangeECL='<< 442083009 |Anatomical or acquired body structure|', slotReference='null'}, cardinalityMin='1', cardinalityMax='1'}",
-				rel.get(1).toString());
+				rels.get(1).toString());
 		assertEquals("Relationship{characteristicType='STATED_RELATIONSHIP', groupId=1, type=ConceptMini{conceptId='363703001'}, " +
 				"target=ConceptMini{conceptId='429892002'}, targetSlot=null, cardinalityMin='1', cardinalityMax='*'}",
-				rel.get(2).toString());
+				rels.get(2).toString());
 
 		final List<Description> desc = updated.getConceptOutline().getDescriptions();
 		assertEquals(1, desc.size());
@@ -143,6 +147,44 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		templateService.writeEmptyInputFile("", "CT Guided Procedure of X", stream);
 		assertEquals("procSite\taction\n", new String(stream.toByteArray()));
+	}
+	
+	
+	@Test
+	public void testCreateTemplateWithSelfGroupedAttribute() throws Exception {
+		String logicTemplate = "64572001 |Disease (disorder)|:\n" + 
+		"	[[~0..1]] {\n" + 
+		"		263502005 |Clinical course (attribute)| = [[+id(<288524001 |Courses (qualifier value)|) @course]]\n" + 
+		"	}, \n" + 
+		"	[[~1..1]] {\n" + 
+		"		[[~1..1]] 370135005 |Pathological process (attribute)| = 441862004 |Infectious process (qualifier value)|,\n" + 
+		"		[[~0..1]] 363698007 |Finding site (attribute)| = [[+id(<<442083009 |Anatomical or acquired body structure (body structure)|) @bodyStructure]],\n" + 
+		"		[[~0..1]] 116676008 |Associated morphology (attribute)| = [[+id(<<49755003 |Morphologically abnormal structure (morphologic abnormality)|) @morphology]],\n" + 
+		"		[[~1..1]] 246075003 |Causative agent (attribute)| = [[+id(<<409822003 |Superkingdom Bacteria (organism)|) @bacteria]],\n" + 
+		"		[[~0..1]] 246454002 |Occurrence (attribute)| = [[+id(<282032007 |Periods of life (qualifier value)|) @periodsOfLife]]\n" + 
+		"	}\n";
+		ConceptTemplate templateRequest = new ConceptTemplate();
+		templateRequest.setLogicalTemplate(logicTemplate);
+		templateRequest.addLexicalTemplate(new LexicalTemplate("course", "[course]", "course", null));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("periodsOfLife", "[periodsOfLife]", "periodsOfLife",null));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("morphology", "[morphology]", "morphology", null));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("bodyStructure", "[bodyStructure]", "bodyStructure", Lists.newArrayList("entire")));
+		templateRequest.addLexicalTemplate(new LexicalTemplate("bacteria", "[bacteria]", "bacteria", null));
+		
+		templateRequest.setConceptOutline(new ConceptOutline(DefinitionStatus.PRIMITIVE)
+				.addDescription(new Description("$course$ $periodsOfLife$ $morphology$ of $bodyStructure$ caused by $bacteria$ (disorder)"))
+				.setModuleId(org.ihtsdo.otf.constants.Concepts.MODULE));
+
+		String name = templateService.create("TemplateWithSelfGroupTest", templateRequest);
+		ConceptTemplate template = templateService.load(name);
+		List<Relationship> relationships = getRelationships(template.getConceptOutline());
+		assertEquals(7, relationships.size());
+		assertEquals(0, relationships.get(0).getGroupId());
+		
+		assertEquals(1, relationships.get(1).getGroupId());
+		
+		assertEquals(2, relationships.get(2).getGroupId());
+		
 	}
 	
 	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {

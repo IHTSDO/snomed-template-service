@@ -17,9 +17,9 @@ import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
 import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateConceptTransformService;
 import org.ihtsdo.otf.authoringtemplate.transform.service.TemplateTransformationResultService;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -82,7 +82,7 @@ public class TemplateController {
 	public Set<ConceptTemplate> listTemplates(@PathVariable String branchPath,
 											  @RequestParam(required = false) String[] descendantOf,
 											  @RequestParam(required = false) String[] ancestorOf) throws IOException {
-		return templateService.listAll(BranchPathUriUtil.parseBranchPath(branchPath),
+		return templateService.listAll(BranchPathUriUtil.decodePath(branchPath),
 				descendantOf, ancestorOf);
 	}
 
@@ -102,7 +102,7 @@ public class TemplateController {
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
 
 		response.setContentType("text/tab-separated-values; charset=utf-8");
-		templateService.writeEmptyInputFile(BranchPathUriUtil.parseBranchPath(branchPath), templateName, response.getOutputStream());
+		templateService.writeEmptyInputFile(BranchPathUriUtil.decodePath(branchPath), templateName, response.getOutputStream());
 	}
 
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "multipart/form-data")
@@ -110,7 +110,7 @@ public class TemplateController {
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
 												 @PathVariable String templateName,
 												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
-		return createService.generateConcepts(BranchPathUriUtil.parseBranchPath(branchPath), templateName, tsvFile.getInputStream());
+		return createService.generateConcepts(BranchPathUriUtil.decodePath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
 	@RequestMapping(value = "/templates/reload", method = RequestMethod.POST)
@@ -125,20 +125,18 @@ public class TemplateController {
 									  @RequestParam Boolean logicalMatch,
 									  @RequestParam(required=false) Boolean lexicalMatch,
 									  @RequestParam(defaultValue="true") boolean stated) throws IOException, ServiceException {
-		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.parseBranchPath(branchPath), logicalMatch, lexicalMatch, stated);
+		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.decodePath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 	
 	
 	
 	@SuppressWarnings("rawtypes")
-	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform", method = RequestMethod.POST)
+	@RequestMapping(value = "/{branchPath}/templates/transform", method = RequestMethod.POST)
 	public ResponseEntity createTemplateTransformation(@PathVariable String branchPath,
-									@PathVariable String destinationTemplate,
 									@RequestBody TemplateTransformRequest transformRequest,
 									UriComponentsBuilder uriComponentsBuilder
 									) throws ServiceException {
-		TemplateTransformation transformation = transformService.createTemplateTransformation(
-				BranchPathUriUtil.parseBranchPath(branchPath), destinationTemplate, transformRequest);
+		TemplateTransformation transformation = transformService.createTemplateTransformation(BranchPathUriUtil.decodePath(branchPath), transformRequest);
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
 		transformService.transformAsynchnously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
@@ -147,19 +145,26 @@ public class TemplateController {
 				.buildAndExpand(transformation.getTransformationId()).toUri()).build();
 	}
 	
-	@RequestMapping(value = "/{branchPath}/templates/{destinationTemplate}/transform/concept", method = RequestMethod.POST)
+	@RequestMapping(value = "/{branchPath}/templates/transform/concept", method = RequestMethod.POST)
 	@ResponseBody
 	public ConceptPojo transformConceptToTemplate(@PathVariable String branchPath,
-									@PathVariable String destinationTemplate,
+									@RequestParam String destinationTemplate,
 									@RequestBody ConceptPojo conceptToTransform) throws ServiceException {
-		if (conceptToTransform == null 
-				|| conceptToTransform.getDescriptions() == null 
-				|| conceptToTransform.getRelationships() == null ) {
-			throw new IllegalArgumentException("Concept to be transformed must not be null and must have descriptions and relationships but got " + conceptToTransform);
+		if (conceptToTransform == null) {
+			throw new IllegalArgumentException("Concept to be transformed must not be null " + conceptToTransform);
+		}
+		
+		if (conceptToTransform.getDescriptions() == null) {
+			throw new IllegalArgumentException("Concept to be transformed must not have null descriptions " + conceptToTransform);
+		}
+		
+		if (conceptToTransform.getClassAxioms() == null) {
+			throw new IllegalArgumentException("The class axioms to be transformed must not be null " + conceptToTransform);
 		}
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
-		return transformService.transformConcept(BranchPathUriUtil.parseBranchPath(branchPath),
-				destinationTemplate, conceptToTransform, restClient);
+		TemplateTransformRequest request = new TemplateTransformRequest();
+		request.setDestinationTemplate(destinationTemplate);
+		return transformService.transformConcept(BranchPathUriUtil.decodePath(branchPath), request, conceptToTransform, restClient);
 	}
 	
 	@RequestMapping(value = "/templates/transform/{transformationId}", method = RequestMethod.GET)

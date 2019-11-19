@@ -1,0 +1,217 @@
+{
+  "effectiveTime": "20190131",
+  "moduleId": "900000000000207008",
+  "active": true,
+  "released": true,
+  "conceptId": "402306009",
+  "fsn": "Allergy to aluminum (disorder)",
+  "definitionStatus": "FULLY_DEFINED",
+  "preferredSynonym": "Allergy to aluminum",
+  "descriptions": [
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1774888010",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Allergy to aluminum",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1783763012",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Aluminium allergy",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "ACCEPTABLE"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1784149019",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Aluminum allergy",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "ACCEPTABLE"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "1773602015",
+      "conceptId": "402306009",
+      "type": "SYNONYM",
+      "lang": "en",
+      "term": "Allergy to aluminium",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20170731",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "descriptionId": "2688318010",
+      "conceptId": "402306009",
+      "type": "FSN",
+      "lang": "en",
+      "term": "Allergy to aluminum (disorder)",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+      }
+    },
+    {
+      "effectiveTime": "20080131",
+      "moduleId": "900000000000207008",
+      "active": false,
+      "released": true,
+      "descriptionId": "1770230012",
+      "conceptId": "402306009",
+      "type": "FSN",
+      "lang": "en",
+      "term": "Allergy to aluminium (disorder)",
+      "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+      "acceptabilityMap": {}
+    }
+  ],
+  "classAxioms": [
+    {
+      "axiomId": "fe01c193-eb94-4dfa-8406-97efa5430214",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "definitionStatusId": "900000000000073002",
+      "effectiveTime": "20190131",
+      "relationships": [
+        {
+          "moduleId": "900000000000207008",
+          "active": true,
+          "type": {
+            "conceptId": "246075003",
+            "fsn": {
+              "term": "Causative agent (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Causative agent",
+              "lang": "en"
+            }
+          },
+          "target": {
+            "effectiveTime": "20020131",
+            "moduleId": "900000000000207008",
+            "active": true,
+            "released": true,
+            "conceptId": "12503006",
+            "definitionStatus": "PRIMITIVE",
+            "fsn": {
+              "term": "Aluminium (substance)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Aluminium",
+              "lang": "en"
+            }
+          },
+          "sourceId": "402306009",
+          "groupId": 1,
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "moduleId": "900000000000207008",
+          "type": {
+            "conceptId": "116680003",
+            "fsn": {
+              "term": "Is a (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Is a",
+              "lang": "en"
+            }
+          },
+          "target": {
+            "effectiveTime": "20030731",
+            "moduleId": "900000000000207008",
+            "active": true,
+            "released": true,
+            "conceptId": "300915004",
+            "definitionStatus": "FULLY_DEFINED",
+            "fsn": {
+              "term": "Metal allergy (disorder)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Metal allergy",
+              "lang": "en"
+            }
+          },
+          "sourceId": "402306009",
+          "groupId": 0,
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "moduleId": "900000000000207008",
+          "type": {
+            "conceptId": "255234002",
+            "fsn": {
+              "term": "After (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "After",
+              "lang": "en"
+            }
+          },
+          "target": {
+            "effectiveTime": "20130731",
+            "moduleId": "900000000000207008",
+            "active": true,
+            "released": true,
+            "conceptId": "609327009",
+            "definitionStatus": "FULLY_DEFINED",
+            "fsn": {
+              "term": "Allergic sensitization (disorder)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Allergic sensitization",
+              "lang": "en"
+            }
+          },
+          "sourceId": "402306009",
+          "groupId": 1,
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        }
+      ]
+    }
+  ],
+  "relationships": []
+}

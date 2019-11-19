@@ -14,9 +14,10 @@ import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.snowowl.SnowOwlRestClientFactory;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.snowowl.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,7 @@ public class TemplateConceptSearchService {
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
 			Boolean logicalMatch, Boolean lexicalMatch, boolean stated) throws ServiceException, ResourceNotFoundException {
 		
-			LOGGER.info("Search concepts for template={}, on branchPath={}, with logigicalMatch={}, lexicalMatch={} and stated={}",
+			LOGGER.info("Search concepts for template={}, on branchPath={}, with logicalMatch={}, lexicalMatch={} and stated={}",
 					templateName, branchPath, logicalMatch, lexicalMatch, stated);
 			if (logicalMatch == null) {
 				throw new IllegalArgumentException("logicalMatch parameter must be specified.");
@@ -168,9 +169,9 @@ public class TemplateConceptSearchService {
 			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
 			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
 			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
-			Set<String> toRemove = findConceptsWithExtraAttributeTypes(conceptPojos, attributeGroups, unGroupedAttributes, stated);
+			Set<String> toRemove = findConceptsNotMatchExactly(conceptPojos, attributeGroups, unGroupedAttributes, stated);
 			if (toRemove.size() > 0) {
-				LOGGER.info("Total concepts " + toRemove.size() + " with additional attributes and are removed from results " + toRemove);
+				LOGGER.info("Total concepts " + toRemove.size() + " are removed from results.");
 				results.removeAll(toRemove);
 			}
 			LOGGER.info("Logical results {}", results.size());
@@ -184,7 +185,7 @@ public class TemplateConceptSearchService {
 		}
 	}
 
-	private Set<String> findConceptsWithExtraAttributeTypes(List<ConceptPojo> conceptPojos, List<AttributeGroup> attributeGroups,
+	protected Set<String> findConceptsNotMatchExactly(List<ConceptPojo> conceptPojos, List<AttributeGroup> attributeGroups,
 			List<Attribute> unGroupedAttributes, boolean stated) {
 		
 		List<Set<String>> allTypes = new ArrayList<>();
@@ -217,35 +218,57 @@ public class TemplateConceptSearchService {
 		allTypes.add(ungrouped);
 		mandatoryTypes.add(mandatoryUngrouped);
 		
-		Set<String> results = new HashSet<>();
+		Set<String> missing = new HashSet<>();
+		Set<String> havingExtra = new HashSet<>();
 		for (ConceptPojo concept : conceptPojos) {
 			//map relationship by group
-			List<RelationshipPojo> activeRelationships = null;
+			List<RelationshipPojo> activeRelationships = new ArrayList<>();
 			if (stated) {
-				activeRelationships = concept.getRelationships().stream()
-					.filter(r -> r.isActive())
-					.filter(r -> r.getCharacteristicType().equals(Constants.STATED))
-					.collect(Collectors.toList());
+				if (concept.getClassAxioms() != null) {
+					for (AxiomPojo axiom: concept.getClassAxioms()) {
+						if (axiom.isActive()) {
+							activeRelationships.addAll(axiom.getRelationships());
+						}
+					}
+				} 
 			} else {
 				activeRelationships = concept.getRelationships().stream()
 						.filter(r -> r.isActive())
 						.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 						.collect(Collectors.toList());
 			}
-
+			
 			Map<Integer, Set<String>> relGroupMap = new HashMap<>();
 			for (RelationshipPojo pojo : activeRelationships) {
 				relGroupMap.computeIfAbsent(pojo.getGroupId(), k -> new HashSet<>())
 				.add(pojo.getType().getConceptId());
 			}
-			if (containExtraAttribute(mandatoryTypes, allTypes, relGroupMap.values())) {
-				results.add(concept.getConceptId());
+			
+			if (missingMandatoryAttribute(mandatoryTypes, relGroupMap.values())) {
+				missing.add(concept.getConceptId());
+			}
+			
+			if (containExtraAttribute(allTypes, relGroupMap.values())) {
+				havingExtra.add(concept.getConceptId());
 			}
 		}
+		
+		if (!missing.isEmpty()) {
+			LOGGER.info("Total concepts missing at least one mandatory attribute:" + missing.size());
+			LOGGER.debug("Concept ids " +  missing);
+		}
+		if (!havingExtra.isEmpty()) {
+			LOGGER.info("Total concepts containing extra attribute:" + havingExtra.size());
+			LOGGER.debug("Concept ids " +  havingExtra);
+		}
+		Set<String> results = new HashSet<>();
+		results.addAll(missing);
+		results.addAll(havingExtra);
 		return results;
 	}
 	
-	private boolean containExtraAttribute(List<Set<String>> mandatoryTypes, List<Set<String>> allTypes, Collection<Set<String>> relGroups) {
+	private boolean missingMandatoryAttribute(List<Set<String>> mandatoryTypes, Collection<Set<String>> relGroups) {
+		//check all mandatory attributes are present
 		for (Set<String> mandatory : mandatoryTypes) {
 			boolean isFound = false;
 			for (Set<String> typeSet : relGroups) {
@@ -258,7 +281,11 @@ public class TemplateConceptSearchService {
 				return true;
 			}
 		}
-		
+		return false;
+	}
+
+	private boolean containExtraAttribute(List<Set<String>> allTypes, Collection<Set<String>> relGroups) {
+		// check no additional types
 		for (Set<String> typeSet : relGroups) {
 			boolean isFound = false;
 			for (Set<String> allType : allTypes) {

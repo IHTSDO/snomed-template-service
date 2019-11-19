@@ -3,14 +3,14 @@ package org.ihtsdo.otf.authoringtemplate.transform;
 import java.util.Map;
 import java.util.Set;
 
-import org.ihtsdo.otf.rest.client.snowowl.pojo.SimpleConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 
 public class TransformationInputData {
 
 	private String branchPath;
 	private ConceptTemplate destinationTemplate;
-	private Map<String, SimpleConceptPojo> conceptIdMap;
+	private Map<String, ConceptMiniPojo> conceptIdMap;
 	private Map<String, Set<String>> destinationAttributeTypeSlotMap;
 	private TemplateTransformRequest transformRequest;
 
@@ -46,11 +46,11 @@ public class TransformationInputData {
 		this.destinationTemplate = destination;
 	}
 
-	public void setConceptIdMap(Map<String, SimpleConceptPojo> conceptIdMap) {
+	public void setConceptIdMap(Map<String, ConceptMiniPojo> conceptIdMap) {
 		this.conceptIdMap = conceptIdMap;
 	}
 
-	public Map<String, SimpleConceptPojo> getConceptIdMap() {
+	public Map<String, ConceptMiniPojo> getConceptIdMap() {
 		return conceptIdMap;
 	}
 
