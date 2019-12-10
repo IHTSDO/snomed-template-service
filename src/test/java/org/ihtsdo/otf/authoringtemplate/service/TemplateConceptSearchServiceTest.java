@@ -1,23 +1,7 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
@@ -37,8 +21,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URISyntaxException;
+import java.util.*;
+
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.when;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
@@ -85,10 +76,10 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		RelationshipPojo additionalRel = new RelationshipPojo(2, "246075003", "6543217", TestDataHelper.STATED_RELATIONSHIP);
 		testConcept.getClassAxioms().iterator().next().getRelationships().add(additionalRel);
 		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
-		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
+				.thenReturn(Collections.singleton(testConcept.getConceptId()));
 		
 		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
-		.thenReturn(Arrays.asList(testConcept));
+				.thenReturn(Collections.singletonList(testConcept));
 		
 		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, null, true);
 		assertNotNull(concepts);
@@ -99,7 +90,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + templateName + JSON).toURI()), jsonStore.getStoreDirectory());
 		ConceptTemplate template = jsonStore.load(templateName, ConceptTemplate.class);
 		when(templateService.loadOrThrow(anyString()))
-		.thenReturn(template);
+			.thenReturn(template);
 		expectGetTerminologyServerClient();
 		return template;
 	}
@@ -110,10 +101,10 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		setUpTemplate(templateName);
 		ConceptPojo testConcept = TestDataHelper.createCTGuidedProcedureConcept(true);
 		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
-		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
+			.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
 		
 		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
-		.thenReturn(Arrays.asList(testConcept));
+			.thenReturn(Arrays.asList(testConcept));
 		
 		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, null, true);
 		assertNotNull(concepts);
@@ -127,10 +118,10 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		
 		ConceptPojo testConcept = TestDataHelper.createCTGuidedProcedureConcept(false);
 		when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt(), anyBoolean()))
-		.thenReturn(new HashSet<>(Arrays.asList(testConcept.getConceptId())));
+			.thenReturn(Collections.singleton(testConcept.getConceptId()));
 		
 		when(terminologyServerClient.searchConcepts(anyString(), anyList()))
-		.thenReturn(Arrays.asList(testConcept));
+				.thenReturn(Collections.singletonList(testConcept));
 		
 		Set<String> concepts = searchService.searchConceptsByTemplate(templateName, "test", true, null, true);
 		assertNotNull(concepts);
@@ -217,7 +208,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		ConceptTemplate template = setUpTemplate(templateName);
 		LogicalTemplate logicalTemplate = logicalTemplateParser.parseTemplate(template.getLogicalTemplate());
 		ConceptPojo concept = gson.fromJson(new InputStreamReader(getClass().getResourceAsStream("Allergy_to_Aluminium_With_Axiom.json")), ConceptPojo.class);
-		Set<String> result = searchService.findConceptsNotMatchExactly(Arrays.asList(concept), logicalTemplate.getAttributeGroups(), logicalTemplate.getUngroupedAttributes(), true);
+		Set<String> result = searchService.findConceptsNotMatchExactly(Collections.singletonList(concept), logicalTemplate.getAttributeGroups(), logicalTemplate.getUngroupedAttributes(), true);
 		assertTrue(result.isEmpty());
 	}
 }

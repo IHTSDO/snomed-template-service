@@ -30,7 +30,7 @@ public class JsonStore {
 	}
 
 	public <T> T load(String name, Class<T> clazz) throws IOException {
-		final File file = getFile(name, clazz);
+		final File file = getFile(name);
 		if (file.isFile()) {
 			return objectMapper.readValue(file, clazz);
 		}
@@ -38,7 +38,7 @@ public class JsonStore {
 	}
 
 	public void save(String name, Object object) throws IOException {
-		try (final FileWriter writer = new FileWriter(getFile(name, object.getClass()))) {
+		try (final FileWriter writer = new FileWriter(getFile(name))) {
 			objectMapper.writeValue(writer, object);
 		}
 	}
@@ -51,7 +51,7 @@ public class JsonStore {
 		return all;
 	}
 
-	private File getFile(String name, Class<?> clazz) {
+	private File getFile(String name) {
 		return new File(storeDirectory, name + EXTENSION);
 	}
 

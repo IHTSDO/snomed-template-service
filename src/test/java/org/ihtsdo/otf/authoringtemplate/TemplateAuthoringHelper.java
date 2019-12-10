@@ -8,13 +8,22 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.io.Files;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import javax.script.SimpleScriptContext;
+
+import static javax.script.ScriptContext.ENGINE_SCOPE;
 
 /**
  * This is not a unit test.
@@ -23,11 +32,12 @@ import com.google.common.io.Files;
 public class TemplateAuthoringHelper {
 
 	
-	public static void main(String[] args) throws IOException {
-		String logical = readAndConvertInput();
-		validate(logical);
-//		compactScratch();
+	public static void main(String[] args) throws IOException, ScriptException {
+//		String logical = readAndConvertInput();
+//		validate(logical);
+		compactScratch();
 //		expandScratch();
+
 	}
 
 	// Helper code for converting template specification tables into template language!

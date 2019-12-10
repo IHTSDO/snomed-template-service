@@ -102,7 +102,7 @@ public class TemplateController {
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
 
 		response.setContentType("text/tab-separated-values; charset=utf-8");
-		templateService.writeEmptyInputFile(BranchPathUriUtil.decodePath(branchPath), templateName, response.getOutputStream());
+		templateService.writeEmptyInputFile(templateName, response.getOutputStream());
 	}
 
 	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "multipart/form-data")
@@ -124,7 +124,7 @@ public class TemplateController {
 									  @PathVariable String templateName,
 									  @RequestParam Boolean logicalMatch,
 									  @RequestParam(required=false) Boolean lexicalMatch,
-									  @RequestParam(defaultValue="true") boolean stated) throws IOException, ServiceException {
+									  @RequestParam(defaultValue="true") boolean stated) throws ServiceException {
 		return searchService.searchConceptsByTemplate(templateName, BranchPathUriUtil.decodePath(branchPath), logicalMatch, lexicalMatch, stated);
 	}
 	
@@ -138,7 +138,7 @@ public class TemplateController {
 									) throws ServiceException {
 		TemplateTransformation transformation = transformService.createTemplateTransformation(BranchPathUriUtil.decodePath(branchPath), transformRequest);
 		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
-		transformService.transformAsynchnously(transformation, restClient);
+		transformService.transformAsynchronously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
 		resultService.update(transformation);
 		return ResponseEntity.created(uriComponentsBuilder.path("/templates/transform/{transformationId}")

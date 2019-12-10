@@ -79,11 +79,11 @@ public class TemplateStore {
 		return name.replace("/", "%2F");
 	}
 
-	public ConceptTemplate load(String name) throws IOException {
+	public ConceptTemplate load(String name) {
 		return templateCache.get(name);
 	}
 
-	public Set<ConceptTemplate> loadAll() throws IOException {
+	public Set<ConceptTemplate> loadAll() {
 		return new HashSet<>(templateCache.values());
 	}
 

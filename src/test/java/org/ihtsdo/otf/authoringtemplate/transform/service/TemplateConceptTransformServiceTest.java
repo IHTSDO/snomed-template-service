@@ -1,35 +1,11 @@
 package org.ihtsdo.otf.authoringtemplate.transform.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.authoringtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.JsonStore;
-import org.ihtsdo.otf.authoringtemplate.service.TemplateConceptSearchService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
@@ -38,13 +14,8 @@ import org.ihtsdo.otf.authoringtemplate.transform.TestDataHelper;
 import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo.DescriptionMiniPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,11 +25,24 @@ import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.when;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
@@ -66,9 +50,6 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private static final String TEMPLATES = "/templates/";
 
 	private static final String JSON = ".json";
-	
-	@MockBean
-	private TemplateConceptSearchService searchService;
 	
 	@Autowired
 	private TemplateConceptTransformService transformService;
@@ -96,6 +77,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testCreateTemplateTransformation() throws ServiceException {
+		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
 		Set<String> concepts = new HashSet<>();
 		concepts.add("123555");
 		transformRequest.setConceptsToTransform(concepts);
@@ -144,13 +126,13 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		assertNotNull(results);
 		
 		List<ConceptPojo> transformed = getTransformationResults(results);
-		
-		assertEquals(true, !transformed.isEmpty());
+
+		assertFalse(transformed.isEmpty());
 		assertEquals(1, transformed.size());
 		ConceptPojo concept = transformed.get(0);
-		//validate descriptions transformation
+		// Validate descriptions transformation
 		assertEquals(3, concept.getDescriptions().size());
-		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(DescriptionPojo::isActive).collect(Collectors.toList());
 		assertEquals(2, activeTerms.size());
 		for (DescriptionPojo term : activeTerms) {
 			if (DescriptionType.FSN.name().equals(term.getType())) {
@@ -169,7 +151,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 			assertNotNull(pojo.getType().getPt());
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
-			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
+			assertFalse(pojo.getTarget().getConceptId().isEmpty());
 		}
 		assertEquals(6, concept.getRelationships().size());
 		Set<RelationshipPojo> inferred = concept.getRelationships()
@@ -188,18 +170,18 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 			relationships.addAll(axiom.getRelationships());
 		}
 		if (conceptToTransform.getRelationships() != null) {
-			relationships.addAll(conceptToTransform.getRelationships().stream().filter(r -> r.isActive()).collect(Collectors.toSet()));
+			relationships.addAll(conceptToTransform.getRelationships().stream().filter(RelationshipPojo::isActive).collect(Collectors.toSet()));
 		}
-		Set<ConceptMiniPojo> targets = relationships.stream().filter(r -> r.isActive()).map(r -> r.getTarget()).collect(Collectors.toSet());
+		Set<ConceptMiniPojo> targets = relationships.stream().filter(RelationshipPojo::isActive).map(RelationshipPojo::getTarget).collect(Collectors.toSet());
 		for (ConceptMiniPojo targetPojo : targets) {
 			concepts.add(constructConceptPojo(targetPojo));
 		}
 		
 		when(terminologyServerClient.searchConcepts(anyString(), any()))
-		.thenReturn(Arrays.asList(conceptToTransform), concepts);
+		.thenReturn(Collections.singletonList(conceptToTransform), concepts);
 		
 		// add test concepts here
-		Set<ConceptMiniPojo> attributeTypes = relationships.stream().filter(r -> r.isActive()).map(r -> r.getType()).collect(Collectors.toSet());
+		Set<ConceptMiniPojo> attributeTypes = relationships.stream().filter(RelationshipPojo::isActive).map(RelationshipPojo::getType).collect(Collectors.toSet());
 		Set<ConceptMiniPojo> conceptMinis = new HashSet<>();
 		conceptMinis.addAll(targets);
 		conceptMinis.addAll(attributeTypes);
@@ -287,12 +269,12 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		assertNotNull(results);
 		
 		List<ConceptPojo> transformed = getTransformationResults(results);
-		assertEquals(true, !transformed.isEmpty());
+		assertFalse(transformed.isEmpty());
 		assertEquals(1, transformed.size());
 		ConceptPojo concept = transformed.get(0);
 		//validate descriptions transformation
 		assertEquals(6, concept.getDescriptions().size());
-		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(DescriptionPojo::isActive).collect(Collectors.toList());
 		assertEquals(4, activeTerms.size());
 		String[] activeSynonyms = {"Allergic reaction caused by adhesive agent",
 				"Allergic reaction to adhesive",
@@ -302,7 +284,6 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 			if (DescriptionType.FSN.name().equals(term.getType())) {
 				assertEquals("Allergic reaction caused by adhesive agent (disorder)", term.getTerm());
 			} else {
-				Arrays.asList(activeSynonyms).contains(term.getTerm());
 				if (term.getTerm().equals(activeSynonyms[0])) {
 					assertNotNull(term.getAcceptabilityMap());
 					assertTrue(term.getAcceptabilityMap().values().contains(Constants.PREFERRED));
@@ -317,7 +298,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 			assertNotNull(pojo.getType().getPt());
 			assertNotNull("Target should not be null", pojo.getTarget());
 			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
-			assertTrue(!pojo.getTarget().getConceptId().isEmpty());
+			assertFalse(pojo.getTarget().getConceptId().isEmpty());
 		}
 		
 		assertEquals(6, concept.getRelationships().size());
@@ -344,12 +325,12 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		assertNotNull(results);
 		
 		List<ConceptPojo> transformed = getTransformationResults(results);
-		assertEquals(true, !transformed.isEmpty());
+		assertFalse(transformed.isEmpty());
 		assertEquals(1, transformed.size());
 		ConceptPojo concept = transformed.get(0);
 		//validate descriptions transformation
 		assertEquals(7, concept.getDescriptions().size());
-		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(DescriptionPojo::isActive).collect(Collectors.toList());
 		assertEquals(5, activeTerms.size());
 		verifyTransformation(concept);
 	}
@@ -372,7 +353,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		
 		// validate descriptions transformation
 		assertEquals(7, result.getDescriptions().size());
-		List<DescriptionPojo> activeTerms = result.getDescriptions().stream().filter(d -> d.isActive()).collect(Collectors.toList());
+		List<DescriptionPojo> activeTerms = result.getDescriptions().stream().filter(DescriptionPojo::isActive).collect(Collectors.toList());
 		assertEquals(5, activeTerms.size());
 		verifyTransformation(result);
 	}
@@ -388,7 +369,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 					StringBuilder msgBuilder = new StringBuilder();
 					msgBuilder.append("Unexpected failure \n");
 					for (String conceptId : failures.keySet()) {
-						msgBuilder.append("ConceptId=" + conceptId + " failure msg = " + failures.get(conceptId) + "\n");
+						msgBuilder.append("ConceptId=").append(conceptId).append(" failure msg = ").append(failures.get(conceptId)).append("\n");
 					}
 					fail("Shouldn't have failures!" + msgBuilder.toString());
 				}
@@ -404,8 +385,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		return transformed;
 	}
 	
-	private void setUpTestTemplates(String sourceTempalte, String destinationTemplate)
-			throws IOException, URISyntaxException, ServiceException, UnsupportedEncodingException {
+	private void setUpTestTemplates(String sourceTempalte, String destinationTemplate) throws IOException, URISyntaxException, ServiceException {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
 				jsonStore.getStoreDirectory());
 		
@@ -415,8 +395,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
 				jsonStore.getStoreDirectory());
 		templateService.reloadCache();
-		try (Reader sourceConceptReader = new InputStreamReader(getClass().getResourceAsStream(sourceTempalte), Constants.UTF_8);
-			 Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(destinationTemplate), Constants.UTF_8)) {
+		try (Reader sourceConceptReader = new InputStreamReader(getClass().getResourceAsStream(sourceTempalte), UTF_8);
+			 Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(destinationTemplate), UTF_8)) {
 			conceptToTransform = gson.fromJson(sourceConceptReader, ConceptPojo.class);
 			transformedConcept = gson.fromJson(transformedJsonReader, ConceptPojo.class);
 		}

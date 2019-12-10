@@ -5,10 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
@@ -45,7 +42,7 @@ public class DescriptionTransformerTest {
 		assertEquals(4, conceptToTransform.getDescriptions().size());
 		List<DescriptionPojo> activeTerms = conceptToTransform.getDescriptions()
 				.stream()
-				.filter(d -> d.isActive())
+				.filter(DescriptionPojo::isActive)
 				.collect(Collectors.toList());
 		assertEquals(3,  activeTerms.size());
 		for (DescriptionPojo pojo : activeTerms) {
@@ -58,7 +55,7 @@ public class DescriptionTransformerTest {
 			} else {
 				assertEquals("TEXT_DEFINITION", pojo.getType());
 				assertEquals("Allergy to almond text definition", pojo.getTerm());
-				Set<String> valueSet = pojo.getAcceptabilityMap().values().stream().collect(Collectors.toSet());
+				Set<String> valueSet = new HashSet<>(pojo.getAcceptabilityMap().values());
 				assertEquals(1, valueSet.size());
 				assertEquals(PREFERRED, valueSet.iterator().next());
 				assertTrue(pojo.isReleased());

@@ -25,20 +25,20 @@ public class RoleGroupNumberGenerator {
 	}
 	
 	public int getRoleGroupNumber(List<RelationshipPojo> roleGroup) {
-		int groupNum = -1;
+		int groupNum;
 		Map<Integer, Integer> publishedGroupNumberCounterMap = getGroupNumberCounterMap(roleGroup, true);
 		Map<Integer, Integer> newGroupNumberCounterMap = getGroupNumberCounterMap(roleGroup, false);
 		Map.Entry<Integer, Integer> publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
 		Map.Entry<Integer, Integer> newMaxEntry = newGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByKey()).get();
 		
-		if (publishedMaxEntry.getValue() >=2 || publishedMaxEntry.getValue() >= newMaxEntry.getValue()) {
-			groupNum = publishedMaxEntry.getKey().intValue();
+		if (publishedMaxEntry.getValue() >= 2 || publishedMaxEntry.getValue() >= newMaxEntry.getValue()) {
+			groupNum = publishedMaxEntry.getKey();
 			if (groupInUse.contains(groupNum) && groupNum > 0) {
-				//use existing published group
+				// Use existing published group
 				return groupNum;
 			}
 		} else {
-			groupNum = newMaxEntry.getKey().intValue();
+			groupNum = newMaxEntry.getKey();
 		}
 		
 		if (groupNum == 0 && !containsISA(roleGroup)) {
@@ -69,7 +69,7 @@ public class RoleGroupNumberGenerator {
 			Map<Integer, Integer> publishedGroupNumberCounterMap = getGroupNumberCounterMap(rels, true);
 			Map.Entry<Integer, Integer> publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
 			if (publishedMaxEntry.getValue() >=2) {
-				groupInUse.add(publishedMaxEntry.getKey().intValue());
+				groupInUse.add(publishedMaxEntry.getKey());
 			}
 		}
 		return groupInUse;
@@ -78,21 +78,17 @@ public class RoleGroupNumberGenerator {
 	private Map<Integer, Integer> getGroupNumberCounterMap (List<RelationshipPojo> roleGroup, boolean isPublished) {
 		Map<Integer, Integer> groupNumberCounterMap = new HashMap<>();
 		for (RelationshipPojo pojo : roleGroup) {
-			Integer counter = groupNumberCounterMap.get(pojo.getGroupId());
-			if (counter == null) {
-				counter =  new Integer(0);
-				groupNumberCounterMap.put(pojo.getGroupId(), counter);
-			}
+			Integer counter = groupNumberCounterMap.computeIfAbsent(pojo.getGroupId(), k -> 0);
 			if (isPublished) {
 				if (pojo.getRelationshipId() != null || pojo.isReleased()) {
-					groupNumberCounterMap.put(pojo.getGroupId(), new Integer(counter +1));
+					groupNumberCounterMap.put(pojo.getGroupId(), counter + 1);
 				}
 			} else {
 				if (pojo.getRelationshipId() == null || !pojo.isReleased()) {
-					groupNumberCounterMap.put(pojo.getGroupId(), new Integer(counter +1));
+					groupNumberCounterMap.put(pojo.getGroupId(), counter + 1);
 				}
-			  }
 			}
+		}
 		return groupNumberCounterMap;
 	}
 }

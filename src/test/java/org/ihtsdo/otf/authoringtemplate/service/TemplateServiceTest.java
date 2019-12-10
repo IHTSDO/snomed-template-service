@@ -145,7 +145,7 @@ public class TemplateServiceTest extends AbstractServiceTest {
 	public void testWriteEmptyInputFile() throws Exception {
 		createCtGuidedProcedureOfX();
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		templateService.writeEmptyInputFile("", "CT Guided Procedure of X", stream);
+		templateService.writeEmptyInputFile("CT Guided Procedure of X", stream);
 		assertEquals("procSite\taction\n", new String(stream.toByteArray()));
 	}
 	

@@ -1,27 +1,9 @@
 package org.ihtsdo.otf.authoringtemplate.transform.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-
 import org.ihtsdo.otf.authoringtemplate.service.TemplateService;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.authoringtemplate.transform.DescriptionTransformer;
-import org.ihtsdo.otf.authoringtemplate.transform.RelationshipTransformer;
-import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformRequest;
-import org.ihtsdo.otf.authoringtemplate.transform.TemplateTransformation;
-import org.ihtsdo.otf.authoringtemplate.transform.TransformationInputData;
-import org.ihtsdo.otf.authoringtemplate.transform.TransformationResult;
-import org.ihtsdo.otf.authoringtemplate.transform.TransformationStatus;
+import org.ihtsdo.otf.authoringtemplate.transform.*;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
@@ -40,6 +22,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+
 @Service
 public class TemplateConceptTransformService {
 
@@ -50,80 +40,78 @@ public class TemplateConceptTransformService {
 	private TemplateTransformationResultService resultService;
 	
 	private final ExecutorService executorService = Executors.newFixedThreadPool(10);
-	
+
+	private final LogicalTemplateParserService parser;
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateConceptTransformService.class);
 
-	
 	@Value("${transformation.batch.max}")
 	private int batchMax;
-	
+
+	public TemplateConceptTransformService() {
+		parser = new LogicalTemplateParserService();
+	}
+
 	@Async
-	public void transformAsynchnously(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
+	public void transformAsynchronously(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
 		transformation.setStatus(TransformationStatus.RUNNING);
 		resultService.update(transformation);
-		List<Future<TransformationResult>> results = null;
+
 		try {
-			results = transform(transformation, restClient);
-		} catch (Exception e) {
-			LOGGER.error("Error occurred", e);
-			transformation.setStatus(TransformationStatus.FAILED);
-			transformation.setErrorMsg(getErrorMsg(e));
-			resultService.update(transformation);
-			return;
-		}
-		List<ConceptPojo> transformed = new ArrayList<>();
-		Map<String, String> errorMsgMap = new HashMap<>();
-		for (Future<TransformationResult> future : results) {
+			// Start transformations in multiple threads
+			List<Future<TransformationResult>> futureTasks = transform(transformation, restClient);
+
+			// Gather transformed concepts and any errors from the transformation jobs
 			try {
-				TransformationResult transformationResult = future.get();
-				transformed.addAll(transformationResult.getConcepts());
-				for (String key : transformationResult.getFailures().keySet()) {
-					errorMsgMap.put(key, transformationResult.getFailures().get(key));
+				List<TransformationResult> transformationResults = new ArrayList<>();
+				for (Future<TransformationResult> future : futureTasks) {
+					transformationResults.add(future.get());
 				}
+
+				TransformationResult finalResult = new TransformationResult();
+
+				finalResult.setConcepts(transformationResults.stream()
+						.map(TransformationResult::getConcepts).flatMap(Collection::stream).collect(Collectors.toList()));
+
+				finalResult.setFailures(transformationResults.stream().map(transformationResult -> transformationResult.getFailures().entrySet())
+						.flatMap(Collection::stream).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+
+				transformation.setStatus(finalResult.getFailures().isEmpty() ? TransformationStatus.COMPLETED : TransformationStatus.COMPLETED_WITH_FAILURE);
+				resultService.writeResultsToFile(transformation, finalResult);
+
 			} catch (InterruptedException | ExecutionException e) {
-				String errorMsg = "Unexpected errors while merging results.";
+				String errorMsg = "Unexpected errors while merging transformation results.";
 				LOGGER.error(errorMsg, e);
 				transformation.setStatus(TransformationStatus.FAILED);
 				transformation.setErrorMsg(errorMsg + getErrorMsg(e));
 			}
+		} catch (ServiceException e) {
+			LOGGER.error("Transformation failed.", e);
+			transformation.setStatus(TransformationStatus.FAILED);
+			transformation.setErrorMsg(e.getMessage());
+		} finally {
+			resultService.update(transformation);
 		}
-		if (errorMsgMap.isEmpty()) {
-			transformation.setStatus(TransformationStatus.COMPLETED);
-		} else {
-			transformation.setStatus(TransformationStatus.COMPLETED_WITH_FAILURE);
-		}
-		TransformationResult finalResult = new TransformationResult();
-		finalResult.setConcepts(transformed);
-		finalResult.setFailures(errorMsgMap);
-		resultService.writeResultsToFile(transformation, finalResult);
-		resultService.update(transformation);
 	}
 	
 	private String getErrorMsg(Throwable t) {
-		if (t instanceof ServiceException) {
+		if (t.getMessage() != null) {
 			return t.getMessage();
 		} else {
-			if (t.getMessage() != null) {
-				return t.getMessage();
-			} else {
-				return "Unexpected error caused by " + t.getCause().getMessage();
-			}
+			return "Unexpected error caused by " + t.getCause().getMessage();
 		}
 	}
 	
 	private TransformationInputData constructTransformationInputData(ConceptTemplate destination, TemplateTransformRequest transformRequest) throws ServiceException {
-		TransformationInputData input = new TransformationInputData(transformRequest);
-		LogicalTemplateParserService parser = new LogicalTemplateParserService();
-		LogicalTemplate logical;
 		try {
-			logical = parser.parseTemplate(destination.getLogicalTemplate());
+			TransformationInputData input = new TransformationInputData(transformRequest);
+			LogicalTemplate logical = parser.parseTemplate(destination.getLogicalTemplate());
 			input.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical, true));
-			
+			input.setDestinationTemplate(destination);
+			return input;
 		} catch (IOException e) {
 			throw new ServiceException("Failed to parse logical template " + destination.getName(), e);
 		}
-		input.setDestinationTemplate(destination);
-		return input;
 	}
 
 	public List<Future<TransformationResult>> transform(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
@@ -134,17 +122,12 @@ public class TemplateConceptTransformService {
 		
 		List<Future<TransformationResult>> results = new ArrayList<>();
 		ConceptTemplate source = null;
-		ConceptTemplate destination = null;
+		ConceptTemplate destination;
 		try {
 			source = templateService.loadOrThrow(transformRequest.getSourceTemplate());
 			destination = templateService.loadOrThrow(destinationTemplate);
 			validate(source, destination);
-			Map<String, ConceptMiniPojo> conceptMap = null;
-			try {
-				conceptMap = getDestinationConceptsMap(branchPath, restClient, destination);
-			} catch (RestClientException e) {
-				throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
-			}
+			Map<String, ConceptMiniPojo> conceptMap = getDestinationConceptsMap(branchPath, restClient, destination);
 			final TransformationInputData input = constructTransformationInputData(destination, transformRequest);
 			input.setBranchPath(branchPath);
 			input.setConceptIdMap(conceptMap);
@@ -157,13 +140,13 @@ public class TemplateConceptTransformService {
 				batchJob.add(conceptId);
 				counter++;
 				if (counter % batchMax == 0 || counter == transformRequest.getConceptsToTransform().size()) {
-					//do work
+					// Do work
 					final List<String> task = batchJob;
 					results.add(executorService.submit(() -> batchTransform(input, task, restClient)));
 					batchJob = null;
 				}
 			}
-		} catch ( IOException e) {
+		} catch (IOException e) {
 			String templateName = source == null ? transformRequest.getSourceTemplate() : destinationTemplate;
 			throw new ServiceException("Failed to load template " + templateName, e);
 		}
@@ -181,7 +164,7 @@ public class TemplateConceptTransformService {
 				List<String> missing = new ArrayList<>(conceptIds);
 				for (ConceptPojo pojo : conceptPojos) {
 					missing.remove(pojo.getConceptId());
-					ConceptPojo transformed = null;
+					ConceptPojo transformed;
 					try {
 						transformed = performTransform(pojo, input, restClient);
 						result.addTransformedConcept(transformed);
@@ -229,7 +212,7 @@ public class TemplateConceptTransformService {
 		return transformed;
 	}
 
-	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws RestClientException {
+	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws ServiceException {
 		List<String> conceptIds = new ArrayList<>();
 		List<Relationship> relationships = destination.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
 		for (Relationship rel : relationships) {
@@ -241,18 +224,21 @@ public class TemplateConceptTransformService {
 			}
 		}
 		LOGGER.info("Load concepts " + conceptIds  + " from branch " + branchPath);
-		Set<ConceptMiniPojo> results = client.getConceptMinis(branchPath, conceptIds, conceptIds.size());
-		Map<String, ConceptMiniPojo> conceptIdMap = new HashMap<>();
-		for (ConceptMiniPojo pojo : results) {
-			conceptIdMap.put(pojo.getConceptId(), pojo);
+		try {
+			Set<ConceptMiniPojo> results = client.getConceptMinis(branchPath, conceptIds, conceptIds.size());
+			Map<String, ConceptMiniPojo> conceptIdMap = new HashMap<>();
+			for (ConceptMiniPojo pojo : results) {
+				conceptIdMap.put(pojo.getConceptId(), pojo);
+			}
+			return conceptIdMap;
+		} catch (RestClientException e) {
+			throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
 		}
-		return conceptIdMap;
 	}
 	
-	public void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException, IOException {
+	public void validate(ConceptTemplate source, ConceptTemplate destination) throws ServiceException {
 		TemplateUtil.validateTermSlots(destination, false);
 		try {
-			LogicalTemplateParserService parser = new LogicalTemplateParserService();
 			LogicalTemplate sourcelogical = parser.parseTemplate(source.getLogicalTemplate());
 			LogicalTemplate destinationLogical = parser.parseTemplate(destination.getLogicalTemplate());
 			Set<String> sourceAttributeTypes = TemplateUtil.getAttributeTypes(sourcelogical);
@@ -270,7 +256,7 @@ public class TemplateConceptTransformService {
 					}
 				}
 				throw new ServiceException(String.format("Destination template %s has slot attribute type %s that doesn't exist in the source template %s",
-														destination.getName(), msgBuilder.toString(), source.getName()));
+						destination.getName(), msgBuilder.toString(), source.getName()));
 			}
 		} catch (IOException e) {
 			throw new ServiceException("Failed to parse logical template", e);
@@ -280,8 +266,9 @@ public class TemplateConceptTransformService {
 
 	private Map<String, Set<DescriptionPojo>> getSlotDescriptionValuesMap(String branchPath, 
 			Map<String, ConceptMiniPojo> attributeSlotMap, SnowOwlRestClient restClient) throws ServiceException {
+
 		Map<String, Set<DescriptionPojo>> slotDescriptionMap = new HashMap<>();
-		List<String> conceptIds = attributeSlotMap.values().stream().map(v -> v.getConceptId()).collect(Collectors.toList());
+		List<String> conceptIds = attributeSlotMap.values().stream().map(ConceptMiniPojo::getConceptId).collect(Collectors.toList());
 		List<ConceptPojo> results;
 		try {
 			results = restClient.searchConcepts(branchPath, conceptIds);
@@ -305,35 +292,28 @@ public class TemplateConceptTransformService {
 		if (!transformRequest.isLexicalTransform() && !transformRequest.isLogicalTransform()) {
 			throw new IllegalArgumentException("Should state at least one type of transformation but got " + transformRequest);
 		}
-		TemplateTransformation templateTransformation = new TemplateTransformation(branchPath, transformRequest);
-		return templateTransformation;
+		return new TemplateTransformation(branchPath, transformRequest);
 	}
 
 	public ConceptPojo transformConcept(String branchPath, TemplateTransformRequest request, ConceptPojo conceptToTransform, SnowOwlRestClient restClient) throws ServiceException {
 		ConceptTemplate destination = null;
-		LogicalTemplate logical = null;
+		LogicalTemplate logical;
 		String destinationTemplate = request.getDestinationTemplate();
 		try {
 			destination = templateService.loadOrThrow(destinationTemplate);
-			LogicalTemplateParserService parser = new LogicalTemplateParserService();
 			logical = parser.parseTemplate(destination.getLogicalTemplate());
 		} catch (ResourceNotFoundException | IOException e) {
 			
 			if (destination == null) {
-				throw new IllegalArgumentException("No tempalte found with name " + destinationTemplate, e);
+				throw new IllegalArgumentException("No template found with name " + destinationTemplate, e);
 			}
 			throw new ServiceException("Failed to load and parse template " + destinationTemplate, e);
 		}
-		Map<String, ConceptMiniPojo> conceptsMap = null;
-		try {
-			conceptsMap = getDestinationConceptsMap(branchPath, restClient, destination);
-		} catch (RestClientException e) {
-			throw new ServiceException("Failed to get concepts from branch " + branchPath , e);
-		}
+
 		TransformationInputData inputData = new TransformationInputData(request);
 		inputData.setBranchPath(branchPath);
 		inputData.setDestinationTemplate(destination);
-		inputData.setConceptIdMap(conceptsMap);
+		inputData.setConceptIdMap(getDestinationConceptsMap(branchPath, restClient, destination));
 		inputData.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical, true));
 		return performTransform(conceptToTransform, inputData, restClient);
 	}

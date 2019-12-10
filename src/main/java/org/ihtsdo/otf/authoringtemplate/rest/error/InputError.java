@@ -1,7 +1,5 @@
 package org.ihtsdo.otf.authoringtemplate.rest.error;
 
-import org.assertj.core.util.Strings;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +24,6 @@ public class InputError extends RuntimeException {
 
 	@Override
 	public String getMessage() {
-		return Strings.join(messages).with("\n");
+		return String.join("\n", messages);
 	}
 }

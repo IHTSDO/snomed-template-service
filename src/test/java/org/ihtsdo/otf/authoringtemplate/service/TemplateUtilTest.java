@@ -2,6 +2,7 @@ package org.ihtsdo.otf.authoringtemplate.service;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Collections;
 import java.util.Set;
 
 import org.junit.Test;
@@ -32,7 +33,7 @@ public class TemplateUtilTest {
 	
 	@Test
 	public void testGetSlots() {
-		Set<String> results = TemplateUtil.getSlots("Allergy to $substance$ (disorder)");
+		Set<String> results = TemplateUtil.getSlots(Collections.singleton("Allergy to $substance$ (disorder)"));
 		assertEquals(1, results.size());
 		assertEquals("substance", results.iterator().next());
 	}

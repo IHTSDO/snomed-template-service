@@ -1,8 +1,5 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +16,12 @@ import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import static org.junit.Assert.*;
+
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RelationshipTransformerTest {
 	
-private RelationshipTransformer transformer;
+	private RelationshipTransformer transformer;
 	
 	@Test
 	public void testTransform() throws ServiceException {
@@ -44,7 +43,7 @@ private RelationshipTransformer transformer;
 		
 		List<RelationshipPojo> activeRels = classAxiom.getRelationships()
 				.stream()
-				.filter(r -> r.isActive())
+				.filter(RelationshipPojo::isActive)
 				.collect(Collectors.toList());
 		assertEquals(4, activeRels.size());
 		
@@ -63,7 +62,7 @@ private RelationshipTransformer transformer;
 	
 	@Test
 	public void testRelationshipComparator() {
-		TreeSet<RelationshipPojo> relationships = new TreeSet<>(RelationshipTransformer.getRelationshipPojoComparator());
+		TreeSet<RelationshipPojo> relationships = new TreeSet<>(RelationshipTransformer.RELATIONSHIP_COMPARATOR);
 		relationships.add(TestDataHelper.createRelationshipPojo(0, "1234"));
 		relationships.add(TestDataHelper.createRelationshipPojo(0, null));
 		relationships.add(TestDataHelper.createRelationshipPojo(1, "12345"));
@@ -72,12 +71,12 @@ private RelationshipTransformer transformer;
 		assertEquals(11, relationships.size());
 		RelationshipPojo first = relationships.first();
 		assertEquals(TestDataHelper.STATED_RELATIONSHIP, first.getCharacteristicType());
-		assertTrue(first.getRelationshipId() == null);
+		assertNull(first.getRelationshipId());
 		assertEquals(0, first.getGroupId());
 		
 		RelationshipPojo last = relationships.last();
 		assertEquals(TestDataHelper.INFERRED_RELATIONSHIP, last.getCharacteristicType());
-		assertTrue(last.getRelationshipId() == null);
+		assertNull(last.getRelationshipId());
 		assertEquals(1, last.getGroupId());
 	}
 }

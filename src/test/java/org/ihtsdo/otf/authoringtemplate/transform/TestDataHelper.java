@@ -234,7 +234,7 @@ public class TestDataHelper {
 			Map<String,CaseSignificance> slotCSMap, DescriptionType type) {
 		Map<String, Set<DescriptionPojo>> results = new HashMap<>();
 		for (String slot : slotValueMap.keySet()) {
-			results.put(slot, new HashSet<DescriptionPojo>());
+			results.put(slot, new HashSet<>());
 			DescriptionPojo pojo = new DescriptionPojo();
 			pojo.setReleased(true);
 			pojo.setActive(true);

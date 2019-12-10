@@ -178,7 +178,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		templateService.create(templateName, new ObjectMapper().readValue(resourceAsStream, ConceptTemplate.class));
 
 		ByteArrayOutputStream emptyInputFile = new ByteArrayOutputStream();
-		templateService.writeEmptyInputFile("MAIN", templateName, emptyInputFile);
+		templateService.writeEmptyInputFile(templateName, emptyInputFile);
 		String header = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(emptyInputFile.toByteArray()))).readLine();
 		assertEquals("Component(optional)\t" +
 						"PropertyType\t" +
@@ -255,7 +255,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 	
 	private void mockSearchConceptsResponse() {
 		expectGetTerminologyServerClient();
-		OngoingStubbing<List<ConceptPojo>> when = null;
+		OngoingStubbing<List<ConceptPojo>> when;
 		try {
 			when = when(terminologyServerClient.searchConcepts(anyString(), anyList()));
 		} catch (RestClientException e) {
@@ -276,7 +276,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 		conceptFsnMap.put("426530000", "Open reduction - action (qualifier value)");
 		conceptFsnMap.put("24626005", "Structure of root of mesentery (body structure)");
 		conceptFsnMap.put("426413004", "Closed reduction - action (qualifier value)");
-		when = when.thenReturn(mockConceptPojos(conceptFsnMap));
+		when.thenReturn(mockConceptPojos(conceptFsnMap));
 	}
 
 	private List<ConceptPojo> mockConceptPojos(Map<String, String> conceptFsnMap) {
@@ -299,7 +299,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest{
 
 	private void mockEclQueryResponse(Set<String>... conceptIdResults) {
 		expectGetTerminologyServerClient();
-		OngoingStubbing<Set<String>> when = null;
+		OngoingStubbing<Set<String>> when;
 		try {
 			when = when(terminologyServerClient.eclQuery(anyString(), anyString(), anyInt()));
 		} catch (RestClientException e) {

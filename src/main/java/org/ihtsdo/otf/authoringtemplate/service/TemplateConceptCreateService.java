@@ -1,20 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.LongStream;
-
+import com.google.common.collect.Iterables;
 import org.ihtsdo.otf.authoringtemplate.rest.error.InputError;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
@@ -24,21 +10,21 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.authoringtemplate.domain.Axiom;
-import org.snomed.authoringtemplate.domain.CaseSignificance;
-import org.snomed.authoringtemplate.domain.ConceptMini;
-import org.snomed.authoringtemplate.domain.ConceptOutline;
-import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.Description;
-import org.snomed.authoringtemplate.domain.DescriptionType;
-import org.snomed.authoringtemplate.domain.Relationship;
-import org.snomed.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import com.google.common.collect.Iterables;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 @Service
 public class TemplateConceptCreateService {
@@ -84,9 +70,7 @@ public class TemplateConceptCreateService {
 		List<ConceptOutline> generatedConcepts = constructConceptOutlines(template, slotColumnValues, slotNames);
 				
 		// clone each template description into all concepts
-		template.getConceptOutline().getDescriptions().forEach(description -> {
-			generatedConcepts.forEach(concept -> concept.addDescription(description.clone()));
-		});
+		template.getConceptOutline().getDescriptions().forEach(description -> generatedConcepts.forEach(concept -> concept.addDescription(description.clone())));
 
 		for (int i = 0; i < generatedConcepts.size(); i++) {
 			List<String> slotRowValues = new ArrayList<>();
@@ -104,10 +88,10 @@ public class TemplateConceptCreateService {
 	
 	private List<ConceptOutline> constructConceptOutlines(ConceptTemplate template, List<List<String>> slotColumnValues, List<String> slotNames) {
 		// convert columnValues into values by row
-		List<List<String>> slotValuesByRow = new ArrayList<List<String>>();
-		for (int i =0; i < slotColumnValues.get(0).size(); i++) {
+		List<List<String>> slotValuesByRow = new ArrayList<>();
+		for (int i = 0; i < slotColumnValues.get(0).size(); i++) {
 			List<String> values = new ArrayList<>();
-			for (int k=0; k < slotColumnValues.size(); k++) {
+			for (int k = 0; k < slotColumnValues.size(); k++) {
 				values.add(slotColumnValues.get(k).get(i));
 			}
 			slotValuesByRow.add(values);
@@ -129,7 +113,7 @@ public class TemplateConceptCreateService {
 				}
 				if (targetSlot != null) {
 					String slotName = targetSlot.getSlotName();
-					int valueIndex = -1;
+					int valueIndex;
 					if (slotName != null) {
 						valueIndex = slotNames.indexOf(slotName);
 					} else {
@@ -157,7 +141,7 @@ public class TemplateConceptCreateService {
 		try {
 			List<String> conceptIds = slotValues.subList(0, slotValues.size() - additionalSlots)
 					.stream()
-					.filter(v -> v != null)
+					.filter(Objects::nonNull)
 					.collect(Collectors.toList());
 			List<ConceptPojo> conceptPojos = client.searchConcepts(branchPath, conceptIds);
 			for (ConceptPojo pojo : conceptPojos) {
@@ -314,10 +298,11 @@ public class TemplateConceptCreateService {
 		return false;
 	}
 
-	private void validateHeader(String header, int expectedColumnCount) throws IOException {
+	private void validateHeader(String header, int expectedColumnCount) {
 		Assert.notNull(header, "Input file is empty.");
 		String[] columns = header.split("\\t");
 		int columnCount = columns.length;
-		Assert.isTrue(columnCount == expectedColumnCount, String.format("There are %s slots requiring input in the selected template is but the header line of the input file has %s columns.", expectedColumnCount, columnCount));
+		Assert.isTrue(columnCount == expectedColumnCount, String.format("There are %s slots requiring input in the selected template" +
+				" is but the header line of the input file has %s columns.", expectedColumnCount, columnCount));
 	}
 }

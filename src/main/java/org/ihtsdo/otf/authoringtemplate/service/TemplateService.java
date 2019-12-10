@@ -1,16 +1,6 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import org.assertj.core.util.Arrays;
+import org.apache.commons.lang.ArrayUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
@@ -26,10 +16,22 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 @Service
 public class TemplateService {
 
-	public static final String OPTIONAL = "(optional)";
+	static final String OPTIONAL = "(optional)";
 
 	public static final Pattern TERM_SLOT_PATTERN = Pattern.compile("\\$([^\\$]*)\\$");
 
@@ -82,7 +84,7 @@ public class TemplateService {
 	public Set<ConceptTemplate> listAll(String branchPath, String[] descendantOf, String[] ancestorOf) throws IOException {
 		Set<ConceptTemplate> templates = listAll();
 		SnowOwlRestClient terminologyClient = terminologyClientFactory.getClient();
-		if (!Arrays.isNullOrEmpty(descendantOf) || !Arrays.isNullOrEmpty(ancestorOf)) {
+		if (!ArrayUtils.isEmpty(descendantOf) || !ArrayUtils.isEmpty(ancestorOf)) {
 			// Group templates by focus concept to reduce the number of ECL queries
 			Map<String, List<ConceptTemplate>> templatesByFocusConcept = templates.stream().collect(Collectors.groupingBy(ConceptTemplate::getFocusConcept));
 			SecurityContext securityContext = SecurityContextHolder.getContext();
@@ -95,7 +97,7 @@ public class TemplateService {
 					ecl += "(" + focusConcept + " AND <<" + descendantOf[i] + ")";
 				}
 				for (int i = 0; ancestorOf != null && i < ancestorOf.length; i++) {
-					if (!Arrays.isNullOrEmpty(descendantOf) || i > 0) ecl += " OR ";
+					if (!ArrayUtils.isEmpty(descendantOf) || i > 0) ecl += " OR ";
 					ecl += "(" + focusConcept + " AND >>" + ancestorOf[i] + ")";
 				}
 				try {
@@ -113,17 +115,17 @@ public class TemplateService {
 		return templateStore.loadAll();
 	}
 
-	public void writeEmptyInputFile(String branchPath, String templateName, OutputStream outputStream) throws IOException, ResourceNotFoundException {
+	public void writeEmptyInputFile(String templateName, OutputStream outputStream) throws IOException, ResourceNotFoundException {
 		ConceptTemplate template = loadOrThrow(templateName);
-		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, Constants.UTF_8))) {
-			String header = "";
+		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, UTF_8))) {
 			List<Relationship> relationships = template.getConceptOutline()
 					.getClassAxioms()
 					.stream()
 					.findFirst()
 					.get()
 					.getRelationships();
-			
+
+			StringBuilder header = new StringBuilder();
 			for (Relationship relationship : relationships) {
 				SimpleSlot targetSlot = relationship.getTargetSlot();
 				if (isSlotRequiringInput(targetSlot)) {
@@ -131,15 +133,15 @@ public class TemplateService {
 					if (TemplateUtil.isOptional(relationship)) {
 						slotName = slotName + OPTIONAL;
 					}
-					if (!header.isEmpty()) header += "\t";
-					header += slotName != null ? slotName : "slot";
+					if (header.length() > 0) header.append("\t");
+					header.append(slotName != null ? slotName : "slot");
 				}
 			}
 			for (String additionalSlot : template.getAdditionalSlots()) {
-				if (!header.isEmpty()) header += "\t";
-				header += additionalSlot;
+				if (header.length() > 0) header.append("\t");
+				header.append(additionalSlot);
 			}
-			writer.write(header);
+			writer.write(header.toString());
 			writer.newLine();
 		}
 	}

@@ -24,13 +24,20 @@ import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 
 public class DescriptionTransformer {
+
 	private ConceptPojo conceptToTransform;
 	private Map<String, Set<DescriptionPojo>> slotValueMap;
 	private String inactivationReason;
 	private ConceptTemplate conceptTemplate;
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTransformer.class);
-	
+
+	private static final Comparator<DescriptionPojo> DESCRIPTION_POJO_COMPARATOR = Comparator
+			.comparing(DescriptionPojo::getType, Comparator.naturalOrder())
+			.thenComparing(DescriptionPojo::isActive, Comparator.nullsFirst(Boolean::compareTo).reversed())
+			.thenComparing(DescriptionPojo::getDescriptionId, Comparator.nullsFirst(String::compareTo))
+			.thenComparing(DescriptionPojo::getTerm, Comparator.naturalOrder());
+
 	public DescriptionTransformer(ConceptPojo conceptToTransform, ConceptTemplate conceptTemplate,
 			Map<String, Set<DescriptionPojo>> slotValueMap, String inactivationReason) {
 		this.conceptToTransform = conceptToTransform;
@@ -67,11 +74,11 @@ public class DescriptionTransformer {
 				}
 			}
 			if (!previousActiveTermMap.keySet().contains(term)) {
-				DescriptionPojo descPojo = conscturctDescriptionPojo(desc, term, moduleId);
+				DescriptionPojo descPojo = getDescriptionPojo(desc, term, moduleId);
 				descPojo.setConceptId(conceptToTransform.getConceptId());
 				newDescriptions.add(descPojo);
 			} else {
-				//update Acceptability
+				// Update Acceptability
 				if (desc.getAcceptabilityMap() != null && !desc.getAcceptabilityMap().isEmpty()) {
 					previousActiveTermMap.get(term).setAcceptabilityMap(desc.getAcceptabilityMap());
 				}
@@ -91,14 +98,13 @@ public class DescriptionTransformer {
 			} else if (SYNONYM.name().equals(pojo.getType())){
 				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().values().contains(PREFERRED)) {
 					if (!newPts.contains(pojo.getTerm())) {
-						updateAcceptablityMap(pojo.getAcceptabilityMap(), ACCEPTABLE);
+						updateAcceptabilityMap(pojo.getAcceptabilityMap(), ACCEPTABLE);
 					}
 				}
 			}
 		}
-		
-		List<DescriptionPojo> updated = new ArrayList<>();
-		updated.addAll(newDescriptions);
+
+		List<DescriptionPojo> updated = new ArrayList<>(newDescriptions);
 		int counter = 0;
 		for (DescriptionPojo pojo : conceptToTransform.getDescriptions()) {
 			if (pojo.isActive() || pojo.isReleased()) {
@@ -110,7 +116,7 @@ public class DescriptionTransformer {
 		if (counter > 0) {
 			LOGGER.info("Total unpublished inactive descriptions removed:" + counter);
 		}
-		Set<DescriptionPojo> descriptions = new TreeSet<DescriptionPojo>( getDescriptionPojoComparator());
+		Set<DescriptionPojo> descriptions = new TreeSet<>(DESCRIPTION_POJO_COMPARATOR);
 		descriptions.addAll(updated);
 		if (updated.size() != descriptions.size()) {
 			throw new ServiceException(String.format("The total sorted descriptions %s doesn't match the total before sorting %s", descriptions.size(), updated.size()));
@@ -118,13 +124,13 @@ public class DescriptionTransformer {
 		conceptToTransform.setDescriptions(descriptions);
 	}
 
-	private void updateAcceptablityMap(Map<String, String> acceptabilityMap, String newValue) {
+	private void updateAcceptabilityMap(Map<String, String> acceptabilityMap, String newValue) {
 		for (String refsetId : acceptabilityMap.keySet()) {
 			acceptabilityMap.put(refsetId, newValue);
 		}
 	}
 
-	private DescriptionPojo conscturctDescriptionPojo(Description desc, String term, String moduleid) {
+	private DescriptionPojo getDescriptionPojo(Description desc, String term, String moduleId) {
 		DescriptionPojo pojo = new DescriptionPojo();
 		pojo.setAcceptabilityMap(desc.getAcceptabilityMap());
 		pojo.setActive(true);
@@ -132,16 +138,8 @@ public class DescriptionTransformer {
 		pojo.setTerm(term);
 		pojo.setType(desc.getType().name());
 		pojo.setLang(desc.getLang());
-		pojo.setModuleId(moduleid);
+		pojo.setModuleId(moduleId);
 		return pojo;
 	}
 
-	public static Comparator<DescriptionPojo> getDescriptionPojoComparator() {
-		Comparator<DescriptionPojo> comparator = Comparator
-				.comparing(DescriptionPojo::getType, Comparator.naturalOrder())
-				.thenComparing(DescriptionPojo:: isActive, Comparator.nullsFirst(Boolean::compareTo).reversed())
-				.thenComparing(DescriptionPojo::getDescriptionId, Comparator.nullsFirst(String::compareTo))
-				.thenComparing(DescriptionPojo::getTerm, Comparator.naturalOrder());
-		return comparator;
-	}
 }

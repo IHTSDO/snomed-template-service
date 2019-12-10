@@ -1,34 +1,19 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.authoringtemplate.domain.CaseSignificance;
-import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.Description;
-import org.snomed.authoringtemplate.domain.DescriptionType;
-import org.snomed.authoringtemplate.domain.LexicalTemplate;
-import org.snomed.authoringtemplate.domain.Relationship;
-import org.snomed.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.*;
 import org.snomed.authoringtemplate.domain.logical.Attribute;
 import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
+
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class TemplateUtil {
 
@@ -53,7 +38,7 @@ public class TemplateUtil {
 	}
 	
 	
-	public static Set<String> getSlots(String ... termTemplates) {
+	public static Set<String> getSlots(Collection<String> termTemplates) {
 		Set<String> slots = new HashSet<>();
 		for (String termTemplate : termTemplates) {
 			Matcher matcher = TemplateService.TERM_SLOT_PATTERN.matcher(termTemplate);
@@ -97,7 +82,7 @@ public class TemplateUtil {
 	public static Map<Pattern, Set<String>> compilePatterns(Set<String> termTemplates) {
 		Map<Pattern, Set<String>> result = new HashMap<>();
 		for (String termPattern : termTemplates) {
-			Set<String> slots = getSlots(termPattern);
+			Set<String> slots = getSlots(Collections.singleton(termPattern));
 			if (slots.isEmpty()) {
 				continue;
 			}
@@ -105,20 +90,6 @@ public class TemplateUtil {
 			result.putIfAbsent(pattern, slots);
 		}
 		return result;
-	}
-	
-	public static void mapSlots(Map<Pattern, List<String>> termTemplatePatterns, String term, Map<String, String> result) {
-		for (Pattern termPattern : termTemplatePatterns.keySet()) {
-			 Matcher matcher = termPattern.matcher(term);
-			 if (matcher.matches()) {
-				 List<String> slots = termTemplatePatterns.get(termPattern);
-				if (matcher.groupCount() == slots.size()) {
-					 for (int i =0; i < matcher.groupCount(); i++) {
-						 result.putIfAbsent(slots.get(i), matcher.group(i+1));
-					 }
-				 }
-			 }
-		}
 	}
 	
 	public static Map<String, ConceptMiniPojo> getAttributeSlotValueMap(Map<String, Set<String>> attributeSlots, ConceptPojo conceptPojo) {
@@ -180,7 +151,7 @@ public class TemplateUtil {
 	public static String getDescriptionFromFSN(String fsn) {
 		if (fsn != null) {
 			Matcher matcher = FSN_PATTERN.matcher(fsn);
-			while (matcher.find()) {
+			if (matcher.find()) {
 				return matcher.group(1).trim();
 			}
 		}
@@ -203,40 +174,38 @@ public class TemplateUtil {
 	}
 
 	public static void validateTermSlots(ConceptTemplate conceptTemplate, boolean checkAdditionalSlots) throws ServiceException {
-		//check term slots can be found in replacement slots
+		// Check term slots can be found in replacement slots
 		Set<String> termTemplates = getTermTemplates(conceptTemplate);
-		Set<String> termSlots = getSlots(termTemplates.toArray(new String[termTemplates.size()]));
+		Set<String> termSlots = getSlots(termTemplates);
 		Map<String, String> lexicalTermNameSlotMap = getLexicalTermNameSlotMap(conceptTemplate);
 		Set<String> slotsDefinedInLexical = new HashSet<>(lexicalTermNameSlotMap.keySet());
 		if (checkAdditionalSlots) {
 			slotsDefinedInLexical.addAll(conceptTemplate.getAdditionalSlots());
 		}
-		//Check term names in term templates are defined in the lexical templates
+
+		// Check term names in term templates are defined in the lexical templates
 		if (!slotsDefinedInLexical.containsAll(termSlots)) {
-			Set<String> slotsNotFound = termSlots;
+			Set<String> slotsNotFound = new HashSet<>(termSlots);
 			slotsNotFound.removeAll(slotsDefinedInLexical);
 			throw new ServiceException(String.format("Template %s has term slot %s that is not defined in the lexical template",
 					conceptTemplate.getName(), slotsNotFound));
 		}
 		List<Relationship> relationships = conceptTemplate.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
 		Set<String> logicalSlots = getSlotsRequiringInput(relationships)
-				.stream().map(s -> s.getSlotName()).collect(Collectors.toSet());
-		
+				.stream().map(SimpleSlot::getSlotName).collect(Collectors.toSet());
+
 		Set<String> logicalSlotsReferencedInLexical = new HashSet<>(lexicalTermNameSlotMap.values());
 		if (!logicalSlots.containsAll(logicalSlotsReferencedInLexical)) {
-			Set<String> slotsNotFound = logicalSlotsReferencedInLexical;
+			Set<String> slotsNotFound = new HashSet<>(logicalSlotsReferencedInLexical);
 			slotsNotFound.removeAll(logicalSlots);
-					throw new ServiceException(String.format("Template %s has slot referenced in the lexical template %s but doesn't exist in the logical template",
-							conceptTemplate.getName(), slotsNotFound));
+			throw new ServiceException(String.format("Template %s has slot referenced in the lexical template %s but doesn't exist in the logical template",
+					conceptTemplate.getName(), slotsNotFound));
 		}
 	}
 	
 	
 	public static boolean isOptional(Relationship relationship) {
-		if (relationship.getCardinalityMin() == null || "0".equals(relationship.getCardinalityMin())) {
-			return true;
-		}
-		return false;
+		return relationship.getCardinalityMin() == null || "0".equals(relationship.getCardinalityMin());
 	}
 
 	public static String getDescriptionFromPT(DescriptionPojo ptPojo) {

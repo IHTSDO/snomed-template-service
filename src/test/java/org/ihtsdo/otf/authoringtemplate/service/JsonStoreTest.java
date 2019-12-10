@@ -51,7 +51,7 @@ public class JsonStoreTest extends AbstractServiceTest{
 		System.out.println(uri);
 		String expecedUrl ="http://localhost:8080/snowstorm/snomed-ct/v2/MAIN/STORMTEST1/STORMTEST1-183/concepts?active=true&offset=0&limit=10&statedEcl=(%3C%3C420134006)%20AND%20(%3C%3C420134006:%5B1..1%5D%7B%5B1..1%5D719722006%3D472964009,%5B1..1%5D246075003%3D%3C105590001%20%7CSubstance%20(substance)%7C%7D)";
 		assertEquals(expecedUrl, uri.toString());
-		String queryStr = uri.getQuery().toString();
+		String queryStr = uri.getQuery();
 		System.out.println("queryString=" + queryStr);
 		String expected = "active=true&offset=0&limit=10&statedEcl=(<<420134006) AND (<<420134006:[1..1]{[1..1]719722006=472964009,[1..1]246075003=<105590001 |Substance (substance)|})";
 

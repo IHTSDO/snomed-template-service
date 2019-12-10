@@ -1,28 +1,16 @@
 package org.ihtsdo.otf.authoringtemplate.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.logical.Attribute;
 import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
@@ -30,6 +18,11 @@ import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class TemplateConceptSearchService {
@@ -63,17 +56,17 @@ public class TemplateConceptSearchService {
 			}
 			
 			if (lexicalMatch != null) {
-				if (!logicalMatch.booleanValue()) {
+				if (!logicalMatch) {
 					throw new IllegalArgumentException("logicalMatch parameter must be true when lexicalMatch is set.");
 				}
 			}
 			try {
 				ConceptTemplate conceptTemplate = templateService.loadOrThrow(templateName);
-				//parse logical
+				// Parse logical
 				LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
 				if (lexicalMatch != null) {
 					Set<String> logicalResult = performLogicalSearch(conceptTemplate, logical, branchPath, true, stated);
-					return performLexicalSearch(conceptTemplate, logical, logicalResult, branchPath, lexicalMatch);
+					return performLexicalSearch(conceptTemplate, logicalResult, branchPath, lexicalMatch);
 				} else {
 					return performLogicalSearch(conceptTemplate, logical, branchPath, logicalMatch, stated);
 				}
@@ -82,7 +75,7 @@ public class TemplateConceptSearchService {
 		}
 	}
 	
-	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate, LogicalTemplate logical, 
+	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate,
 			Set<String> logicalMatched, String branchPath, boolean lexicalMatch) throws ServiceException {
 		
 		Set<String> result = new HashSet<>();
@@ -90,15 +83,19 @@ public class TemplateConceptSearchService {
 			LOGGER.info("No results found for logical search.");
 			return result;
 		}
-		List<Description> descriptions = conceptTemplate.getConceptOutline().getDescriptions();
-		List<Pattern> patterns = new ArrayList<>();
-		for (Description description : descriptions) {
-			if (description.getTermTemplate() != null) {
-				patterns.add(TemplateUtil.constructTermPattern(description.getTermTemplate()));
-			}
-		}
+
+		// TODO Remove unused code? Should it be used?
+//		List<Description> descriptions = conceptTemplate.getConceptOutline().getDescriptions();
+//		List<Pattern> patterns = new ArrayList<>();
+//		for (Description description : descriptions) {
+//			if (description.getTermTemplate() != null) {
+//				patterns.add(TemplateUtil.constructTermPattern(description.getTermTemplate()));
+//			}
+//		}
+
 		Map<Pattern, Set<String>> fsnPatternSlotsMap = TemplateUtil.compilePatterns(
 				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN));
+
 		Map<Pattern, Set<String>> synoymPatternSlotsMap = TemplateUtil.compilePatterns(
 				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM));
 		try {
@@ -107,16 +104,16 @@ public class TemplateConceptSearchService {
 			for (ConceptPojo conceptPojo : concepts) {
 				List<String> synoyms = conceptPojo.getDescriptions()
 						.stream()
-						.filter(d->d.isActive())
+						.filter(DescriptionPojo::isActive)
 						.filter(d -> d.getType().equals(DescriptionType.SYNONYM.name()))
-						.map(d -> d.getTerm())
+						.map(DescriptionPojo::getTerm)
 						.collect(Collectors.toList());
 				
 				List<String> fsns = conceptPojo.getDescriptions()
 						.stream()
-						.filter(d->d.isActive())
+						.filter(DescriptionPojo::isActive)
 						.filter(d -> d.getType().equals(DescriptionType.FSN.name()))
-						.map(d -> d.getTerm())
+						.map(DescriptionPojo::getTerm)
 						.collect(Collectors.toList());
 				
 				boolean isMatched = false;
@@ -143,9 +140,8 @@ public class TemplateConceptSearchService {
 		} catch (RestClientException e) {
 			throw new ServiceException("Failed to complete lexical template search.", e);
 		}
-		
 	}
-	
+
 	private boolean isPatternMatched(Pattern pattern, Collection<String> terms) {
 		for (String term : terms) {
 			if (pattern.matcher(term).matches()) {
@@ -167,8 +163,8 @@ public class TemplateConceptSearchService {
 			LOGGER.debug("Logic template ECL=" + logicalEcl);
 			String ecl = constructLogicalSearchEcl(domainEcl, logicalEcl, logicalMatch);
 			LOGGER.info("Logical search ECL={} stated={}", ecl, stated);
-			Set<String> results = terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated);
-			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<String>(results));
+			Set<String> results = new HashSet<>(terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated));
+			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<>(results));
 			Set<String> toRemove = findConceptsNotMatchExactly(conceptPojos, attributeGroups, unGroupedAttributes, stated);
 			if (toRemove.size() > 0) {
 				LOGGER.info("Total concepts " + toRemove.size() + " are removed from results.");
@@ -221,7 +217,7 @@ public class TemplateConceptSearchService {
 		Set<String> missing = new HashSet<>();
 		Set<String> havingExtra = new HashSet<>();
 		for (ConceptPojo concept : conceptPojos) {
-			//map relationship by group
+			// Map relationship by group
 			List<RelationshipPojo> activeRelationships = new ArrayList<>();
 			if (stated) {
 				if (concept.getClassAxioms() != null) {
@@ -233,7 +229,7 @@ public class TemplateConceptSearchService {
 				} 
 			} else {
 				activeRelationships = concept.getRelationships().stream()
-						.filter(r -> r.isActive())
+						.filter(RelationshipPojo::isActive)
 						.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
 						.collect(Collectors.toList());
 			}
@@ -268,7 +264,7 @@ public class TemplateConceptSearchService {
 	}
 	
 	private boolean missingMandatoryAttribute(List<Set<String>> mandatoryTypes, Collection<Set<String>> relGroups) {
-		//check all mandatory attributes are present
+		// Check all mandatory attributes are present
 		for (Set<String> mandatory : mandatoryTypes) {
 			boolean isFound = false;
 			for (Set<String> typeSet : relGroups) {
@@ -285,7 +281,7 @@ public class TemplateConceptSearchService {
 	}
 
 	private boolean containExtraAttribute(List<Set<String>> allTypes, Collection<Set<String>> relGroups) {
-		// check no additional types
+		// Check no additional types
 		for (Set<String> typeSet : relGroups) {
 			boolean isFound = false;
 			for (Set<String> allType : allTypes) {
@@ -379,13 +375,13 @@ public class TemplateConceptSearchService {
 
 	public String constructEclQuery(List<String> focusConcepts, List<AttributeGroup> attributeGroups,
 			List<Attribute> unGroupedAttriburtes) throws ServiceException {
-		List<Attribute> attributes = new ArrayList<>();
-		attributes.addAll(unGroupedAttriburtes);
+
+		List<Attribute> attributes = new ArrayList<>(unGroupedAttriburtes);
 		StringBuilder queryBuilder = new StringBuilder();
 		if (focusConcepts == null || focusConcepts.isEmpty()) {
 			throw new ServiceException("No focus concepts defined!");
 		}
-		queryBuilder.append("<<" + focusConcepts.get(0));
+		queryBuilder.append("<<").append(focusConcepts.get(0));
 		if (!attributeGroups.isEmpty() || !unGroupedAttriburtes.isEmpty()) {
 			queryBuilder.append(":");
 		}
@@ -400,16 +396,15 @@ public class TemplateConceptSearchService {
 				queryBuilder.append(",");
 			}
 			if (group.getCardinalityMin() != null) {
-				queryBuilder.append("[" + group.getCardinalityMin() + CARDINALITY_SEPARATOR);
+				queryBuilder.append("[").append(group.getCardinalityMin()).append(CARDINALITY_SEPARATOR);
 			}
 			if (group.getCardinalityMax() != null) {
-				queryBuilder.append(group.getCardinalityMax() + "]");
+				queryBuilder.append(group.getCardinalityMax()).append("]");
 			}
 			queryBuilder.append("{");
 			queryBuilder.append(convertAttributeToEcl(group.getAttributes()));
 			queryBuilder.append("}");
 		}
-		 queryBuilder.toString();
-		 return replaceSlot( queryBuilder.toString(), attributes);
+		 return replaceSlot(queryBuilder.toString(), attributes);
 	}
 }
