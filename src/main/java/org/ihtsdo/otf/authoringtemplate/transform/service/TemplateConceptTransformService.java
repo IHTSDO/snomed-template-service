@@ -9,12 +9,14 @@ import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SimpleConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DefinitionStatus;
 import org.snomed.authoringtemplate.domain.Relationship;
+import org.snomed.authoringtemplate.domain.logical.Attribute;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,7 +108,7 @@ public class TemplateConceptTransformService {
 		try {
 			TransformationInputData input = new TransformationInputData(transformRequest);
 			LogicalTemplate logical = parser.parseTemplate(destination.getLogicalTemplate());
-			input.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical, true));
+			input.setDestinationSlotToAttributeMap(TemplateUtil.getSlotToAttributeMap(logical, true));
 			input.setDestinationTemplate(destination);
 			return input;
 		} catch (IOException e) {
@@ -188,10 +190,15 @@ public class TemplateConceptTransformService {
 		return result;
 	}
 	
-	private ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowOwlRestClient restClient) throws ServiceException{
+	private ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowOwlRestClient restClient) throws ServiceException {
 		ConceptPojo transformed = conceptPojo;
 		ConceptTemplate conceptTemplate = inputData.getDestinationTemplate();
-		Map<String, ConceptMiniPojo> attributeSlotValueMap = TemplateUtil.getAttributeSlotValueMap(inputData.getDestinationAttributeTypeSlotMap(), conceptPojo);
+		Map<String, ConceptMiniPojo> attributeSlotValueMap;
+		try {
+			attributeSlotValueMap = constructSlotToTargetValueMap(inputData, conceptPojo, restClient);
+		} catch (RestClientException e) {
+			throw new ServiceException("Fail to validate slot target values" , e);
+		}
 		if (inputData.getTransformRequest().isLogicalTransform()) {
 			org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus definitionStatus = org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.PRIMITIVE;
 			if (DefinitionStatus.FULLY_DEFINED == conceptTemplate.getConceptOutline().getDefinitionStatus()) {
@@ -210,6 +217,29 @@ public class TemplateConceptTransformService {
 			transformed.setEffectiveTime(null);
 		}
 		return transformed;
+	}
+
+	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowOwlRestClient restClient) throws RestClientException {
+		Map<String, Set<ConceptMiniPojo>> slotToAttrbuteValuesMap = TemplateUtil.getSlotNameToAttributeValueMap(inputData.getDestinationSlotToAttributeMap(), conceptPojo);
+		// validate using attribute slot range when there is more than one value for a given slot
+		Map<String, ConceptMiniPojo> slotToValuesMap = new HashMap<>();
+		for (String slot : slotToAttrbuteValuesMap.keySet()) {
+			List<String> conceptIds = slotToAttrbuteValuesMap.get(slot).stream().map(ConceptMiniPojo :: getConceptId).collect(Collectors.toList());
+			if (conceptIds.size() > 1) {
+				Set<SimpleConceptPojo> results = restClient.getConcepts(inputData.getBranchPath(), inputData.getDestinationSlotToAttributeMap().get(slot).getAllowableRangeECL().trim(),
+						null, conceptIds, conceptIds.size(), true);
+				Set<String> conceptsWithinRange = results.stream().map(SimpleConceptPojo :: getId).collect(Collectors.toSet());
+				for (ConceptMiniPojo pojo : slotToAttrbuteValuesMap.get(slot)) {
+					if (conceptsWithinRange.contains(pojo.getConceptId())) {
+						slotToValuesMap.put(slot, pojo);
+						break;
+					}
+				}
+			} else {
+				slotToValuesMap.put(slot, slotToAttrbuteValuesMap.get(slot).iterator().next());
+			}
+		}
+		return slotToValuesMap;
 	}
 
 	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws ServiceException {
@@ -241,9 +271,12 @@ public class TemplateConceptTransformService {
 		try {
 			LogicalTemplate sourcelogical = parser.parseTemplate(source.getLogicalTemplate());
 			LogicalTemplate destinationLogical = parser.parseTemplate(destination.getLogicalTemplate());
+			
 			Set<String> sourceAttributeTypes = TemplateUtil.getAttributeTypes(sourcelogical);
-			Map<String, Set<String>> destinationAttribyteSlotMap = TemplateUtil.getAttributeTypeSlotMap(destinationLogical, false);
-			Set<String> destinationTypes = destinationAttribyteSlotMap.keySet();
+			Map<String, Attribute> destinationSlotToAttributeMap = TemplateUtil.getSlotToAttributeMap(destinationLogical, false);
+			
+			Set<String> destinationTypes = destinationSlotToAttributeMap.values().stream().map(Attribute:: getType).collect(Collectors.toSet());
+			// check mandatory destination attribute types exist in the source template
 			if (!sourceAttributeTypes.containsAll(destinationTypes)) {
 				StringBuilder msgBuilder = new StringBuilder();
 				int counter = 0;
@@ -261,7 +294,6 @@ public class TemplateConceptTransformService {
 		} catch (IOException e) {
 			throw new ServiceException("Failed to parse logical template", e);
 		}
-		
 	}
 
 	private Map<String, Set<DescriptionPojo>> getSlotDescriptionValuesMap(String branchPath, 
@@ -314,7 +346,8 @@ public class TemplateConceptTransformService {
 		inputData.setBranchPath(branchPath);
 		inputData.setDestinationTemplate(destination);
 		inputData.setConceptIdMap(getDestinationConceptsMap(branchPath, restClient, destination));
-		inputData.setDestinationAttributeTypeSlotMap(TemplateUtil.getAttributeTypeSlotMap(logical, true));
+		inputData.setDestinationSlotToAttributeMap(TemplateUtil.getSlotToAttributeMap(logical, true));
+		
 		return performTransform(conceptToTransform, inputData, restClient);
 	}
 }

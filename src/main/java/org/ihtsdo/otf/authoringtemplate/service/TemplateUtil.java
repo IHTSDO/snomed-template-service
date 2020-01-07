@@ -92,51 +92,57 @@ public class TemplateUtil {
 		return result;
 	}
 	
-	public static Map<String, ConceptMiniPojo> getAttributeSlotValueMap(Map<String, Set<String>> attributeSlots, ConceptPojo conceptPojo) {
-		Map<String, ConceptMiniPojo> result = new HashMap<>();
+	public static Map<String, Set<ConceptMiniPojo>> getSlotNameToAttributeValueMap(Map<String, Attribute> slotNameToAttributeMap, ConceptPojo conceptPojo) {
+		Map<String, Set<String>> attributeIdToSlotsMap = new HashMap<>();
+		for (String slotName : slotNameToAttributeMap.keySet()) {
+			attributeIdToSlotsMap.computeIfAbsent(slotNameToAttributeMap.get(slotName).getType(), slots -> new HashSet<>()).add(slotName);
+		}
+		
+		Map<String, Set<ConceptMiniPojo>> attributeTypeToTargetValuesMap = new HashMap<>();
+		
 		for (AxiomPojo axiom : conceptPojo.getClassAxioms()) {
-			for (RelationshipPojo pojo : axiom.getRelationships()) {
-				if (!pojo.isActive()) {
+			for (RelationshipPojo relationship : axiom.getRelationships()) {
+				if (!relationship.isActive()) {
 					continue;
 				}
-				if (attributeSlots.keySet().contains(pojo.getType().getConceptId())) {
-					for (String slot : attributeSlots.get(pojo.getType().getConceptId())) {
-						result.putIfAbsent(slot, pojo.getTarget());
-					}
-				}
+				attributeTypeToTargetValuesMap.computeIfAbsent(relationship.getType().getConceptId(), values -> new HashSet<ConceptMiniPojo>())
+					.add(relationship.getTarget());
+				
+			}
+		}
+		
+		Map<String , Set<ConceptMiniPojo>> result = new HashMap<>();
+		for (String attributeTyeId : attributeIdToSlotsMap.keySet()) {
+			for (String slotName : attributeIdToSlotsMap.get(attributeTyeId)) {
+				result.put(slotName, attributeTypeToTargetValuesMap.get(attributeTyeId));
 			}
 		}
 		return result;
 	}
-
-	public static Map<String, Set<String>>  getAttributeTypeSlotMap(LogicalTemplate logical, boolean includeOptionalAttribute) {
-		Map<String, Set<String>> attributeSlots = new HashMap<>();
-		for (Attribute attr : logical.getUngroupedAttributes()) {
-			if (!includeOptionalAttribute && ("0".equals(attr.getCardinalityMin()))) {
+	
+	public static Map<String, Attribute> getSlotToAttributeMap(LogicalTemplate logical, boolean includeOptionalAttribute) {
+		
+		Map<String, Attribute> slotToAttributeMap = new HashMap<>();
+		for (Attribute attribute : logical.getUngroupedAttributes()) {
+			if (!includeOptionalAttribute && ("0".equals(attribute.getCardinalityMin()))) {
 				continue;
 			}
-			if (attr.getSlotName() != null) {
-				if (!attributeSlots.containsKey(attr.getType())) {
-					attributeSlots.put(attr.getType(), new HashSet<>());
-				}
-				attributeSlots.get(attr.getType()).add(attr.getSlotName());
+			if (attribute.getSlotName() != null) {
+				slotToAttributeMap.put(attribute.getSlotName(), attribute);
 			}
 		}
 
 		for (AttributeGroup attributeGrp : logical.getAttributeGroups()) {
-			for (Attribute attr : attributeGrp.getAttributes()) {
-				if (!includeOptionalAttribute && ("0".equals(attr.getCardinalityMin()))) {
+			for (Attribute attribute : attributeGrp.getAttributes()) {
+				if (!includeOptionalAttribute && ("0".equals(attribute.getCardinalityMin()))) {
 					continue;
 				}
-				if (attr.getSlotName() != null) {
-					if (!attributeSlots.containsKey(attr.getType())) {
-						attributeSlots.put(attr.getType(), new HashSet<>());
-					}
-					attributeSlots.get(attr.getType()).add(attr.getSlotName());
+				if (attribute.getSlotName() != null) {
+					slotToAttributeMap.put(attribute.getSlotName(), attribute);
 				}
 			}
 		}
-		return attributeSlots;
+		return slotToAttributeMap;
 	}
 	
 	public static List<SimpleSlot> getSlotsRequiringInput(Collection<Relationship> relationships) {

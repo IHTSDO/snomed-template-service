@@ -1,0 +1,248 @@
+{
+  "conceptId": "263078002",
+  "released": false,
+  "active": true,
+  "moduleId": "900000000000207008",
+  "definitionStatus": "FULLY_DEFINED",
+  "descriptions": [
+    {
+      "active": true,
+      "released": false,
+      "term": "Fracture dislocation of elbow joint (disorder)",
+      "conceptId": "263078002",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "FSN",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000508004": "PREFERRED",
+        "900000000000509007": "PREFERRED"
+      }
+    },
+    {
+      "active": true,
+      "released": false,
+      "term": "Fracture dislocation of elbow joint",
+      "conceptId": "263078002",
+      "moduleId": "900000000000207008",
+      "lang": "en",
+      "type": "SYNONYM",
+      "caseSignificance": "CASE_INSENSITIVE",
+      "acceptabilityMap": {
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+      }
+    }
+  ],
+  "classAxioms": [
+    {
+      "axiomId": "08bb334c-f120-4e0b-b63c-40c3e0e332c7",
+      "moduleId": "900000000000207008",
+      "active": true,
+      "released": true,
+      "definitionStatusId": "900000000000073002",
+      "relationships": [
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "263078002",
+          "target": {
+            "conceptId": "16953009",
+            "fsn": {
+              "term": "Elbow joint structure (body structure)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Elbow joint structure",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 2,
+          "type": {
+            "conceptId": "363698007",
+            "fsn": {
+              "term": "Finding site (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Finding site",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "263078002",
+          "target": {
+            "conceptId": "72704001",
+            "fsn": {
+              "term": "Fracture (morphologic abnormality)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Fracture",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 1,
+          "type": {
+            "conceptId": "116676008",
+            "fsn": {
+              "term": "Associated morphology (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Associated morphology",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "263078002",
+          "target": {
+            "conceptId": "64572001",
+            "fsn": {
+              "term": "Disease (disorder)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Disease",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 0,
+          "type": {
+            "conceptId": "116680003",
+            "fsn": {
+              "term": "Is a (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Is a",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "263078002",
+          "target": {
+            "conceptId": "87642003",
+            "fsn": {
+              "term": "Dislocation (morphologic abnormality)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Dislocation",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 2,
+          "type": {
+            "conceptId": "116676008",
+            "fsn": {
+              "term": "Associated morphology (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Associated morphology",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "263078002",
+          "target": {
+            "conceptId": "305016004",
+            "fsn": {
+              "term": "Periarticular bone structure of elbow joint (body structure)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Periarticular bone structure of elbow joint",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 1,
+          "type": {
+            "conceptId": "363698007",
+            "fsn": {
+              "term": "Finding site (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Finding site",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        },
+        {
+          "active": true,
+          "released": false,
+          "moduleId": "900000000000207008",
+          "sourceId": "263078002",
+          "target": {
+            "conceptId": "773760007",
+            "fsn": {
+              "term": "Traumatic event (event)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Traumatic event",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "groupId": 3,
+          "type": {
+            "conceptId": "42752001",
+            "fsn": {
+              "term": "Due to (attribute)",
+              "lang": "en"
+            },
+            "pt": {
+              "term": "Due to",
+              "lang": "en"
+            },
+            "definitionStatus": "PRIMITIVE"
+          },
+          "characteristicType": "STATED_RELATIONSHIP",
+          "modifier": "EXISTENTIAL"
+        }
+      ]
+    }
+  ],
+  "gciAxioms": [],
+  "relationships": []
+}

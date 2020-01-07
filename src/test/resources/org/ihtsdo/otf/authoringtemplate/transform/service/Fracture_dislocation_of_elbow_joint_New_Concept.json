@@ -1,0 +1,244 @@
+{
+"conceptId": "263078002",
+"active": true,
+"moduleId": "900000000000207008",
+"definitionStatus": "FULLY_DEFINED",
+"descriptions": [],
+"classAxioms": [
+{
+"axiomId": "08bb334c-f120-4e0b-b63c-40c3e0e332c7",
+"moduleId": "900000000000207008",
+"active": true,
+"released": true,
+"definitionStatusId": "900000000000073002",
+"relationships": [
+{
+"active": true,
+"released": false,
+"moduleId": "900000000000207008",
+"sourceId": "263078002",
+"destinationId": "64572001",
+"typeId": "116680003",
+"type": {
+"conceptId": "116680003",
+"id": "116680003",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Is a (attribute)",
+"lang": "en"
+},
+"pt": {
+"term": "Is a",
+"lang": "en"
+}
+},
+"target": {
+"conceptId": "64572001",
+"id": "64572001",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Disease (disorder)",
+"lang": "en"
+},
+"pt": {
+"term": "Disease",
+"lang": "en"
+}
+},
+"groupId": 0,
+"characteristicType": "STATED_RELATIONSHIP",
+"modifier": "EXISTENTIAL"
+},
+{
+"active": true,
+"released": false,
+"moduleId": "900000000000207008",
+"sourceId": "263078002",
+"destinationId": "773760007",
+"typeId": "42752001",
+"type": {
+"conceptId": "42752001",
+"id": "42752001",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Due to (attribute)",
+"lang": "en"
+},
+"pt": {
+"term": "Due to",
+"lang": "en"
+}
+},
+"target": {
+"conceptId": "773760007",
+"id": "773760007",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Traumatic event (event)",
+"lang": "en"
+},
+"pt": {
+"term": "Traumatic event",
+"lang": "en"
+}
+},
+"groupId": 3,
+"characteristicType": "STATED_RELATIONSHIP",
+"modifier": "EXISTENTIAL"
+},
+{
+"active": true,
+"released": false,
+"moduleId": "900000000000207008",
+"sourceId": "263078002",
+"destinationId": "16953009",
+"typeId": "363698007",
+"type": {
+"conceptId": "363698007",
+"id": "363698007",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Finding site (attribute)",
+"lang": "en"
+},
+"pt": {
+"term": "Finding site",
+"lang": "en"
+}
+},
+"target": {
+"conceptId": "16953009",
+"id": "16953009",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Elbow joint structure (body structure)",
+"lang": "en"
+},
+"pt": {
+"term": "Elbow joint structure",
+"lang": "en"
+}
+},
+"groupId": 2,
+"characteristicType": "STATED_RELATIONSHIP",
+"modifier": "EXISTENTIAL"
+},
+{
+"active": true,
+"released": false,
+"moduleId": "900000000000207008",
+"sourceId": "263078002",
+"destinationId": "87642003",
+"typeId": "116676008",
+"type": {
+"conceptId": "116676008",
+"id": "116676008",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Associated morphology (attribute)",
+"lang": "en"
+},
+"pt": {
+"term": "Associated morphology",
+"lang": "en"
+}
+},
+"target": {
+"conceptId": "87642003",
+"id": "87642003",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Dislocation (morphologic abnormality)",
+"lang": "en"
+},
+"pt": {
+"term": "Dislocation",
+"lang": "en"
+}
+},
+"groupId": 2,
+"characteristicType": "STATED_RELATIONSHIP",
+"modifier": "EXISTENTIAL"
+},
+{
+"active": true,
+"released": false,
+"moduleId": "900000000000207008",
+"sourceId": "263078002",
+"destinationId": "305016004",
+"typeId": "363698007",
+"type": {
+"conceptId": "363698007",
+"id": "363698007",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Finding site (attribute)",
+"lang": "en"
+},
+"pt": {
+"term": "Finding site",
+"lang": "en"
+}
+},
+"target": {
+"conceptId": "305016004",
+"id": "305016004",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Periarticular bone structure of elbow joint (body structure)",
+"lang": "en"
+},
+"pt": {
+"term": "Periarticular bone structure of elbow joint",
+"lang": "en"
+}
+},
+"groupId": 1,
+"characteristicType": "STATED_RELATIONSHIP",
+"modifier": "EXISTENTIAL"
+},
+{
+"active": true,
+"released": false,
+"moduleId": "900000000000207008",
+"sourceId": "263078002",
+"destinationId": "72704001",
+"typeId": "116676008",
+"type": {
+"conceptId": "116676008",
+"id": "116676008",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Associated morphology (attribute)",
+"lang": "en"
+},
+"pt": {
+"term": "Associated morphology",
+"lang": "en"
+}
+},
+"target": {
+"conceptId": "72704001",
+"id": "72704001",
+"definitionStatus": "PRIMITIVE",
+"fsn": {
+"term": "Fracture (morphologic abnormality)",
+"lang": "en"
+},
+"pt": {
+"term": "Fracture",
+"lang": "en"
+}
+},
+"groupId": 1,
+"characteristicType": "STATED_RELATIONSHIP",
+"modifier": "EXISTENTIAL"
+}
+],
+"id": "08bb334c-f120-4e0b-b63c-40c3e0e332c7",
+"definitionStatus": "FULLY_DEFINED"
+}
+],
+"gciAxioms": [],
+"relationships": []
+}

@@ -81,7 +81,7 @@ public class RelationshipTransformer {
 						if (TemplateUtil.isOptional(rel)) {
 							continue;
 						} else {
-							throw new ServiceException("Failed to find attribute slot value " + slot);
+							throw new ServiceException("Failed to find attribute value for slot name " + slot);
 						}
 					}
 					String key = target.getConceptId() + "_" + rel.getType().getConceptId();

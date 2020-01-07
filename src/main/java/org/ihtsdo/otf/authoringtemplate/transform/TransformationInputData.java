@@ -1,17 +1,17 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
 import java.util.Map;
-import java.util.Set;
 
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
+import org.snomed.authoringtemplate.domain.logical.Attribute;
 
 public class TransformationInputData {
 
 	private String branchPath;
 	private ConceptTemplate destinationTemplate;
 	private Map<String, ConceptMiniPojo> conceptIdMap;
-	private Map<String, Set<String>> destinationAttributeTypeSlotMap;
+	private Map<String, Attribute> slotToAttributeTypeMap;
 	private TemplateTransformRequest transformRequest;
 
 	public TransformationInputData(TemplateTransformRequest transformRequest) {
@@ -54,11 +54,11 @@ public class TransformationInputData {
 		return conceptIdMap;
 	}
 
-	public void setDestinationAttributeTypeSlotMap(Map<String, Set<String>> attributeTypeSlotMap) {
-		destinationAttributeTypeSlotMap = attributeTypeSlotMap;
+	public void setDestinationSlotToAttributeMap(Map<String, Attribute> slotToAttributeMap) {
+		this.slotToAttributeTypeMap = slotToAttributeMap;
 	}
 
-	public Map<String, Set<String>> getDestinationAttributeTypeSlotMap() {
-		return destinationAttributeTypeSlotMap;
+	public Map<String, Attribute> getDestinationSlotToAttributeMap() {
+		return this.slotToAttributeTypeMap;
 	}
 }

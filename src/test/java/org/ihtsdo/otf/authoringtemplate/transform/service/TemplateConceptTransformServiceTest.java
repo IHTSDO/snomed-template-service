@@ -31,7 +31,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -40,46 +39,47 @@ import java.util.stream.Collectors;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
-	
-	private static final String TEMPLATES = "/templates/";
 
-	private static final String JSON = ".json";
-	
 	@Autowired
 	private TemplateConceptTransformService transformService;
 
 	@Autowired
 	private JsonStore jsonStore;
 	
-	private String source = "Allergy to [substance]";
-	private String destination = "Allergy to [substance] V2";
-
-	private static final String CT_GUIDED_BODY_STRUCTURE_TEMPLATE = "CT guided [procedure] of [body structure]";
-	
 	private ConceptPojo conceptToTransform;
+	
 	private ConceptPojo transformedConcept;
+	
 	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	
 	// set it to true to print out concept in json
-	private boolean isDebug = true;
+	private boolean isDebug = false;
 	
 	private TemplateTransformRequest transformRequest;
 	
+	private String source;
+	
+	private String destination;
+	
 	@Before
-	public void setUp() {
+	public void setUp() throws Exception {
+		source = "Allergy to [substance]";
+		destination = "Allergy to [substance] V2";
 		transformRequest = new TemplateTransformRequest(source, destination);
+		setUpTemplates(source, destination);
 	}
 	
 	@Test
 	public void testCreateTemplateTransformation() throws ServiceException {
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest();
-		Set<String> concepts = new HashSet<>();
-		concepts.add("123555");
+		Set<String> concepts = Collections.singleton("123555");
 		transformRequest.setConceptsToTransform(concepts);
 		TemplateTransformation transformation = transformService.createTemplateTransformation("MAIN", transformRequest);
 		assertNotNull(transformation);
@@ -88,12 +88,6 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	@Test
 	public void testValidateWithSuccess() {
 		try {
-			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
-					jsonStore.getStoreDirectory());
-			
-			FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
-					jsonStore.getStoreDirectory());
-			templateService.reloadCache();
 			ConceptTemplate sourceTemplate = templateService.loadOrThrow(source);
 			ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
 			transformService.validate(sourceTemplate, destinationTemplate);
@@ -105,21 +99,19 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	@Test(expected=ServiceException.class)
 	public void testValidateWithFailure() throws Exception {
-		setUpTestTemplates("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
-		ConceptTemplate sourceTemplate = templateService.loadOrThrow(CT_GUIDED_BODY_STRUCTURE_TEMPLATE);
+		setUpTemplates("CT guided [procedure] of [body structure]");
+		ConceptTemplate sourceTemplate = templateService.loadOrThrow("CT guided [procedure] of [body structure]");
 		ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
 		transformService.validate(sourceTemplate, destinationTemplate);
 	}
 	
 	@Test
 	public void testAllegyToSubstanceTempalteTransformation() throws Exception {
-		setUpTestTemplates("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
-		Set<String> concepts = new HashSet<>();
-		concepts.add("712839001");
+		initTestConcepts("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
 		mockTerminologyServerClient();
-		mockSearchConcepts();
+		mockSearchConcepts(false);
 		
-		transformRequest.setConceptsToTransform(concepts);
+		transformRequest.setConceptsToTransform(Collections.singleton("712839001"));
 		transformRequest.setInactivationReason("ERRONEOUS");
 		TemplateTransformation transformation = new TemplateTransformation("MAIN", transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
@@ -162,7 +154,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void mockSearchConcepts() throws RestClientException {
+	private void mockSearchConcepts(boolean skipSearchConceptsCall) throws RestClientException {
 		
 		List<ConceptPojo> concepts = new ArrayList<>();
 		Set<RelationshipPojo> relationships = new HashSet<>();
@@ -177,9 +169,15 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 			concepts.add(constructConceptPojo(targetPojo));
 		}
 		
-		when(terminologyServerClient.searchConcepts(anyString(), any()))
-		.thenReturn(Collections.singletonList(conceptToTransform), concepts);
-		
+		// Mock two method calls. One is used in template concept search and one in the transformation service
+		if (skipSearchConceptsCall) {
+			when(terminologyServerClient.searchConcepts(anyString(), any()))
+			.thenReturn(concepts);
+		} else {
+			when(terminologyServerClient.searchConcepts(anyString(), any()))
+			.thenReturn(Collections.singletonList(conceptToTransform), concepts);
+			
+		}
 		// add test concepts here
 		Set<ConceptMiniPojo> attributeTypes = relationships.stream().filter(RelationshipPojo::isActive).map(RelationshipPojo::getType).collect(Collectors.toSet());
 		Set<ConceptMiniPojo> conceptMinis = new HashSet<>();
@@ -204,6 +202,9 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		concepts.add(constructConceptMiniPojo("420134006", "Propensity to adverse reaction (finding)"));
 		concepts.add(constructConceptMiniPojo("281647001", "Adverse reaction (disorder)"));
 		concepts.add(constructConceptMiniPojo("472964009", "Allergic process (qualifier value)"));
+		concepts.add(constructConceptMiniPojo("272691005", "Bone structure of shoulder girdle (body structure)"));
+		concepts.add(constructConceptMiniPojo("773760007", "Traumatic event (event)"));
+		concepts.add(constructConceptMiniPojo("72704001", "Fracture (morphologic abnormality)"));
 		return concepts;
 	}
 
@@ -255,15 +256,13 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	public void testAllergicReactionCausedBySubstanceTempalteTransformation() throws Exception {
 		source = "Allergic reaction caused by [substance]";
 		destination = "Allergic reaction caused by [substance] (disorder) V2";
-		setUpTestTemplates("Allergic_Reaction_Caused_By_Adhesive_Concept.json",
-				"Allergic_Reaction_Caused_By_Adhesive_Concept_Transformed.json");
-		Set<String> concepts = new HashSet<>();
-		concepts.add("418325008");
+		setUpTemplates(source, destination);
+		initTestConcepts("Allergic_Reaction_Caused_By_Adhesive_Concept.json", "Allergic_Reaction_Caused_By_Adhesive_Concept_Transformed.json");
 		mockTerminologyServerClient();
-		mockSearchConcepts();
+		mockSearchConcepts(false);
 		
 		TemplateTransformRequest transformRequest = new TemplateTransformRequest(source, destination);
-		transformRequest.setConceptsToTransform(concepts);
+		transformRequest.setConceptsToTransform(Collections.singleton("418325008"));
 		TemplateTransformation transformation = new TemplateTransformation("MAIN", transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
@@ -312,14 +311,11 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testAllergyToAluminiumTransformation() throws Exception {
-		setUpTestTemplates("Allergy_to_Aluminium_Concept.json",
-				"Allergy_to_Aluminium_Concept_Transformed.json");
-		Set<String> concepts = new HashSet<>();
-		concepts.add("402306009");
+		initTestConcepts("Allergy_to_Aluminium_Concept.json", "Allergy_to_Aluminium_Concept_Transformed.json");
 		mockTerminologyServerClient();
-		mockSearchConcepts();
+		mockSearchConcepts(false);
 		
-		transformRequest.setConceptsToTransform(concepts);
+		transformRequest.setConceptsToTransform(Collections.singleton("402306009"));
 		TemplateTransformation transformation = new TemplateTransformation("MAIN", transformRequest);
 		List<Future<TransformationResult>> results = transformService.transform(transformation, terminologyServerClient);
 		assertNotNull(results);
@@ -338,14 +334,11 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testSingleConceptTranformation() throws Exception {
-		setUpTestTemplates("Allergy_to_Aluminium_Concept_WithAxiomOnly.json",
-				"Allergy_to_Aluminium_Concept_WithAxiomOnly_Transformed.json");
+		initTestConcepts("Allergy_to_Aluminium_Concept_WithAxiomOnly.json", "Allergy_to_Aluminium_Concept_WithAxiomOnly_Transformed.json");
 		Set<String> concepts = new HashSet<>();
 		concepts.add("402306009");
 		mockTerminologyServerClient();
-		mockSearchConcepts();
-		// invoke the first mock method call
-		terminologyServerClient.searchConcepts("MAIN", new ArrayList<>(concepts));
+		mockSearchConcepts(true);
 		
 		transformRequest = new TemplateTransformRequest(null, destination);
 		ConceptPojo result = transformService.transformConcept("MAIN", transformRequest, conceptToTransform, terminologyServerClient);
@@ -358,6 +351,36 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		verifyTransformation(result);
 	}
 	
+	@Test
+	public void testMultipleSlotsWithinTheSameAttributeType() throws Exception {
+		String tempalteName = "Fracture dislocation of [body structure] (disorder)";
+		setUpTemplates(tempalteName);
+		initTestConcepts("Fracture_dislocation_of_elbow_joint_New_Concept.json", "Fracture_dislocation_of_elbow_joint_transformed.json");
+		mockTerminologyServerClient();
+		mockSearchConcepts(true);
+		mockSearchAttributeValuesWithinRange("<<39352004 |Joint structure (body structure)|", Collections.singletonList("16953009"));
+		mockSearchAttributeValuesWithinRange("<<72704001 |Fracture (morphologic abnormality)|", Collections.singletonList("72704001"));
+		mockSearchAttributeValuesWithinRange("<<272673000 |Bone structure (body structure)|", Collections.singletonList("305016004"));
+		mockSearchAttributeValuesWithinRange("<<87642003 |Dislocation (morphologic abnormality)|", Collections.singletonList("87642003"));
+		mockSearchAttributeValuesWithinRange("<<773760007 |Traumatic event (event)|", Collections.singletonList("773760007"));
+		// invoke the first mock method call
+		terminologyServerClient.searchConcepts("MAIN", new ArrayList<>(Collections.singleton("123")));
+		ConceptPojo result = transformService.transformConcept("MAIN/test", new TemplateTransformRequest(null, tempalteName),
+				conceptToTransform, terminologyServerClient);
+		verifyTransformation(result);
+	}
+	
+	private void mockSearchAttributeValuesWithinRange(String rangeEcl, List<String> conceptIds) throws RestClientException {
+		Set<SimpleConceptPojo> mockResults = new HashSet<>();
+		for (String conceptId : conceptIds) {
+			SimpleConceptPojo pojo = new SimpleConceptPojo();
+			pojo.setId(conceptId);
+			mockResults.add(pojo);
+		}
+		when(terminologyServerClient.getConcepts(anyString(), eq(rangeEcl), any(), any(), anyInt(), eq(true)))
+		.thenReturn(mockResults);
+	}
+
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {
 		List<ConceptPojo> transformed = new ArrayList<>();
 		Map<String, String> errorMsgMap = new HashMap<>();
@@ -385,21 +408,20 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		return transformed;
 	}
 	
-	private void setUpTestTemplates(String sourceTempalte, String destinationTemplate) throws IOException, URISyntaxException, ServiceException {
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + source + JSON).toURI()),
-				jsonStore.getStoreDirectory());
-		
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + destination + JSON).toURI()),
-				jsonStore.getStoreDirectory());
-		
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + CT_GUIDED_BODY_STRUCTURE_TEMPLATE + JSON).toURI()),
-				jsonStore.getStoreDirectory());
-		templateService.reloadCache();
-		try (Reader sourceConceptReader = new InputStreamReader(getClass().getResourceAsStream(sourceTempalte), UTF_8);
-			 Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(destinationTemplate), UTF_8)) {
-			conceptToTransform = gson.fromJson(sourceConceptReader, ConceptPojo.class);
-			transformedConcept = gson.fromJson(transformedJsonReader, ConceptPojo.class);
+	private void setUpTemplates(String... templates) throws Exception {
+		for (String templateName : templates) {
+			FileUtils.copyFileToDirectory(new File(getClass().getResource("/templates/" + templateName + ".json").toURI()),
+					jsonStore.getStoreDirectory());
 		}
+		templateService.reloadCache();
+	}
+	
+	private void initTestConcepts(String sourceConceptJson, String transformedJson) throws IOException {
+		try (Reader sourceConceptReader = new InputStreamReader(getClass().getResourceAsStream(sourceConceptJson), UTF_8);
+				Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformedJson), UTF_8)) {
+				conceptToTransform = gson.fromJson(sourceConceptReader, ConceptPojo.class);
+				transformedConcept = gson.fromJson(transformedJsonReader, ConceptPojo.class);
+			}
 	}
 
 	private OngoingStubbing<SnowOwlRestClient> mockTerminologyServerClient() {
