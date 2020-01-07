@@ -1,0 +1,55 @@
+{
+  "name": "Fracture dislocation of [body structure] (disorder)",
+  "domain":"<<263063009 |Fracture dislocation of joint (disorder)|",
+  "version": 1,
+  "logicalTemplate":"64572001 |Disease (disorder)| : [[~1..*]] { 116676008 |Associated morphology (attribute)| = [[ +id( <<72704001 |Fracture (morphologic abnormality)| ) @morph1]], 363698007 |Finding site (attribute)| = [[ +id( <<272673000 |Bone structure (body structure)| ) @boneStructure]]} , [[~1..*]] { 116676008 |Associated morphology (attribute)| = [[ +id( <<87642003 |Dislocation (morphologic abnormality)| ) @morph2]], 363698007 |Finding site (attribute)| = [[ +id( <<39352004 |Joint structure (body structure)| ) @jointStructure ]]} , [[~1..1]] {42752001 |Due to (attribute)| = [[ +id( <<773760007 |Traumatic event (event)| ) @due]] }",
+  "conceptOutline": {
+    "definitionStatus": "FULLY_DEFINED",
+    "descriptions": [
+      {
+        "type": "FSN",
+        "lang": "en",
+        "termTemplate": "$fracture morphology$ $dislocation$ of $joint structure$ (disorder)",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      },
+      {
+        "type": "SYNONYM",
+        "lang": "en",
+        "termTemplate": "$fracture morphology$ $dislocation$ of $joint structure$",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      }
+    ]
+  },
+  "lexicalTemplates": [
+    {
+      "name": "fracture morphology",
+      "displayName": "[Fracture morphology]",
+      "takeFSNFromSlot": "morph1"
+    },
+    {
+      "name": "dislocation",
+      "displayName": "[dislocation]",
+      "takeFSNFromSlot": "morph2",
+      "removeParts": [
+      	"traumatic"
+      ]
+    },
+    {
+      "name": "joint structure",
+      "displayName": "[joint structure]",
+      "takeFSNFromSlot": "jointStructure",
+      "removeParts": [
+      	"structure of",
+      	"structure"
+      ]
+    }
+  ]
+}

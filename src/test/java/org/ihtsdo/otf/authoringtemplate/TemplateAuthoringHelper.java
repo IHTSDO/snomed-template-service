@@ -43,7 +43,7 @@ public class TemplateAuthoringHelper {
 	// Helper code for converting template specification tables into template language!
 	// Not for production use
 	private static String readAndConvertInput() throws IOException {
-		File file = new File("templates/.input.txt");
+		File file = new File("snomed-templates/.input.txt");
 
 		List<String> lines = Files.readLines(file, Charset.forName("UTF-8"));
 
@@ -131,7 +131,7 @@ public class TemplateAuthoringHelper {
 	private static void expandScratch() throws IOException {transformScratch(false);}
 
 	private static void transformScratch(boolean compact) throws IOException {
-		File file = new File("templates/.scratch.txt");
+		File file = new File("snomed-templates/.scratch.txt");
 		File tempFile = new File(file.getAbsolutePath() + ".tmp");
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
