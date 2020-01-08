@@ -9,7 +9,6 @@ import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SimpleConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -226,9 +225,8 @@ public class TemplateConceptTransformService {
 		for (String slot : slotToAttrbuteValuesMap.keySet()) {
 			List<String> conceptIds = slotToAttrbuteValuesMap.get(slot).stream().map(ConceptMiniPojo :: getConceptId).collect(Collectors.toList());
 			if (conceptIds.size() > 1) {
-				Set<SimpleConceptPojo> results = restClient.getConcepts(inputData.getBranchPath(), inputData.getDestinationSlotToAttributeMap().get(slot).getAllowableRangeECL().trim(),
-						null, conceptIds, conceptIds.size(), true);
-				Set<String> conceptsWithinRange = results.stream().map(SimpleConceptPojo :: getId).collect(Collectors.toSet());
+				String rangeEcl = TemplateUtil.constructRangeValidationEcl(inputData.getDestinationSlotToAttributeMap().get(slot).getAllowableRangeECL().trim(), conceptIds);
+				Set<String> conceptsWithinRange = restClient.eclQuery(inputData.getBranchPath(), rangeEcl, conceptIds.size());
 				for (ConceptMiniPojo pojo : slotToAttrbuteValuesMap.get(slot)) {
 					if (conceptsWithinRange.contains(pojo.getConceptId())) {
 						slotToValuesMap.put(slot, pojo);

@@ -41,6 +41,7 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -371,14 +372,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	}
 	
 	private void mockSearchAttributeValuesWithinRange(String rangeEcl, List<String> conceptIds) throws RestClientException {
-		Set<SimpleConceptPojo> mockResults = new HashSet<>();
-		for (String conceptId : conceptIds) {
-			SimpleConceptPojo pojo = new SimpleConceptPojo();
-			pojo.setId(conceptId);
-			mockResults.add(pojo);
-		}
-		when(terminologyServerClient.getConcepts(anyString(), eq(rangeEcl), any(), any(), anyInt(), eq(true)))
-		.thenReturn(mockResults);
+		when(terminologyServerClient.eclQuery(anyString(), contains(rangeEcl), anyInt()))
+		.thenReturn(new HashSet<String>(conceptIds));
 	}
 
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {
