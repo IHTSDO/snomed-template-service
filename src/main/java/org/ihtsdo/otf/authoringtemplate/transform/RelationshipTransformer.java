@@ -1,14 +1,5 @@
 package org.ihtsdo.otf.authoringtemplate.transform;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.ihtsdo.otf.authoringtemplate.service.Constants;
 import org.ihtsdo.otf.authoringtemplate.service.TemplateUtil;
 import org.ihtsdo.otf.authoringtemplate.service.exception.ServiceException;
@@ -20,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.Relationship;
+
+import java.util.*;
 
 public class RelationshipTransformer {
 
@@ -105,11 +98,12 @@ public class RelationshipTransformer {
 				transformedRels.add(pojo);
 			}
 		}
-		Set<RelationshipPojo> sortedRels = new TreeSet<>(RELATIONSHIP_COMPARATOR);
-		sortedRels.addAll(transformedRels);
-		if (transformedRels.size() != sortedRels.size()) {
-			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",transformedRels.size(), sortedRels.size()));
-		}
+		// TODO: Is this sorting needed? The result is ignored, apart from checking uniqueness..
+//		Set<RelationshipPojo> sortedRels = new TreeSet<>(RELATIONSHIP_COMPARATOR);
+//		sortedRels.addAll(transformedRels);
+//		if (transformedRels.size() != sortedRels.size()) {
+//			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",transformedRels.size(), sortedRels.size()));
+//		}
 		// Only for one axiom at the moment.
 		classAxiom.setEffectiveTime(null);
 		classAxiom.setRelationships(transformedRels);
