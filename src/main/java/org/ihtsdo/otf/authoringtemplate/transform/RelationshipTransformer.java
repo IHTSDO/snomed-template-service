@@ -98,12 +98,7 @@ public class RelationshipTransformer {
 				transformedRels.add(pojo);
 			}
 		}
-		// TODO: Is this sorting needed? The result is ignored, apart from checking uniqueness..
-//		Set<RelationshipPojo> sortedRels = new TreeSet<>(RELATIONSHIP_COMPARATOR);
-//		sortedRels.addAll(transformedRels);
-//		if (transformedRels.size() != sortedRels.size()) {
-//			throw new ServiceException(String.format("The total sorted relationships %s doesn't match the total before sorting %s",transformedRels.size(), sortedRels.size()));
-//		}
+
 		// Only for one axiom at the moment.
 		classAxiom.setEffectiveTime(null);
 		classAxiom.setRelationships(transformedRels);
