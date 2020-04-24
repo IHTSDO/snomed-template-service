@@ -6,8 +6,8 @@
 	<groupId>org.snomed.otf</groupId>
 	<artifactId>snomed-template-service</artifactId>
 	<version>2.2.0-SNAPSHOT</version>
-	<name>Snomed Template Service</name>
-	<description>A service to support SNOMED CT authoring driven by Expression Template Language</description>
+	<name>SNOMED CT Transformation and Template Service</name>
+	<description>A service to support SNOMED CT authoring offering Transformation and Template functionality.</description>
 
 	<properties>
 		<packageName>${project.artifactId}</packageName>
@@ -112,7 +112,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>org.ihtsdo.otf.authoringtemplate.App</mainClass>
+					<mainClass>org.ihtsdo.otf.transformationandtemplate.Application</mainClass>
 				</configuration>
 				<executions>
 					<execution>

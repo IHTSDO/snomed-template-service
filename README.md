@@ -1,13 +1,13 @@
-Snomed Template Service
-====================================
+SNOMED CT Transformation and Template Service
+============================================
 
 ## Overview
-Snomed Template Service REST API offers the following back-end services:
+SNOMED Transformation and Template Service is a REST API with the following functions:
 
-1. Maintaining and authoring Snomed Templates
-2. Searching concepts by template logically, lexically or both
-3. Generating new concepts that conformed to a given template
-4. Transforming concepts from a source template to a destination template
+- Authoring using SNOMED Templates
+- Searching concepts by template logically, lexically or both
+- Generating new concepts that conformed to a given template
+- Transforming concepts from a source template to a destination template
 
 ## Quick Start
 Use Maven to build the executable jar and run:
@@ -20,7 +20,7 @@ The default username and password is _user_/_password_.
 
 ## Setup
 
-Snomed Template Service application needs to connect to the TermServer for querying SNOMED CT concepts. The {{**terminologyserver.urll**}} parameter is used to configure this.
+The service needs to connect to the Snowstorm terminology server for querying SNOMED CT concepts. The {{**terminologyserver.url**}} parameter is used to configure this.
 
 To improve performance the templates are cached. **POST /templates/reload** will clear all caches and should be used when new templates are created/
 added to **snomed-templates** store. The snomed-templates store is configured via {{**templateStorePath**}} parameter.
@@ -31,7 +31,7 @@ added to **snomed-templates** store. The snomed-templates store is configured vi
 
 
 ### Configuration options
-The default configuration of this Spring Boot application can be found in [application.properties](blob/master/src/main/resources/application.properties). The defaults can be overridden using command line arguments, for example set a different HTTP port:
+The default configuration of this Spring Boot application can be found in [application.properties](src/main/resources/application.properties). The defaults can be overridden using command line arguments, for example set a different HTTP port:
 ```bash
 java -Xmx3g -jar target/snomed-template-service*.jar --server.port=8081
 ```
