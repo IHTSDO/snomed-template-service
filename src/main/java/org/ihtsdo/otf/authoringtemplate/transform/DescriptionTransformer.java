@@ -69,11 +69,11 @@ public class DescriptionTransformer {
 			if (FSN == desc.getType()) {
 				newFsn = term;
 			} else {
-				if (desc.getAcceptabilityMap().values().contains(PREFERRED)) {
+				if (desc.getAcceptabilityMap().containsValue(PREFERRED)) {
 					newPts.add(term);
 				}
 			}
-			if (!previousActiveTermMap.keySet().contains(term)) {
+			if (!previousActiveTermMap.containsKey(term)) {
 				DescriptionPojo descPojo = getDescriptionPojo(desc, term, moduleId);
 				descPojo.setConceptId(conceptToTransform.getConceptId());
 				newDescriptions.add(descPojo);
@@ -96,9 +96,9 @@ public class DescriptionTransformer {
 					pojo.setEffectiveTime(null);
 				}
 			} else if (SYNONYM.name().equals(pojo.getType())){
-				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().values().contains(PREFERRED)) {
+				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().containsValue(PREFERRED)) {
 					if (!newPts.contains(pojo.getTerm())) {
-						updateAcceptabilityMap(pojo.getAcceptabilityMap(), ACCEPTABLE);
+						pojo.getAcceptabilityMap().replaceAll((i, v) -> ACCEPTABLE);
 					}
 				}
 			}
@@ -122,12 +122,6 @@ public class DescriptionTransformer {
 			throw new ServiceException(String.format("The total sorted descriptions %s doesn't match the total before sorting %s", descriptions.size(), updated.size()));
 		}
 		conceptToTransform.setDescriptions(descriptions);
-	}
-
-	private void updateAcceptabilityMap(Map<String, String> acceptabilityMap, String newValue) {
-		for (String refsetId : acceptabilityMap.keySet()) {
-			acceptabilityMap.put(refsetId, newValue);
-		}
 	}
 
 	private DescriptionPojo getDescriptionPojo(Description desc, String term, String moduleId) {
