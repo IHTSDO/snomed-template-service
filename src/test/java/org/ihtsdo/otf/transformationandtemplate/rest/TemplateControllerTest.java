@@ -9,7 +9,7 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.transformationandtemplate.AbstractTest;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
-import org.ihtsdo.otf.transformationandtemplate.service.TemplateService;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.After;
 import org.junit.Before;

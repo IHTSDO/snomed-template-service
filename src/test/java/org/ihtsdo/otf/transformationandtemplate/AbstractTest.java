@@ -8,7 +8,7 @@ import java.util.UUID;
 import javax.annotation.PreDestroy;
 
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
-import org.ihtsdo.otf.transformationandtemplate.service.TemplateStore;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateStore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -41,8 +41,7 @@ public abstract class AbstractTest {
 		@Bean
 		public JsonStore getTemplateJsonStore() throws IOException {
 			tempDir = Files.createTempDirectory(UUID.randomUUID().toString()).toFile();
-			final JsonStore jsonStore = new JsonStore(tempDir, objectMapper);
-			return jsonStore;
+			return new JsonStore(tempDir, objectMapper);
 		}
 
 		@PreDestroy
@@ -50,8 +49,8 @@ public abstract class AbstractTest {
 			FileSystemUtils.deleteRecursively(tempDir);
 		}
 	}
-	
-	
+
+
 	@Before
 	public void before() {
 		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("", ""));

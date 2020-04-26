@@ -7,7 +7,7 @@ import java.util.List;
 import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.transformationandtemplate.AbstractTest;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.transformationandtemplate.transform.TestDataHelper;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.junit.runner.RunWith;
