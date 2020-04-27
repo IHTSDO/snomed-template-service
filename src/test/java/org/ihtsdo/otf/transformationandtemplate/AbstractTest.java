@@ -60,7 +60,7 @@ public abstract class AbstractTest {
 	@After
 	public void after() {
 		// Recreate empty template store
-		FileSystemUtils.deleteRecursively(templateStore.getJsonStore().getStoreDirectory());
-		templateStore.getJsonStore().getStoreDirectory().mkdirs();
+		FileSystemUtils.deleteRecursively(templateStore.getTemplateJsonStore().getStoreDirectory());
+		templateStore.getTemplateJsonStore().getStoreDirectory().mkdirs();
 	}
 }

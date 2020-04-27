@@ -1,0 +1,19 @@
+{
+	"name": "Batch Description Creation",
+	"source": "tsv",
+	"component": "DESCRIPTION",
+	"changeType": "CREATE",
+	"fieldMap": {
+		"conceptId": "$tsv.0",
+		"term": "$tsv.1",
+		"lang": "$tsv.2",
+		"caseSignificance": "$tsv.3",
+		"type": "$tsv.4",
+		"acceptability": [
+			{
+				"key": "$tsv.5",
+				"value": "$tsv.6"
+			}
+		]
+	}
+}

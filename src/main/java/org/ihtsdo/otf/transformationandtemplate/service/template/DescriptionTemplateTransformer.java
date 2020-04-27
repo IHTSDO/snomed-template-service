@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.transformationandtemplate.service.transform;
+package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import static org.ihtsdo.otf.transformationandtemplate.service.Constants.ACCEPTABLE;
 import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.ihtsdo.otf.transformationandtemplate.service.template.LexicalTemplateTransformService;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
@@ -23,14 +22,14 @@ import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 
-public class DescriptionTransformer {
+public class DescriptionTemplateTransformer {
 
 	private ConceptPojo conceptToTransform;
 	private Map<String, Set<DescriptionPojo>> slotValueMap;
 	private String inactivationReason;
 	private ConceptTemplate conceptTemplate;
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTransformer.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTemplateTransformer.class);
 
 	private static final Comparator<DescriptionPojo> DESCRIPTION_POJO_COMPARATOR = Comparator
 			.comparing(DescriptionPojo::getType, Comparator.naturalOrder())
@@ -38,7 +37,7 @@ public class DescriptionTransformer {
 			.thenComparing(DescriptionPojo::getDescriptionId, Comparator.nullsFirst(String::compareTo))
 			.thenComparing(DescriptionPojo::getTerm, Comparator.naturalOrder());
 
-	public DescriptionTransformer(ConceptPojo conceptToTransform, ConceptTemplate conceptTemplate,
+	public DescriptionTemplateTransformer(ConceptPojo conceptToTransform, ConceptTemplate conceptTemplate,
 			Map<String, Set<DescriptionPojo>> slotValueMap, String inactivationReason) {
 		this.conceptToTransform = conceptToTransform;
 		this.conceptTemplate = conceptTemplate;

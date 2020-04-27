@@ -3,18 +3,15 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.io.FileUtils;
-import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
-import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TemplateTransformRequest;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TemplateTransformation;
-import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationResult;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo.DescriptionMiniPojo;
+import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
+import org.ihtsdo.otf.transformationandtemplate.service.Constants;
+import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
+import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,11 +33,7 @@ import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @RunWith(SpringJUnit4ClassRunner.class)

@@ -41,7 +41,7 @@ public class TemplateStore {
 	private LogicalTemplateParserService logicalParserService;
 
 	@Autowired
-	private JsonStore jsonStore;
+	private JsonStore templateJsonStore;
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -58,7 +58,7 @@ public class TemplateStore {
 	public void init() throws IOException, ServiceException {
 		logger.info("Loading templates into cache.");
 		templateCache.clear();
-		Set<ConceptTemplate> conceptTemplates = jsonStore.loadAll(ConceptTemplate.class);
+		Set<ConceptTemplate> conceptTemplates = templateJsonStore.loadAll(ConceptTemplate.class);
 		for (ConceptTemplate template : conceptTemplates) {
 			generateAndCache(template);
 		}
@@ -91,7 +91,7 @@ public class TemplateStore {
 	public void save(String name, ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		conceptTemplate.setName(name);
 		stripTemporalParts(conceptTemplate);
-		jsonStore.save(name, conceptTemplate);
+		templateJsonStore.save(name, conceptTemplate);
 		generateAndCache(conceptTemplate);
 	}
 
@@ -209,8 +209,8 @@ public class TemplateStore {
 		return value == null ? null : new ConceptMini(value);
 	}
 
-	public JsonStore getJsonStore() {
-		return jsonStore;
+	public JsonStore getTemplateJsonStore() {
+		return templateJsonStore;
 	}
 
 	public void clear() {

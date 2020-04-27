@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.transformationandtemplate.service.transform;
+package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import java.util.Comparator;
 import java.util.HashMap;

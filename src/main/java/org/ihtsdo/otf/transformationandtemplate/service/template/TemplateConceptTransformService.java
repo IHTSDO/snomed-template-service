@@ -1,7 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.*;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
@@ -202,13 +201,13 @@ public class TemplateConceptTransformService {
 				definitionStatus =  org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.FULLY_DEFINED;
 			}
 			transformed.setDefinitionStatus(definitionStatus);
-			RelationshipTransformer relationShipTransformer = new RelationshipTransformer(transformed, conceptTemplate.getConceptOutline(), attributeSlotValueMap, inputData.getConceptIdMap());
+			RelationshipTemplateTransformer relationShipTransformer = new RelationshipTemplateTransformer(transformed, conceptTemplate.getConceptOutline(), attributeSlotValueMap, inputData.getConceptIdMap());
 			relationShipTransformer.transform();
 		}
 		
 		if (inputData.getTransformRequest().isLexicalTransform()) {
 			Map<String, Set<DescriptionPojo>> slotDescriptionsMap = getSlotDescriptionValuesMap(inputData.getBranchPath(), attributeSlotValueMap, restClient);
-			DescriptionTransformer transformer = new DescriptionTransformer(transformed, conceptTemplate, slotDescriptionsMap, 
+			DescriptionTemplateTransformer transformer = new DescriptionTemplateTransformer(transformed, conceptTemplate, slotDescriptionsMap,
 					inputData.getTransformRequest().getInactivationReason());
 			transformer.transform();
 			transformed.setEffectiveTime(null);

@@ -1,4 +1,4 @@
-package org.ihtsdo.otf.transformationandtemplate.service.transform;
+package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +12,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
+import org.ihtsdo.otf.transformationandtemplate.service.template.RelationshipTemplateTransformer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
@@ -20,9 +21,9 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import static org.junit.Assert.*;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-public class RelationshipTransformerTest {
+public class RelationshipTemplateTransformerTest {
 	
-	private RelationshipTransformer transformer;
+	private RelationshipTemplateTransformer transformer;
 	
 	@Test
 	public void testTransform() throws ServiceException {
@@ -31,7 +32,7 @@ public class RelationshipTransformerTest {
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
 		Map<String, ConceptMiniPojo> attributeSlotMap = new HashMap<>();
 		attributeSlotMap.put("substance", new ConceptMiniPojo("256350002"));
-		transformer = new RelationshipTransformer(conceptToTransform, conceptOutline, attributeSlotMap, new HashMap<String, ConceptMiniPojo>());
+		transformer = new RelationshipTemplateTransformer(conceptToTransform, conceptOutline, attributeSlotMap, new HashMap<String, ConceptMiniPojo>());
 		transformer.transform();
 		AxiomPojo classAxiom = conceptToTransform.getClassAxioms().iterator().next();
 		assertEquals(4, classAxiom.getRelationships().size());
@@ -63,7 +64,7 @@ public class RelationshipTransformerTest {
 	
 	@Test
 	public void testRelationshipComparator() {
-		TreeSet<RelationshipPojo> relationships = new TreeSet<>(RelationshipTransformer.RELATIONSHIP_COMPARATOR);
+		TreeSet<RelationshipPojo> relationships = new TreeSet<>(RelationshipTemplateTransformer.RELATIONSHIP_COMPARATOR);
 		relationships.add(TestDataHelper.createRelationshipPojo(0, "1234"));
 		relationships.add(TestDataHelper.createRelationshipPojo(0, null));
 		relationships.add(TestDataHelper.createRelationshipPojo(1, "12345"));

@@ -1,17 +1,9 @@
-package org.ihtsdo.otf.transformationandtemplate.service.transform;
+package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
+import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
@@ -20,8 +12,14 @@ import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
+import static org.junit.Assert.*;
+
 @RunWith(SpringJUnit4ClassRunner.class)
-public class DescriptionTransformerTest {
+public class DescriptionTemplateTransformerTest {
 
 	@Test
 	public void testTransform() throws ServiceException {
@@ -37,7 +35,7 @@ public class DescriptionTransformerTest {
 		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("substance", "Almond");
 		Map<String, Set<DescriptionPojo>> slotDescriptonValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, null, DescriptionType.FSN);
-		DescriptionTransformer transformer = new DescriptionTransformer(conceptToTransform, conceptTempalte, slotDescriptonValuesMap, inactivationReason);
+		DescriptionTemplateTransformer transformer = new DescriptionTemplateTransformer(conceptToTransform, conceptTempalte, slotDescriptonValuesMap, inactivationReason);
 		transformer.transform();
 		assertNotNull(conceptToTransform.getDescriptions());
 		assertEquals(4, conceptToTransform.getDescriptions().size());

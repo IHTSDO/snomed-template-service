@@ -48,9 +48,14 @@ public class Config extends WebSecurityConfigurerAdapter {
 				.build();
 	}
 
-	@Bean
+	@Bean("templateJsonStore")
 	public JsonStore getTemplateJsonStore(@Value("${templateStorePath}") String templateStorePath) {
 		return new JsonStore(new File(templateStorePath), getGeneralMapper());
+	}
+
+	@Bean("transformationRecipeStore")
+	public JsonStore getTransformationRecipeJsonStore(@Value("${transformationRecipeStorePath}") String transformationRecipeStorePath) {
+		return new JsonStore(new File(transformationRecipeStorePath), getGeneralMapper());
 	}
 
 	@Bean

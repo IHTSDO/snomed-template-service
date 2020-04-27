@@ -11,10 +11,10 @@ import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConcept
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptSearchService;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TemplateTransformRequest;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TemplateTransformation;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationResult;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationStatus;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateTransformRequest;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateTransformation;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TransformationResult;
+import org.ihtsdo.otf.transformationandtemplate.service.template.TransformationStatus;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptTransformService;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateTransformationResultService;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;

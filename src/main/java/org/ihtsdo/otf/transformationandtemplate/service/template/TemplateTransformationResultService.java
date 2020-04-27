@@ -5,9 +5,6 @@ import com.google.gson.GsonBuilder;
 import org.ihtsdo.otf.transformationandtemplate.TransformationResourceConfiguration;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.transformationandtemplate.service.ResourcePathHelper;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TemplateTransformation;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationResult;
-import org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationStatus;
 import org.ihtsdo.otf.resourcemanager.ResourceManager;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
@@ -20,8 +17,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationStatus.COMPLETED;
-import static org.ihtsdo.otf.transformationandtemplate.service.transform.TransformationStatus.COMPLETED_WITH_FAILURE;
+import static org.ihtsdo.otf.transformationandtemplate.service.template.TransformationStatus.COMPLETED;
+import static org.ihtsdo.otf.transformationandtemplate.service.template.TransformationStatus.COMPLETED_WITH_FAILURE;
 
 @Service
 public class TemplateTransformationResultService {

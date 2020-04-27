@@ -1,18 +1,18 @@
-package org.ihtsdo.otf.transformationandtemplate.service.transform;
+package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper.createRelationshipPojo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import static org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper.createRelationshipPojo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 @RunWith(JUnit4.class)
 public class RoleGroupNumberGeneratorTest {

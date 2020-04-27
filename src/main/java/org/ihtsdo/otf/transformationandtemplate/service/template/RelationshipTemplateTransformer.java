@@ -1,7 +1,6 @@
-package org.ihtsdo.otf.transformationandtemplate.service.transform;
+package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import org.ihtsdo.otf.transformationandtemplate.service.Constants;
-import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateUtil;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
@@ -14,7 +13,7 @@ import org.snomed.authoringtemplate.domain.Relationship;
 
 import java.util.*;
 
-public class RelationshipTransformer {
+public class RelationshipTemplateTransformer {
 
 	private ConceptPojo conceptToTransform;
 	private ConceptOutline conceptOutline;
@@ -31,7 +30,7 @@ public class RelationshipTransformer {
 			.thenComparing(RelationshipPojo::getType, Comparator.comparing(ConceptMiniPojo::getConceptId, Comparator.nullsFirst(String::compareTo)))
 			.thenComparing(RelationshipPojo::getTarget, Comparator.comparing(ConceptMiniPojo::getConceptId, Comparator.nullsFirst(String::compareTo)));
 
-	public RelationshipTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
+	public RelationshipTemplateTransformer(ConceptPojo conceptToTransform, ConceptOutline conceptOutline,
 			Map<String, ConceptMiniPojo> attributeSlotMap, Map<String, ConceptMiniPojo> conceptIdMap) {
 		this.conceptToTransform = conceptToTransform;
 		this.conceptOutline = conceptOutline;
