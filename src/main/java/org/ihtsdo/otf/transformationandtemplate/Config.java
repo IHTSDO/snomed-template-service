@@ -79,7 +79,8 @@ public class Config extends WebSecurityConfigurerAdapter {
 		// Encode branch paths in uri to allow request mapping to work
 		return new FilterRegistrationBean(new BranchPathUriRewriteFilter(
 				"/(.*)/templates",
-				"/(.*)/templates/.*"
+				"/(.*)/templates/.*",
+				"/(.*)/recipe/.*"
 		));
 	}
 	
