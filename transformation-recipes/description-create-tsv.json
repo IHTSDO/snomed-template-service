@@ -7,8 +7,8 @@
 		"conceptId": "$tsv.0",
 		"term": "$tsv.1",
 		"lang": "$tsv.2",
-		"caseSignificance": "$tsv.3",
-		"type": "$tsv.4",
+		"caseSignificanceId": "$tsv.3",
+		"typeId": "$tsv.4",
 		"acceptability": [
 			{
 				"key": "$tsv.5",

@@ -1,14 +1,18 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
+import org.ihtsdo.otf.rest.exception.BusinessServiceException;
+import org.ihtsdo.otf.rest.exception.ProcessingException;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.OperationNotImplementedException;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.List;
 
 @Service
 public class ComponentTransformService {
@@ -19,27 +23,27 @@ public class ComponentTransformService {
 	@Autowired
 	private JsonStore transformationRecipeStore;
 
-	public void startBatchTransformation(ComponentTransformationRequest request) throws ServiceException {
+	public List<ChangeResult<? extends SnomedComponent>> startBatchTransformation(ComponentTransformationRequest request) throws BusinessServiceException {
 		TransformationRecipe recipe;
 		String recipeName = request.getRecipe();
 		try {
 			recipe = transformationRecipeStore.load(recipeName, TransformationRecipe.class);
 		} catch (IOException e) {
-			throw new ServiceException(String.format("Failed to load recipe '%s'.", recipeName));
+			throw new BusinessServiceException(String.format("Failed to load recipe '%s'.", recipeName));
 		}
 		if (recipe == null) {
-			throw new ServiceException(String.format("Recipe '%s' not found.", recipeName));
+			throw new ResourceNotFoundException(String.format("Recipe '%s' not found.", recipeName));
 		}
 
 		switch (recipe.getComponent()) {
 			case CONCEPT:
 				break;
 			case DESCRIPTION:
-				descriptionService.startBatchTransformation(recipe, request);
-				break;
+				return descriptionService.startBatchTransformation(recipe, request);
 			default:
-				throw new OperationNotImplementedException();
+				throw new ProcessingException("Unable to transform component of type " + recipe.getComponent());
 		}
+		return null;
 	}
 
 }
