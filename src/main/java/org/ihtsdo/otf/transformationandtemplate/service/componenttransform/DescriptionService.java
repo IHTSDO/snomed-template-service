@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
+import com.google.common.base.Strings;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
@@ -8,18 +9,18 @@ import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRe
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
+import org.ihtsdo.otf.utils.SnomedIdentifierUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 
 import static java.lang.String.format;
+import static org.ihtsdo.otf.utils.SnomedIdentifierUtils.isValidConceptIdFormat;
 
 @Service
 public class DescriptionService {
@@ -35,21 +36,22 @@ public class DescriptionService {
 	public List<ChangeResult<? extends SnomedComponent>> startBatchTransformation(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		switch (recipe.getChangeType()) {
 			case CREATE:
-				List<DescriptionPojo> descriptions = createDescriptions(recipe, request);
-				logger.info("{} descriptions.", descriptions.size());
-				return snowstormClient.createDescriptions(descriptions, request.getBranchPath());
+				return createDescriptions(recipe, request);
 			default:
 				throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
 		}
 	}
 
-	private List<DescriptionPojo> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+	private List<ChangeResult<? extends SnomedComponent>> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		try (TransformationStream transformationStream = transformationStreamFactory.createTransformationStream(recipe, request)) {
 			ComponentTransformation componentTransformation;
 			while ((componentTransformation = transformationStream.next()) != null) {
-				// TODO: error reporting for converting values from rows
 				DescriptionPojo description = new DescriptionPojo();
+				ChangeResult<DescriptionPojo> changeResult = new ChangeResult<>(description);
+				changes.add(changeResult);
+
 				description.setConceptId(componentTransformation.getValueString("conceptId"));
 				description.setTerm(componentTransformation.getValueString("term"));
 				description.setLang(componentTransformation.getValueString("lang"));
@@ -58,12 +60,39 @@ public class DescriptionService {
 				Map<String, String> acceptabilityStrings = componentTransformation.getValueMap("acceptability");
 				Map<String, DescriptionPojo.Acceptability> acceptabilityMap = getAcceptabilityMapFromConceptIdStringMap(acceptabilityStrings);
 				description.setAcceptabilityMap(acceptabilityMap);
-				descriptions.add(description);
+				if (valid(description, changeResult)) {
+					descriptions.add(description);
+				}
 			}
 		} catch (IOException e) {
 			throw new BusinessServiceException("Failed to read transformation stream.", e);
 		}
-		return descriptions;
+		logger.info("{} of {} descriptions passed simple internal checks.", descriptions.size(), changes.size());
+		return snowstormClient.createDescriptions(descriptions, changes, request.getBranchPath());
+	}
+
+	// Some basic validation like identifier formats
+	private boolean valid(DescriptionPojo description, ChangeResult<DescriptionPojo> changeResult) {
+		List<Function<DescriptionPojo, String>> validation = Arrays.asList(
+				descriptionPojo -> descriptionPojo.getDescriptionId() == null ||
+						SnomedIdentifierUtils.isValidDescriptionIdFormat(descriptionPojo.getDescriptionId()) ? null : "Description id format",
+				descriptionPojo -> isValidConceptIdFormat(descriptionPojo.getConceptId()) ? null : "Concept id format",
+				descriptionPojo -> Strings.isNullOrEmpty(descriptionPojo.getTerm()) ? "Term not empty" : null,
+				descriptionPojo -> Strings.isNullOrEmpty(descriptionPojo.getLang()) ? "Lang not empty" : null,
+				descriptionPojo -> descriptionPojo.getCaseSignificance() == null ? "Case significance" : null,
+				descriptionPojo -> descriptionPojo.getType() == null ? "Type" : null,
+				descriptionPojo -> descriptionPojo.getAcceptabilityMap().isEmpty() ||
+						descriptionPojo.getAcceptabilityMap().entrySet().stream()
+								.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry" : null
+		);
+		for (Function<DescriptionPojo, String> validationFunction : validation) {
+			String message = validationFunction.apply(description);
+			if (message != null) {
+				changeResult.fail(message + " validation failed.");
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public static Map<String, DescriptionPojo.Acceptability> getAcceptabilityMapFromConceptIdStringMap(Map<String, String> acceptabilityStrings) {

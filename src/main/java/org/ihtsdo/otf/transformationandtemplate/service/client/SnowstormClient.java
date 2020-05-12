@@ -41,15 +41,21 @@ public class SnowstormClient {
 				.build();
 	}
 
-	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(List<DescriptionPojo> descriptions, String branchPath) throws BusinessServiceException {
-		List<ChangeResult<DescriptionPojo>> changeResults = descriptions.stream().map(ChangeResult::new).collect(Collectors.toList());
+	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(List<DescriptionPojo> descriptions,
+			List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException {
+
+		if (descriptions.isEmpty()) {
+			return new ArrayList<>(changes);
+		}
+
+		logger.info("Starting process to save {} descriptions.", descriptions.size());
 
 		// Initial terminology server communication check
 		try {
 			getBranch("MAIN");
 		} catch (WebClientException e) {
 			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changeResults, "Failed to communicate with the terminology server.");
+			failAllRemaining(changes, "Failed to communicate with the terminology server.");
 		}
 
 		// Get branch metadata
@@ -58,7 +64,7 @@ public class SnowstormClient {
 			branch = getBranch(branchPath);
 		} catch (WebClientException e) {
 			logger.info("Failed to load branch {} from the terminology server.", branchPath, e);
-			return failAllRemaining(changeResults, format("Failed to load branch %s from the terminology server.", branchPath));
+			return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", branchPath));
 		}
 		String defaultModuleId = getMetadataString(branch, DEFAULT_MODULE_ID_METADATA_KEY);
 
@@ -85,11 +91,11 @@ public class SnowstormClient {
 					.retrieve()
 					.bodyToMono(CONCEPT_LIST_TYPE_REF)
 					.block();
+			logger.info("Loaded {} concepts.", concepts.size());
 
 			// Join new descriptions to concepts
 			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-			for (ChangeResult<DescriptionPojo> changeResult : changeResults) {
-				DescriptionPojo description = changeResult.getComponent();
+			for (DescriptionPojo description : descriptions) {
 				ConceptPojo conceptPojo = conceptMap.get(description.getConceptId());
 				if (conceptPojo != null) {
 					conceptPojo.add(description);
@@ -103,7 +109,7 @@ public class SnowstormClient {
 						}
 					}
 				} else {
-					changeResult.fail(format("Concept %s not found.", description.getConceptId()));
+					getChangeResult(changes, description).fail(format("Concept %s not found.", description.getConceptId()));
 					// Description not joined to any concept so no will not appear in the update request.
 				}
 			}
@@ -122,9 +128,10 @@ public class SnowstormClient {
 					.filter(validationResult -> validationResult.getSeverity() == ERROR)
 					.map(ConceptValidationResult::getConceptId)
 					.collect(Collectors.toSet());
+			logger.info("{} concepts had validation errors.", conceptsWithError.size());
 			for (String conceptWithError : conceptsWithError) {
 				for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptWithError)) {
-					getChangeResult(changeResults, description).fail(format("Concept validation errors: %s", toString(conceptValidationResultMap.get(conceptWithError))));
+					getChangeResult(changes, description).fail(format("Concept validation errors: %s", toString(conceptValidationResultMap.get(conceptWithError))));
 				}
 				conceptMap.remove(conceptWithError);
 				// Whole concept removed from map so changes will not appear in the update request.
@@ -137,7 +144,12 @@ public class SnowstormClient {
 				}
 			});
 
+			if (conceptMap.isEmpty()) {
+				return new ArrayList<>(changes);
+			}
+
 			// Bulk update concepts
+			logger.info("Saving {} concepts.", conceptMap.size());
 			ClientResponse bulkUpdateResponse = webClient.post()
 					.uri(uriBuilder -> uriBuilder
 							.path("/browser/{branch}/concepts/bulk")
@@ -146,12 +158,12 @@ public class SnowstormClient {
 					.exchange()
 					.block();
 			String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
-			logger.info("Bulk update location: {}", locationHeader);
+			logger.info("Bulk update job url: {}", locationHeader);
 
 			int maxWaitSeconds = conceptMap.size() * 10_000;
 			ConceptChangeBatchStatus status = getBatchStatus(branchPath, locationHeader, maxWaitSeconds);
 			if (ConceptChangeBatchStatus.Status.FAILED == status.getStatus()) {
-				return failAllRemaining(changeResults, "Persisting concept batch failed with message: " + status.getMessage());
+				return failAllRemaining(changes, "Persisting concept batch failed with message: " + status.getMessage());
 			}
 
 			// Batch load concepts again to fetch identifiers of new components
@@ -163,6 +175,8 @@ public class SnowstormClient {
 					.retrieve()
 					.bodyToMono(CONCEPT_LIST_TYPE_REF)
 					.block();
+			logger.info("Loaded {} concepts after update.", updatedConcepts.size());
+
 			for (ConceptPojo updatedConcept : updatedConcepts) {
 				final Set<DescriptionPojo> savedDescriptions = updatedConcept.getDescriptions();
 				Set<DescriptionPojo> descriptionPojos = conceptIdToDescriptionMap.get(updatedConcept.getConceptId());
@@ -174,15 +188,15 @@ public class SnowstormClient {
 								.findFirst()
 								.ifPresent(pojo -> descriptionPojo.setDescriptionId(pojo.getDescriptionId()));
 					}
-					getChangeResult(changeResults, descriptionPojo).success();
+					getChangeResult(changes, descriptionPojo).success();
 				}
 			}
 		} catch (WebClientException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);
-			return failAllRemaining(changeResults, "Failed to communicate with the terminology server.");
+			return failAllRemaining(changes, "Failed to communicate with the terminology server.");
 		}
 
-		return new ArrayList<>(changeResults);
+		return new ArrayList<>(changes);
 	}
 
 	private String getMetadataString(Branch branch, String key) {
@@ -244,6 +258,7 @@ public class SnowstormClient {
 	}
 
 	private List<ConceptValidationResult> runValidation(String branchPath, List<ConceptPojo> concepts) {
+		logger.info("Validating {} concepts.", concepts.size());
 		return webClient.post()
 					.uri(uriBuilder -> uriBuilder
 							.path("/browser/{branch}/validate/concepts")
