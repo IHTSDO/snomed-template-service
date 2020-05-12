@@ -153,6 +153,30 @@ public class SnowstormClient {
 			if (ConceptChangeBatchStatus.Status.FAILED == status.getStatus()) {
 				return failAllRemaining(changeResults, "Persisting concept batch failed with message: " + status.getMessage());
 			}
+
+			// Batch load concepts again to fetch identifiers of new components
+			List<ConceptPojo> updatedConcepts = webClient.post()
+					.uri(uriBuilder -> uriBuilder
+							.path("/browser/{branch}/concepts/bulk-load")
+							.build(branchPath))
+					.body(BodyInserters.fromObject(new ConceptIdsRequest(conceptMap.keySet())))
+					.retrieve()
+					.bodyToMono(CONCEPT_LIST_TYPE_REF)
+					.block();
+			for (ConceptPojo updatedConcept : updatedConcepts) {
+				final Set<DescriptionPojo> savedDescriptions = updatedConcept.getDescriptions();
+				Set<DescriptionPojo> descriptionPojos = conceptIdToDescriptionMap.get(updatedConcept.getConceptId());
+				for (DescriptionPojo descriptionPojo : descriptionPojos) {
+					if (descriptionPojo.getDescriptionId() == null) {
+						// Set description id from updated concept so it's in the final output
+						savedDescriptions.stream()
+								.filter(d -> DESCRIPTION_WITHOUT_ID_COMPARATOR.compare(descriptionPojo, d) == 0)
+								.findFirst()
+								.ifPresent(pojo -> descriptionPojo.setDescriptionId(pojo.getDescriptionId()));
+					}
+					getChangeResult(changeResults, descriptionPojo).success();
+				}
+			}
 		} catch (WebClientException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);
 			return failAllRemaining(changeResults, "Failed to communicate with the terminology server.");
