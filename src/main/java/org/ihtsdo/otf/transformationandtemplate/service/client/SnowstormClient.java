@@ -115,6 +115,44 @@ public class SnowstormClient {
 			for (ConceptValidationResult validationResult : validationResults) {
 				conceptValidationResultMap.computeIfAbsent(validationResult.getConceptId(), (c) -> new TreeSet<>(CONCEPT_VALIDATION_RESULT_COMPARATOR));
 			}
+
+			// Remove concepts with validation errors
+			// All component changes for this concept will not be saved
+			Set<String> conceptsWithError = validationResults.stream()
+					.filter(validationResult -> validationResult.getSeverity() == ERROR)
+					.map(ConceptValidationResult::getConceptId)
+					.collect(Collectors.toSet());
+			for (String conceptWithError : conceptsWithError) {
+				for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptWithError)) {
+					getChangeResult(changeResults, description).fail(format("Concept validation errors: %s", toString(conceptValidationResultMap.get(conceptWithError))));
+				}
+				conceptMap.remove(conceptWithError);
+				// Whole concept removed from map so changes will not appear in the update request.
+			}
+
+			// Remove temp description UUIDs
+			descriptions.forEach(description -> {
+				if (description.getDescriptionId().contains("-")) {
+					description.setDescriptionId(null);
+				}
+			});
+
+			// Bulk update concepts
+			ClientResponse bulkUpdateResponse = webClient.post()
+					.uri(uriBuilder -> uriBuilder
+							.path("/browser/{branch}/concepts/bulk")
+							.build(branchPath))
+					.body(BodyInserters.fromObject(conceptMap.values()))
+					.exchange()
+					.block();
+			String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
+			logger.info("Bulk update location: {}", locationHeader);
+
+			int maxWaitSeconds = conceptMap.size() * 10_000;
+			ConceptChangeBatchStatus status = getBatchStatus(branchPath, locationHeader, maxWaitSeconds);
+			if (ConceptChangeBatchStatus.Status.FAILED == status.getStatus()) {
+				return failAllRemaining(changeResults, "Persisting concept batch failed with message: " + status.getMessage());
+			}
 		} catch (WebClientException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);
 			return failAllRemaining(changeResults, "Failed to communicate with the terminology server.");
@@ -153,6 +191,28 @@ public class SnowstormClient {
 		});
 
 		return new ArrayList<>(changeResults);
+	}
+
+	private ConceptChangeBatchStatus getBatchStatus(String branchPath, String locationHeader, int maxWaitSeconds) throws ProcessingException {
+		int waitSeconds = 0;
+		while (waitSeconds < maxWaitSeconds) {
+			ConceptChangeBatchStatus latestBatchStatus = webClient.get()
+					.uri(locationHeader)
+					.retrieve()
+					.bodyToMono(ConceptChangeBatchStatus.class)
+					.block();
+			ConceptChangeBatchStatus.Status status = latestBatchStatus.getStatus();
+			if (status != ConceptChangeBatchStatus.Status.RUNNING) {
+				return latestBatchStatus;
+			}
+			try {
+				waitSeconds++;
+				Thread.sleep(1_000);
+			} catch (InterruptedException e) {
+				logger.warn("Interrupted while polling batch status.", e);
+			}
+		}
+		throw new ProcessingException("Batch change exceeded maximum duration.");
 	}
 
 	private String toString(Set<ConceptValidationResult> conceptValidationResults) {
