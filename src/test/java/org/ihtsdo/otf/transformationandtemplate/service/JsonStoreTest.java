@@ -13,26 +13,25 @@ import static org.junit.Assert.assertEquals;
 import java.net.URI;
 import java.util.Set;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-public class JsonStoreTest extends AbstractServiceTest{
+public class JsonStoreTest extends AbstractServiceTest {
 
 	@Autowired
-	private JsonStore jsonStore;
+	private JsonStore templateJsonStore;
 
 	@Test
 	public void testSaveLoad() throws Exception {
-		Assert.assertNull(jsonStore.load("one", ConceptMini.class));
-		jsonStore.save("one", new ConceptMini("123"));
-		final ConceptMini one = jsonStore.load("one", ConceptMini.class);
+		Assert.assertNull(templateJsonStore.load("one", ConceptMini.class));
+		templateJsonStore.save("one", new ConceptMini("123"));
+		final ConceptMini one = templateJsonStore.load("one", ConceptMini.class);
 		Assert.assertEquals("123", one.getConceptId());
 	}
 
 	@Test
 	public void testLoadAll() throws Exception {
-		jsonStore.save("one", new ConceptMini("100"));
-		jsonStore.save("two", new ConceptMini("200"));
-		jsonStore.save("three", new ConceptMini("300"));
-		final Set<ConceptMini> conceptMinis = jsonStore.loadAll(ConceptMini.class);
+		templateJsonStore.save("one", new ConceptMini("100"));
+		templateJsonStore.save("two", new ConceptMini("200"));
+		templateJsonStore.save("three", new ConceptMini("300"));
+		final Set<ConceptMini> conceptMinis = templateJsonStore.loadAll(ConceptMini.class);
 		Assert.assertEquals(3, conceptMinis.size());
 	}
 	

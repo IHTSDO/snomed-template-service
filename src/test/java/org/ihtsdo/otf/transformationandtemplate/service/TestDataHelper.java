@@ -1,28 +1,16 @@
 package org.ihtsdo.otf.transformationandtemplate.service;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
-import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.FULLY_DEFINED;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
-import org.snomed.authoringtemplate.domain.Axiom;
-import org.snomed.authoringtemplate.domain.CaseSignificance;
-import org.snomed.authoringtemplate.domain.ConceptMini;
-import org.snomed.authoringtemplate.domain.ConceptOutline;
-import org.snomed.authoringtemplate.domain.Description;
-import org.snomed.authoringtemplate.domain.DescriptionType;
-import org.snomed.authoringtemplate.domain.Relationship;
-import org.snomed.authoringtemplate.domain.SimpleSlot;
+import org.snomed.authoringtemplate.domain.*;
+
+import java.util.*;
+
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.FULLY_DEFINED;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.*;
 
 public class TestDataHelper {
 
@@ -88,35 +76,42 @@ public class TestDataHelper {
 		DescriptionPojo pojo = new DescriptionPojo();
 		pojo.setReleased(true);
 		pojo.setActive(true);
-		pojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		pojo.setCaseSignificance(CASE_INSENSITIVE);
 		pojo.setTerm("Allergy to almond");
-		pojo.setType(DescriptionType.SYNONYM.name());
-		pojo.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
+		pojo.setType(SYNONYM);
+		pojo.setAcceptabilityMap(constructAcceptabilityMap(DescriptionPojo.Acceptability.PREFERRED, DescriptionPojo.Acceptability.PREFERRED));
 		pojos.add(pojo);
 		
 		DescriptionPojo fsn = new DescriptionPojo();
 		fsn.setReleased(true);
 		fsn.setActive(true);
-		fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		fsn.setCaseSignificance(CASE_INSENSITIVE);
 		fsn.setTerm("Allergy to almond (disorder)");
-		fsn.setType(DescriptionType.FSN.name());
-		fsn.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
+		fsn.setType(FSN);
+		fsn.setAcceptabilityMap(constructAcceptabilityMap(DescriptionPojo.Acceptability.PREFERRED, DescriptionPojo.Acceptability.PREFERRED));
 		pojos.add(fsn);
 		
 		DescriptionPojo textDefinition = new DescriptionPojo();
 		textDefinition.setReleased(true);
 		textDefinition.setActive(true);
-		textDefinition.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		textDefinition.setCaseSignificance(CASE_INSENSITIVE);
 		textDefinition.setTerm("Allergy to almond text definition");
-		textDefinition.setType("TEXT_DEFINITION");
-		textDefinition.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
+		textDefinition.setType(TEXT_DEFINITION);
+		textDefinition.setAcceptabilityMap(constructAcceptabilityMap(DescriptionPojo.Acceptability.PREFERRED, DescriptionPojo.Acceptability.PREFERRED));
 		pojos.add(textDefinition);
 		return pojos;
 	}
 
 
-	public static Map<String, String> constructAcceptabilityMap(String usValue, String gbValue) {
+	public static Map<String, String> constructAcceptabilityMapStrings(String usValue, String gbValue) {
 		Map<String, String> result = new HashMap<>();
+		result.put("900000000000509007", usValue);
+		result.put("900000000000508004", gbValue);
+		return result;
+	}
+
+	public static Map<String, DescriptionPojo.Acceptability> constructAcceptabilityMap(DescriptionPojo.Acceptability usValue, DescriptionPojo.Acceptability gbValue) {
+		Map<String, DescriptionPojo.Acceptability> result = new HashMap<>();
 		result.put("900000000000509007", usValue);
 		result.put("900000000000508004", gbValue);
 		return result;
@@ -231,7 +226,8 @@ public class TestDataHelper {
 
 
 	public static Map<String, Set<DescriptionPojo>> constructSlotDescriptionValuesMap(Map<String, String> slotValueMap,
-			Map<String,CaseSignificance> slotCSMap, DescriptionType type) {
+			Map<String, CaseSignificance> slotCSMap, DescriptionType type) {
+
 		Map<String, Set<DescriptionPojo>> results = new HashMap<>();
 		for (String slot : slotValueMap.keySet()) {
 			results.put(slot, new HashSet<>());
@@ -239,13 +235,13 @@ public class TestDataHelper {
 			pojo.setReleased(true);
 			pojo.setActive(true);
 			if (slotCSMap == null || slotCSMap.isEmpty()) {
-				pojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+				pojo.setCaseSignificance(CASE_INSENSITIVE);
 			} else {
-				pojo.setCaseSignificance(slotCSMap.get(slot).name());
+				pojo.setCaseSignificance(DescriptionPojo.CaseSignificance.valueOf(slotCSMap.get(slot).name()));
 			}
 			pojo.setTerm(slotValueMap.get(slot));
-			pojo.setType(type.name());
-			pojo.setAcceptabilityMap(constructAcceptabilityMap(PREFERRED, PREFERRED));
+			pojo.setType(DescriptionPojo.Type.valueOf(type.name()));
+			pojo.setAcceptabilityMap(constructAcceptabilityMap(DescriptionPojo.Acceptability.PREFERRED, DescriptionPojo.Acceptability.PREFERRED));
 			results.get(slot).add(pojo);
 		}
 		return results;

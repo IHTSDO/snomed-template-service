@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TemplateStore {
 
-	private Map<String, ConceptTemplate> templateCache;
+	private final Map<String, ConceptTemplate> templateCache;
 
 	@Autowired
 	private LogicalTemplateParserService logicalParserService;
@@ -43,16 +43,16 @@ public class TemplateStore {
 	@Autowired
 	private JsonStore templateJsonStore;
 
-	private Logger logger = LoggerFactory.getLogger(getClass());
+	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public TemplateStore() throws IOException {
+	public TemplateStore() {
 		templateCache = new HashMap<>();
 	}
 
 	/**
 	 * Init method loads all templates from disk into cache.
 	 * Call again if the templates on disk are changed from outside this application.
-	 * @throws IOException
+	 * @throws IOException, ServiceException
 	 */
 	@PostConstruct
 	public void init() throws IOException, ServiceException {
@@ -125,7 +125,7 @@ public class TemplateStore {
 	}
 
 	private List<Relationship> constructRelationships(LogicalTemplate logicalTemplate) {
-		List<Relationship> relationships = new ArrayList<Relationship>();
+		List<Relationship> relationships = new ArrayList<>();
 		// Add Parents
 		for (String focusConcept : logicalTemplate.getFocusConcepts()) {
 			final Relationship relationship = new Relationship();

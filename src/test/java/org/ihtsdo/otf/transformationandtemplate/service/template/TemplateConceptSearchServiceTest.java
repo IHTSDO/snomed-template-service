@@ -7,9 +7,7 @@ import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptSearchService;
-import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.junit.Before;
@@ -35,7 +33,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.when;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 
 	private static final String TEMPLATES = "/templates/";
@@ -49,7 +46,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	private TemplateService templateService;
 	
 	@Autowired
-	private JsonStore jsonStore;
+	private JsonStore templateJsonStore;
 	
 	private LogicalTemplateParserService logicalTemplateParser;
 
@@ -91,8 +88,8 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	}
 		
 	private ConceptTemplate setUpTemplate(String templateName) throws IOException, URISyntaxException {
-		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + templateName + JSON).toURI()), jsonStore.getStoreDirectory());
-		ConceptTemplate template = jsonStore.load(templateName, ConceptTemplate.class);
+		FileUtils.copyFileToDirectory(new File(getClass().getResource(TEMPLATES + templateName + JSON).toURI()), templateJsonStore.getStoreDirectory());
+		ConceptTemplate template = templateJsonStore.load(templateName, ConceptTemplate.class);
 		when(templateService.loadOrThrow(anyString()))
 			.thenReturn(template);
 		expectGetTerminologyServerClient();
@@ -132,7 +129,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		assertEquals(1, concepts.size());
 	}
 	
-	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
+	private OngoingStubbing<SnowstormRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 		

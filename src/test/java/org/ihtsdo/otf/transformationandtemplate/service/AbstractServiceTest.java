@@ -8,8 +8,8 @@ import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.transformationandtemplate.AbstractTest;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -21,18 +21,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-
-@RunWith(SpringJUnit4ClassRunner.class)
 public abstract class AbstractServiceTest extends AbstractTest {
 
 	@Autowired
 	protected TemplateService templateService;
 
 	@MockBean
-	protected SnowOwlRestClientFactory clientFactory;
+	protected SnowstormRestClientFactory clientFactory;
 
 	@MockBean
-	protected SnowOwlRestClient terminologyServerClient;
+	protected SnowstormRestClient terminologyServerClient;
 	
 	public void createCtGuidedProcedureOfX() throws IOException, ServiceException {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
@@ -43,18 +41,18 @@ public abstract class AbstractServiceTest extends AbstractTest {
 		templateRequest.addLexicalTemplate(new LexicalTemplate("actionTerm", "Procedure", "action", Lists.newArrayList(" - action")));
 		Description fsn = new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)");
 		fsn.setType(DescriptionType.FSN);
-		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
+		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(Constants.PREFERRED, Constants.PREFERRED));
 		Description pt = new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance");
 		pt.setType(DescriptionType.SYNONYM);
-		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
+		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(Constants.PREFERRED, Constants.PREFERRED));
 		templateRequest.setConceptOutline(new ConceptOutline().addDescription(fsn).addDescription(pt));
 		templateService.create("CT Guided Procedure of X", templateRequest);
 	}
 	
 	public List<Relationship> getRelationships(ConceptOutline conceptOutline) {
-		if (conceptOutline.getClassAxioms() == null) {
+		if (conceptOutline.getClassAxioms() == null || conceptOutline.getClassAxioms().isEmpty()) {
 			return Collections.emptyList();
 		}
-		return conceptOutline.getClassAxioms().stream().findFirst().get().getRelationships();
+		return conceptOutline.getClassAxioms().iterator().next().getRelationships();
 	}
 }

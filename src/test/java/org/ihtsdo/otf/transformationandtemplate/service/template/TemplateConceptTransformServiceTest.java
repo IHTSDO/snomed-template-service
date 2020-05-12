@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo.DescriptionMiniPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
@@ -14,36 +14,34 @@ import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.stubbing.OngoingStubbing;
-import org.snomed.authoringtemplate.domain.CaseSignificance;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.FSN;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 
 	@Autowired
 	private TemplateConceptTransformService transformService;
 
 	@Autowired
-	private JsonStore jsonStore;
+	private JsonStore templateJsonStore;
 	
 	private ConceptPojo conceptToTransform;
 	
@@ -119,7 +117,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		List<DescriptionPojo> activeTerms = concept.getDescriptions().stream().filter(DescriptionPojo::isActive).collect(Collectors.toList());
 		assertEquals(2, activeTerms.size());
 		for (DescriptionPojo term : activeTerms) {
-			if (DescriptionType.FSN.name().equals(term.getType())) {
+			if (DescriptionPojo.Type.FSN == term.getType()) {
 				assertEquals("Allergy to almond (finding)", term.getTerm());
 			} else {
 				assertEquals("Allergy to almond", term.getTerm());
@@ -212,34 +210,34 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		DescriptionPojo inactiveFsnPojo = new DescriptionPojo();
 		inactiveFsnPojo.setActive(false);
 		inactiveFsnPojo.setTerm("inactive_" + conceptMini.getFsn() );
-		inactiveFsnPojo.setCaseSignificance(CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name());
-		inactiveFsnPojo.setType(DescriptionType.FSN.name());
+		inactiveFsnPojo.setCaseSignificance(ENTIRE_TERM_CASE_SENSITIVE);
+		inactiveFsnPojo.setType(FSN);
 		descriptions.add(inactiveFsnPojo);
 		
 		DescriptionPojo fsnPojo = new DescriptionPojo();
 		descriptions.add(fsnPojo);
 		fsnPojo.setActive(true);
 		fsnPojo.setTerm(conceptMini.getFsn().getTerm());
-		fsnPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
-		fsnPojo.setType(DescriptionType.FSN.name());
+		fsnPojo.setCaseSignificance(CASE_INSENSITIVE);
+		fsnPojo.setType(FSN);
 		DescriptionPojo ptPojo = new DescriptionPojo();
 		ptPojo.setTerm(TemplateUtil.getDescriptionFromFSN(conceptMini.getFsn().getTerm()));
 		if (ptPojo.getTerm().equals("Aluminium")) {
-			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.ACCEPTABLE, Constants.PREFERRED));
+			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(ACCEPTABLE, PREFERRED));
 			DescriptionPojo usPtPojo = new DescriptionPojo();
 			usPtPojo.setTerm("Aluminum");
-			usPtPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED,Constants.ACCEPTABLE));
+			usPtPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, ACCEPTABLE));
 			usPtPojo.setActive(true);
-			usPtPojo.setType(DescriptionType.SYNONYM.name());
-			usPtPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			usPtPojo.setType(DescriptionPojo.Type.SYNONYM);
+			usPtPojo.setCaseSignificance(CASE_INSENSITIVE);
 			descriptions.add(usPtPojo);
 			
 		} else {
-			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(Constants.PREFERRED, Constants.PREFERRED));
+			ptPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, PREFERRED));
 		}
 		ptPojo.setActive(true);
-		ptPojo.setType(DescriptionType.SYNONYM.name());
-		ptPojo.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+		ptPojo.setType(DescriptionPojo.Type.SYNONYM);
+		ptPojo.setCaseSignificance(CASE_INSENSITIVE);
 		descriptions.add(ptPojo);
 		return pojo;
 	}
@@ -272,12 +270,12 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 				"Allergic reaction caused by adhesive"};
 		
 		for (DescriptionPojo term : activeTerms) {
-			if (DescriptionType.FSN.name().equals(term.getType())) {
+			if (DescriptionPojo.Type.FSN == term.getType()) {
 				assertEquals("Allergic reaction caused by adhesive agent (disorder)", term.getTerm());
 			} else {
 				if (term.getTerm().equals(activeSynonyms[0])) {
 					assertNotNull(term.getAcceptabilityMap());
-					assertTrue(term.getAcceptabilityMap().values().contains(Constants.PREFERRED));
+					assertTrue(term.getAcceptabilityMap().containsValue(PREFERRED));
 				}
 			}
 		}
@@ -297,6 +295,11 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 				.stream().filter(r -> r.getCharacteristicType().equals("INFERRED_RELATIONSHIP"))
 				.collect(Collectors.toSet());
 		assertEquals(6, inferred.size());
+
+		assertEquals(transformedConcept.getClassAxioms(), transformedConcept.getClassAxioms());
+		assertEquals(concept.getClassAxioms(), concept.getClassAxioms());
+		assertEquals(transformedConcept.getClassAxioms(), concept.getClassAxioms());
+
 		verifyTransformation(concept);
 	}
 
@@ -397,20 +400,22 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private void setUpTemplates(String... templates) throws Exception {
 		for (String templateName : templates) {
 			FileUtils.copyFileToDirectory(new File(getClass().getResource("/templates/" + templateName + ".json").toURI()),
-					jsonStore.getStoreDirectory());
+					templateJsonStore.getStoreDirectory());
 		}
 		templateService.reloadCache();
 	}
 	
 	private void initTestConcepts(String sourceConceptJson, String transformedJson) throws IOException {
-		try (Reader sourceConceptReader = new InputStreamReader(getClass().getResourceAsStream(sourceConceptJson), UTF_8);
-				Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformedJson), UTF_8)) {
+		InputStream resourceAsStream = getClass().getResourceAsStream(sourceConceptJson);
+		assertNotNull(sourceConceptJson + " stream must not be null", resourceAsStream);
+		try (Reader sourceConceptReader = new InputStreamReader(resourceAsStream, UTF_8);
+			 Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformedJson), UTF_8)) {
 				conceptToTransform = gson.fromJson(sourceConceptReader, ConceptPojo.class);
 				transformedConcept = gson.fromJson(transformedJsonReader, ConceptPojo.class);
 			}
 	}
 
-	private OngoingStubbing<SnowOwlRestClient> mockTerminologyServerClient() {
+	private OngoingStubbing<SnowstormRestClient> mockTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 	
@@ -418,6 +423,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		if (isDebug) {
 			System.out.println(gson.toJson(transformed));
 		}
+//		JSONAssert.assertEquals(gson.toJson(transformedConcept), gson.toJson(transformed), false);
 		if (!transformedConcept.equals(transformed)) {
 			assertEquals(transformedConcept.toString().replace(",", ",\n"), transformed.toString().replace(",", ",\n"));
 		}

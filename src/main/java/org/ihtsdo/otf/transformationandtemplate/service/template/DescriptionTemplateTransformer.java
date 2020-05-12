@@ -1,33 +1,26 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.ACCEPTABLE;
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
-import static org.snomed.authoringtemplate.domain.DescriptionType.FSN;
-import static org.snomed.authoringtemplate.domain.DescriptionType.SYNONYM;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
 
+import java.util.*;
+
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
+import static org.snomed.authoringtemplate.domain.DescriptionType.FSN;
+
 public class DescriptionTemplateTransformer {
 
-	private ConceptPojo conceptToTransform;
-	private Map<String, Set<DescriptionPojo>> slotValueMap;
-	private String inactivationReason;
-	private ConceptTemplate conceptTemplate;
+	private final ConceptPojo conceptToTransform;
+	private final Map<String, Set<DescriptionPojo>> slotValueMap;
+	private final String inactivationReason;
+	private final ConceptTemplate conceptTemplate;
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(DescriptionTemplateTransformer.class);
 
@@ -68,7 +61,7 @@ public class DescriptionTemplateTransformer {
 			if (FSN == desc.getType()) {
 				newFsn = term;
 			} else {
-				if (desc.getAcceptabilityMap().containsValue(PREFERRED)) {
+				if (desc.getAcceptabilityMap().containsValue(PREFERRED.name())) {
 					newPts.add(term);
 				}
 			}
@@ -79,7 +72,7 @@ public class DescriptionTemplateTransformer {
 			} else {
 				// Update Acceptability
 				if (desc.getAcceptabilityMap() != null && !desc.getAcceptabilityMap().isEmpty()) {
-					previousActiveTermMap.get(term).setAcceptabilityMap(desc.getAcceptabilityMap());
+					previousActiveTermMap.get(term).setAcceptabilityMap(getAcceptabilityMapFromConstantStringMap(desc.getAcceptabilityMap()));
 				}
 			}
 		}
@@ -88,13 +81,13 @@ public class DescriptionTemplateTransformer {
 			if (!pojo.isActive()) {
 				continue;
 			}
-			if (FSN.name().equals(pojo.getType())) {
+			if (pojo.getType() == DescriptionPojo.Type.FSN) {
 				if (newFsn != null && !newFsn.equals(pojo.getTerm())) {
 					pojo.setActive(false);
 					pojo.setInactivationIndicator(inactivationReason);
 					pojo.setEffectiveTime(null);
 				}
-			} else if (SYNONYM.name().equals(pojo.getType())){
+			} else if (pojo.getType() == DescriptionPojo.Type.SYNONYM){
 				if (pojo.getAcceptabilityMap() != null && pojo.getAcceptabilityMap().containsValue(PREFERRED)) {
 					if (!newPts.contains(pojo.getTerm())) {
 						pojo.getAcceptabilityMap().replaceAll((i, v) -> ACCEPTABLE);
@@ -125,14 +118,20 @@ public class DescriptionTemplateTransformer {
 
 	private DescriptionPojo getDescriptionPojo(Description desc, String term, String moduleId) {
 		DescriptionPojo pojo = new DescriptionPojo();
-		pojo.setAcceptabilityMap(desc.getAcceptabilityMap());
+		pojo.setAcceptabilityMap(getAcceptabilityMapFromConstantStringMap(desc.getAcceptabilityMap()));
 		pojo.setActive(true);
-		pojo.setCaseSignificance(desc.getCaseSignificance().name());
+		pojo.setCaseSignificance(DescriptionPojo.CaseSignificance.valueOf(desc.getCaseSignificance().name()));
 		pojo.setTerm(term);
-		pojo.setType(desc.getType().name());
+		pojo.setType(DescriptionPojo.Type.valueOf(desc.getType().name()));
 		pojo.setLang(desc.getLang());
 		pojo.setModuleId(moduleId);
 		return pojo;
+	}
+
+	private Map<String, DescriptionPojo.Acceptability> getAcceptabilityMapFromConstantStringMap(Map<String, String> acceptabilityMap) {
+		Map<String, DescriptionPojo.Acceptability> map = new TreeMap<>();
+		acceptabilityMap.forEach((key, value) -> map.put(key, DescriptionPojo.Acceptability.valueOf(value)));
+		return map;
 	}
 
 }

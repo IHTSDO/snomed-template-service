@@ -3,8 +3,8 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 import org.apache.commons.lang.ArrayUtils;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,7 @@ public class TemplateService {
 	private TemplateStore templateStore;
 
 	@Autowired
-	private SnowOwlRestClientFactory terminologyClientFactory;
+	private SnowstormRestClientFactory terminologyClientFactory;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -83,7 +83,7 @@ public class TemplateService {
 
 	public Set<ConceptTemplate> listAll(String branchPath, String[] descendantOf, String[] ancestorOf) throws IOException {
 		Set<ConceptTemplate> templates = listAll();
-		SnowOwlRestClient terminologyClient = terminologyClientFactory.getClient();
+		SnowstormRestClient terminologyClient = terminologyClientFactory.getClient();
 		if (!ArrayUtils.isEmpty(descendantOf) || !ArrayUtils.isEmpty(ancestorOf)) {
 			// Group templates by focus concept to reduce the number of ECL queries
 			Map<String, List<ConceptTemplate>> templatesByFocusConcept = templates.stream().collect(Collectors.groupingBy(ConceptTemplate::getFocusConcept));

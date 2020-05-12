@@ -17,8 +17,8 @@ import org.ihtsdo.otf.transformationandtemplate.service.template.TransformationR
 import org.ihtsdo.otf.transformationandtemplate.service.template.TransformationStatus;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptTransformService;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateTransformationResultService;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
@@ -53,7 +53,7 @@ public class TemplateController {
 	private TemplateConceptTransformService transformService;
 	
 	@Autowired
-	private SnowOwlRestClientFactory terminologyClientFactory;
+	private SnowstormRestClientFactory terminologyClientFactory;
 	
 	@Autowired
 	private TemplateTransformationResultService resultService;
@@ -137,7 +137,7 @@ public class TemplateController {
 									UriComponentsBuilder uriComponentsBuilder
 									) throws ServiceException {
 		TemplateTransformation transformation = transformService.createTemplateTransformation(BranchPathUriUtil.decodePath(branchPath), transformRequest);
-		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
+		SnowstormRestClient restClient = terminologyClientFactory.getClient();
 		transformService.transformAsynchronously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
 		resultService.update(transformation);
@@ -161,7 +161,7 @@ public class TemplateController {
 		if (conceptToTransform.getClassAxioms() == null) {
 			throw new IllegalArgumentException("The class axioms to be transformed must not be null " + conceptToTransform);
 		}
-		SnowOwlRestClient restClient = terminologyClientFactory.getClient();
+		SnowstormRestClient restClient = terminologyClientFactory.getClient();
 		TemplateTransformRequest request = new TemplateTransformRequest();
 		request.setDestinationTemplate(destinationTemplate);
 		return transformService.transformConcept(BranchPathUriUtil.decodePath(branchPath), request, conceptToTransform, restClient);

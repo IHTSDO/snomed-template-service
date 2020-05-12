@@ -15,7 +15,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.*;
 import static org.junit.Assert.*;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -45,18 +46,18 @@ public class DescriptionTemplateTransformerTest {
 				.collect(Collectors.toList());
 		assertEquals(3,  activeTerms.size());
 		for (DescriptionPojo pojo : activeTerms) {
-			assertEquals("CASE_INSENSITIVE", pojo.getCaseSignificance());
-			if (DescriptionType.FSN.name().equals(pojo.getType())) {
+			assertEquals(CASE_INSENSITIVE, pojo.getCaseSignificance());
+			if (FSN == pojo.getType()) {
 				assertEquals("Allergy to almond (finding)", pojo.getTerm());
-			} else if (DescriptionType.SYNONYM.name().equals(pojo.getType())) {
+			} else if (SYNONYM == pojo.getType()) {
 				assertEquals("Allergy to almond", pojo.getTerm());
 				assertTrue(pojo.isReleased());
 			} else {
-				assertEquals("TEXT_DEFINITION", pojo.getType());
+				assertEquals(TEXT_DEFINITION, pojo.getType());
 				assertEquals("Allergy to almond text definition", pojo.getTerm());
-				Set<String> valueSet = new HashSet<>(pojo.getAcceptabilityMap().values());
+				Set<DescriptionPojo.Acceptability> valueSet = new HashSet<>(pojo.getAcceptabilityMap().values());
 				assertEquals(1, valueSet.size());
-				assertEquals(PREFERRED, valueSet.iterator().next());
+				assertEquals(DescriptionPojo.Acceptability.PREFERRED, valueSet.iterator().next());
 				assertTrue(pojo.isReleased());
 			}
 		}
@@ -67,7 +68,7 @@ public class DescriptionTemplateTransformerTest {
 				.collect(Collectors.toList());
 		assertEquals(1,  inactiveTerms.size());
 		for (DescriptionPojo pojo : inactiveTerms) {
-			assertEquals(DescriptionType.FSN.name(), pojo.getType());
+			assertEquals(FSN, pojo.getType());
 			assertEquals("Allergy to almond (disorder)", pojo.getTerm());
 			assertEquals(inactivationReason, pojo.getInactivationIndicator());
 		}

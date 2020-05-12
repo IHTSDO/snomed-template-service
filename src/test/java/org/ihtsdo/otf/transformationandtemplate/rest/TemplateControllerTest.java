@@ -32,7 +32,7 @@ public class TemplateControllerTest extends AbstractTest {
 	private TemplateService templateService;
 
 	@Autowired
-	private JsonStore jsonStore;
+	private JsonStore templateJsonStore;
 
 	private MockMvc mockMvc;
 
@@ -61,7 +61,7 @@ public class TemplateControllerTest extends AbstractTest {
 	
 	@After
 	public void tearDown() throws IOException {
-		FileUtils.deleteDirectory(jsonStore.getStoreDirectory());
+		FileUtils.deleteDirectory(templateJsonStore.getStoreDirectory());
 	}
 
 }

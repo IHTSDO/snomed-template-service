@@ -15,7 +15,7 @@ import org.assertj.core.util.Lists;
 import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.OngoingStubbing;
@@ -188,7 +188,7 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		
 	}
 	
-	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
+	private OngoingStubbing<SnowstormRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 

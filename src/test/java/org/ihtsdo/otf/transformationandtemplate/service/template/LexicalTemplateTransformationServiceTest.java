@@ -1,23 +1,9 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
-import static org.junit.Assert.assertEquals;
-import static org.snomed.authoringtemplate.domain.CaseSignificance.CASE_INSENSITIVE;
-import static org.snomed.authoringtemplate.domain.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE;
-import static org.snomed.authoringtemplate.domain.CaseSignificance.INITIAL_CHARACTER_CASE_INSENSITIVE;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.ihtsdo.otf.transformationandtemplate.service.template.LexicalTemplateTransformService;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,7 +14,12 @@ import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-@RunWith(SpringJUnit4ClassRunner.class)
+import java.util.*;
+
+import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
+import static org.junit.Assert.assertEquals;
+import static org.snomed.authoringtemplate.domain.CaseSignificance.*;
+
 public class LexicalTemplateTransformationServiceTest extends AbstractServiceTest {
 	
 	private List<LexicalTemplate> lexicalTemplates;
@@ -42,11 +33,11 @@ public class LexicalTemplateTransformationServiceTest extends AbstractServiceTes
 				"structure"));
 		ReplacementRule rule = new ReplacementRule("of $body structure$", "");
 		rule.setSlotAbsent(true);
-		bodysStructure.setTermReplacements(Arrays.asList(rule));
+		bodysStructure.setTermReplacements(Collections.singletonList(rule));
 		LexicalTemplate substance = new LexicalTemplate("substance", "[substance]", "substance", Collections.emptyList());
 		ReplacementRule substanceReplacementRule = new ReplacementRule("caused by $substance$", "");
 		substanceReplacementRule.setSlotAbsent(true);
-		substance.setTermReplacements(Arrays.asList(substanceReplacementRule));
+		substance.setTermReplacements(Collections.singletonList(substanceReplacementRule));
 		
 		lexicalTemplates = new ArrayList<>();
 		
@@ -57,7 +48,7 @@ public class LexicalTemplateTransformationServiceTest extends AbstractServiceTes
 		fsn.setLang("en");
 		fsn.setType(DescriptionType.FSN);
 		fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE);
-		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, PREFERRED));
+		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(PREFERRED, PREFERRED));
 		descriptions = new ArrayList<>();
 		descriptions.add(fsn);
 		
@@ -65,7 +56,7 @@ public class LexicalTemplateTransformationServiceTest extends AbstractServiceTes
 		pt.setLang("en");
 		pt.setType(DescriptionType.SYNONYM);
 		pt.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE);
-		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, PREFERRED));
+		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(PREFERRED, PREFERRED));
 		descriptions.add(pt);
 	}
 	

@@ -25,9 +25,9 @@ public class TemplateTransformationResultService {
 
 	private final ResourceManager transformationResourceManager;
 
-	private Gson prettyJson;
+	private final Gson prettyJson;
 
-	private Logger logger = LoggerFactory.getLogger(getClass());
+	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public TemplateTransformationResultService(
 			@Autowired TransformationResourceConfiguration transformationResourceConfiguration,

@@ -15,7 +15,7 @@ public class JsonStore {
 
 	private static final FilenameFilter FILENAME_FILTER = (dir, name) -> name.endsWith(EXTENSION);
 
-	private File storeDirectory;
+	private final File storeDirectory;
 
 	private final ObjectMapper objectMapper;
 

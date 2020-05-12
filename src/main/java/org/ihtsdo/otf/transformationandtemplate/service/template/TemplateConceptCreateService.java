@@ -4,8 +4,8 @@ import com.google.common.collect.Iterables;
 import org.ihtsdo.otf.transformationandtemplate.rest.error.InputError;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.slf4j.Logger;
@@ -38,7 +38,7 @@ public class TemplateConceptCreateService {
 	private TemplateService templateService;
 	
 	@Autowired
-	private SnowOwlRestClientFactory terminologyClientFactory;
+	private SnowstormRestClientFactory terminologyClientFactory;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	
@@ -136,7 +136,7 @@ public class TemplateConceptCreateService {
 
 	private Map<String, Set<DescriptionPojo>> createSlotConceptPojoMap(String branchPath, List<String> slotNames, List<String> slotValues, int additionalSlots) throws ServiceException {
 		Map<String, Set<DescriptionPojo>> slotValueMap = new HashMap<>();
-		SnowOwlRestClient client = terminologyClientFactory.getClient();
+		SnowstormRestClient client = terminologyClientFactory.getClient();
 		Map<String, ConceptPojo> coneptIdPojoMap = new HashMap<>();
 		try {
 			List<String> conceptIds = slotValues.subList(0, slotValues.size() - additionalSlots)
@@ -166,8 +166,8 @@ public class TemplateConceptCreateService {
 		Set<DescriptionPojo> result = new HashSet<>();
 		DescriptionPojo pojo = new DescriptionPojo();
 		pojo.setTerm(term);
-		pojo.setType(type);
-		pojo.setCaseSignificance(CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name());
+		pojo.setType(DescriptionPojo.Type.valueOf(type));
+		pojo.setCaseSignificance(DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE);
 		result.add(pojo);
 		return result;
 	}
@@ -177,7 +177,7 @@ public class TemplateConceptCreateService {
 		int slotIndex = -1;
 		List<String> errorMessages = new ArrayList<>();
 		try {
-			SnowOwlRestClient client = terminologyClientFactory.getClient();
+			SnowstormRestClient client = terminologyClientFactory.getClient();
 			for (SimpleSlot simpleSlot : slotsRequiringInput) {
 				slotIndex++;
 				Set<String> slotValuesToValidate = slotInputValues.get(slotIndex)

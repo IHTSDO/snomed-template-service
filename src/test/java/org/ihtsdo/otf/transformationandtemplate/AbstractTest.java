@@ -26,13 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest
 public abstract class AbstractTest {
-	
+
 	@Autowired
 	protected TemplateStore templateStore;
-	
+
 	@TestConfiguration
 	private static class TestConfig {
-		
+
 		@Autowired
 		private ObjectMapper objectMapper;
 

@@ -1,53 +1,37 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.ihtsdo.otf.transformationandtemplate.rest.error.InputError;
-import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
-import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptCreateService;
+import org.ihtsdo.otf.transformationandtemplate.rest.error.InputError;
+import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
-import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
+import java.io.*;
+import java.util.*;
+
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.FSN;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
 
 public class TemplateConceptCreateServiceTest extends AbstractServiceTest {
-	
+
 	@Autowired
 	private TemplateConceptCreateService conceptCreateService;
-	
+
 	@Test
 	public void testGenerateConcepts_templateNotFound() throws IOException, ServiceException {
 		try {
@@ -251,7 +235,7 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest {
 		}
 	}
 
-	private OngoingStubbing<SnowOwlRestClient> expectGetTerminologyServerClient() {
+	private OngoingStubbing<SnowstormRestClient> expectGetTerminologyServerClient() {
 		return when(clientFactory.getClient()).thenReturn(terminologyServerClient);
 	}
 	
@@ -289,8 +273,8 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest {
 			pojo.setConceptId(conceptId);
 			DescriptionPojo fsn = new DescriptionPojo();
 			fsn.setTerm(conceptFsnMap.get(conceptId));
-			fsn.setType("FSN");
-			fsn.setCaseSignificance(CaseSignificance.CASE_INSENSITIVE.name());
+			fsn.setType(FSN);
+			fsn.setCaseSignificance(CASE_INSENSITIVE);
 			Set<DescriptionPojo> descriptionSet = new HashSet<>();
 			descriptionSet.add(fsn);
 			pojo.setDescriptions(descriptionSet);

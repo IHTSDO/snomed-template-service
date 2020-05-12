@@ -3,7 +3,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 import org.ihtsdo.otf.transformationandtemplate.service.Constants;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
@@ -25,6 +25,9 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.FSN;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.SYNONYM;
+
 @Service
 public class TemplateConceptSearchService {
 
@@ -38,7 +41,7 @@ public class TemplateConceptSearchService {
 	private LogicalTemplateParserService logicalTemplateParser;
 	
 	@Autowired
-	private SnowOwlRestClientFactory terminologyClientFactory;
+	private SnowstormRestClientFactory terminologyClientFactory;
 	
 	@Autowired
 	private TemplateService templateService;
@@ -106,14 +109,14 @@ public class TemplateConceptSearchService {
 				List<String> synoyms = conceptPojo.getDescriptions()
 						.stream()
 						.filter(DescriptionPojo::isActive)
-						.filter(d -> d.getType().equals(DescriptionType.SYNONYM.name()))
+						.filter(d -> d.getType() == SYNONYM)
 						.map(DescriptionPojo::getTerm)
 						.collect(Collectors.toList());
 				
 				List<String> fsns = conceptPojo.getDescriptions()
 						.stream()
 						.filter(DescriptionPojo::isActive)
-						.filter(d -> d.getType().equals(DescriptionType.FSN.name()))
+						.filter(d -> d.getType() == FSN)
 						.map(DescriptionPojo::getTerm)
 						.collect(Collectors.toList());
 				
@@ -347,10 +350,10 @@ public class TemplateConceptSearchService {
 				queryBuilder.append(",");
 			}
 			if (attribute.getCardinalityMin() != null) {
-				queryBuilder.append("[" + attribute.getCardinalityMin() + CARDINALITY_SEPARATOR);
+				queryBuilder.append("[").append(attribute.getCardinalityMin()).append(CARDINALITY_SEPARATOR);
 			}
 			if (attribute.getCardinalityMax() != null) {
-				queryBuilder.append(attribute.getCardinalityMax() + "]");
+				queryBuilder.append(attribute.getCardinalityMax()).append("]");
 			}
 			queryBuilder.append(attribute.getType());
 			queryBuilder.append( "=");

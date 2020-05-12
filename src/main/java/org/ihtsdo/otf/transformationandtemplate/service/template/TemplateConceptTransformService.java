@@ -2,7 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClient;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
@@ -51,7 +51,7 @@ public class TemplateConceptTransformService {
 	}
 
 	@Async
-	public void transformAsynchronously(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
+	public void transformAsynchronously(TemplateTransformation transformation, SnowstormRestClient restClient) throws ServiceException {
 		transformation.setStatus(TransformationStatus.RUNNING);
 		resultService.update(transformation);
 
@@ -112,7 +112,7 @@ public class TemplateConceptTransformService {
 		}
 	}
 
-	public List<Future<TransformationResult>> transform(TemplateTransformation transformation, SnowOwlRestClient restClient) throws ServiceException {
+	public List<Future<TransformationResult>> transform(TemplateTransformation transformation, SnowstormRestClient restClient) throws ServiceException {
 		
 		String branchPath = transformation.getBranchPath();
 		TemplateTransformRequest transformRequest = transformation.getTransformRequest();
@@ -152,7 +152,7 @@ public class TemplateConceptTransformService {
 		
 	}
 	
-	private TransformationResult batchTransform(TransformationInputData input, List<String> conceptIds, SnowOwlRestClient restClient) {
+	private TransformationResult batchTransform(TransformationInputData input, List<String> conceptIds, SnowstormRestClient restClient) {
 		TransformationResult result = new TransformationResult();
 		Map<String, String> errors = new HashMap<>();
 		result.setFailures(errors);
@@ -186,7 +186,7 @@ public class TemplateConceptTransformService {
 		return result;
 	}
 	
-	private ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowOwlRestClient restClient) throws ServiceException {
+	private ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowstormRestClient restClient) throws ServiceException {
 		ConceptPojo transformed = conceptPojo;
 		ConceptTemplate conceptTemplate = inputData.getDestinationTemplate();
 		Map<String, ConceptMiniPojo> attributeSlotValueMap;
@@ -215,7 +215,7 @@ public class TemplateConceptTransformService {
 		return transformed;
 	}
 
-	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowOwlRestClient restClient) throws RestClientException {
+	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowstormRestClient restClient) throws RestClientException {
 		Map<String, Set<ConceptMiniPojo>> slotToAttrbuteValuesMap = TemplateUtil.getSlotNameToAttributeValueMap(inputData.getDestinationSlotToAttributeMap(), conceptPojo);
 		// validate using attribute slot range when there is more than one value for a given slot
 		Map<String, ConceptMiniPojo> slotToValuesMap = new HashMap<>();
@@ -237,7 +237,7 @@ public class TemplateConceptTransformService {
 		return slotToValuesMap;
 	}
 
-	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowOwlRestClient client, ConceptTemplate destination) throws ServiceException {
+	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowstormRestClient client, ConceptTemplate destination) throws ServiceException {
 		List<String> conceptIds = new ArrayList<>();
 		List<Relationship> relationships = destination.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
 		for (Relationship rel : relationships) {
@@ -292,7 +292,7 @@ public class TemplateConceptTransformService {
 	}
 
 	private Map<String, Set<DescriptionPojo>> getSlotDescriptionValuesMap(String branchPath, 
-			Map<String, ConceptMiniPojo> attributeSlotMap, SnowOwlRestClient restClient) throws ServiceException {
+			Map<String, ConceptMiniPojo> attributeSlotMap, SnowstormRestClient restClient) throws ServiceException {
 
 		Map<String, Set<DescriptionPojo>> slotDescriptionMap = new HashMap<>();
 		List<String> conceptIds = attributeSlotMap.values().stream().map(ConceptMiniPojo::getConceptId).collect(Collectors.toList());
@@ -322,7 +322,7 @@ public class TemplateConceptTransformService {
 		return new TemplateTransformation(branchPath, transformRequest);
 	}
 
-	public ConceptPojo transformConcept(String branchPath, TemplateTransformRequest request, ConceptPojo conceptToTransform, SnowOwlRestClient restClient) throws ServiceException {
+	public ConceptPojo transformConcept(String branchPath, TemplateTransformRequest request, ConceptPojo conceptToTransform, SnowstormRestClient restClient) throws ServiceException {
 		ConceptTemplate destination = null;
 		LogicalTemplate logical;
 		String destinationTemplate = request.getDestinationTemplate();

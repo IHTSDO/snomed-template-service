@@ -19,7 +19,7 @@ public class TemplateUtil {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateUtil.class);
 	
-	private static Pattern FSN_PATTERN = Pattern.compile("(.*)(\\(.*\\))");
+	private static final Pattern FSN_PATTERN = Pattern.compile("(.*)(\\(.*\\))");
 
 	public static Pattern constructTermPattern(String termTemplate) {
 		String result = termTemplate;
@@ -33,8 +33,7 @@ public class TemplateUtil {
 		result = result.replace(")", "\\)");
 		result = result.replace(".+","(.+)");
 		LOGGER.info("term pattern regex=" + result);
-		Pattern pattern = Pattern.compile(result);
-		return pattern;
+		return Pattern.compile(result);
 	}
 	
 	
@@ -105,7 +104,7 @@ public class TemplateUtil {
 				if (!relationship.isActive()) {
 					continue;
 				}
-				attributeTypeToTargetValuesMap.computeIfAbsent(relationship.getType().getConceptId(), values -> new HashSet<ConceptMiniPojo>())
+				attributeTypeToTargetValuesMap.computeIfAbsent(relationship.getType().getConceptId(), values -> new HashSet<>())
 					.add(relationship.getTarget());
 				
 			}
@@ -216,7 +215,7 @@ public class TemplateUtil {
 
 	public static String getDescriptionFromPT(DescriptionPojo ptPojo) {
 		String term = ptPojo.getTerm();
-		if (!CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name().equals(ptPojo.getCaseSignificance())) {
+		if (ptPojo.getCaseSignificance() != DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE) {
 			return StringUtils.uncapitalize(term);
 		} 
 		return term;
@@ -224,7 +223,7 @@ public class TemplateUtil {
 
 	public static String getDescriptionFromFSN(DescriptionPojo fsnPojo) {
 		String term = getDescriptionFromFSN(fsnPojo.getTerm());
-		if (!CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE.name().equals(fsnPojo.getCaseSignificance())) {
+		if (fsnPojo.getCaseSignificance() != DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE) {
 			return StringUtils.uncapitalize(term);
 		} 
 		return term;

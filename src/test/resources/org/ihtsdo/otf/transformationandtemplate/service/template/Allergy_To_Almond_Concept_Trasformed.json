@@ -15,9 +15,9 @@
       "type": "FSN",
       "caseSignificance": "CASE_INSENSITIVE",
       "acceptabilityMap": {
-        "900000000000508004": "PREFERRED",
-        "900000000000509007": "PREFERRED"
-      }
+        "900000000000509007": "PREFERRED",
+        "900000000000508004": "PREFERRED"
+	  }
     },
     {
       "descriptionId": "3286073016",

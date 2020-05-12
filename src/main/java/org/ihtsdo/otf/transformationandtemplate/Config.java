@@ -1,13 +1,10 @@
 package org.ihtsdo.otf.transformationandtemplate;
 
-import static com.google.common.base.Predicates.not;
-import static springfox.documentation.builders.PathSelectors.regex;
-
-import java.io.File;
-import java.text.SimpleDateFormat;
-
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
-import org.ihtsdo.otf.rest.client.terminologyserver.SnowOwlRestClientFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,15 +21,16 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.web.client.RestTemplate;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+
+import static com.google.common.base.Predicates.not;
+import static springfox.documentation.builders.PathSelectors.regex;
 
 @Configuration
 @EnableSwagger2
@@ -59,9 +57,10 @@ public class Config extends WebSecurityConfigurerAdapter {
 	}
 
 	@Bean
-	public SnowOwlRestClientFactory snowOwlRestClientFactory(@Value("${terminologyserver.url}") String snowOwlUrl,
-															 @Value("${terminologyserver.reasonerId}") String snowOwlReasonerId) {
-		return new SnowOwlRestClientFactory(snowOwlUrl, snowOwlReasonerId, false);
+	public SnowstormRestClientFactory snowOwlRestClientFactory(@Value("${terminologyserver.url}") String snowstormUrl,
+			@Value("${terminologyserver.reasonerId}") String reasonerId) {
+
+		return new SnowstormRestClientFactory(snowstormUrl, reasonerId);
 	}
 
 	@Bean
