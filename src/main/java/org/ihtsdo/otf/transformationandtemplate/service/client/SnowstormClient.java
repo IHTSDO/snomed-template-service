@@ -44,6 +44,24 @@ public class SnowstormClient {
 	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(List<DescriptionPojo> descriptions, String branchPath) throws BusinessServiceException {
 		List<ChangeResult<DescriptionPojo>> changeResults = descriptions.stream().map(ChangeResult::new).collect(Collectors.toList());
 
+		// Initial terminology server communication check
+		try {
+			getBranch("MAIN");
+		} catch (WebClientException e) {
+			logger.error("Failed to communicate with the terminology server.", e);
+			failAllRemaining(changeResults, "Failed to communicate with the terminology server.");
+		}
+
+		// Get branch metadata
+		Branch branch;
+		try {
+			branch = getBranch(branchPath);
+		} catch (WebClientException e) {
+			logger.info("Failed to load branch {} from the terminology server.", branchPath, e);
+			return failAllRemaining(changeResults, format("Failed to load branch %s from the terminology server.", branchPath));
+		}
+		String defaultModuleId = getMetadataString(branch, DEFAULT_MODULE_ID_METADATA_KEY);
+
 		try {
 			// Give new descriptions a temporary UUID
 			descriptions.forEach(description -> {
@@ -75,6 +93,15 @@ public class SnowstormClient {
 				ConceptPojo conceptPojo = conceptMap.get(description.getConceptId());
 				if (conceptPojo != null) {
 					conceptPojo.add(description);
+
+					// Assign description module
+					if (description.getModuleId() == null) {
+						if (defaultModuleId != null) {
+							description.setModuleId(defaultModuleId);
+						} else {
+							description.setModuleId(conceptPojo.getModuleId());
+						}
+					}
 				} else {
 					changeResult.fail(format("Concept %s not found.", description.getConceptId()));
 					// Description not joined to any concept so no will not appear in the update request.
@@ -94,6 +121,21 @@ public class SnowstormClient {
 		}
 
 		return new ArrayList<>(changeResults);
+	}
+
+	private String getMetadataString(Branch branch, String key) {
+		return branch != null && branch.getMetadata() != null && branch.getMetadata().containsKey(key) ? (String) branch.getMetadata().get(key) : null;
+	}
+
+	private Branch getBranch(String branchPath) {
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("/branches/{branch}")
+						.queryParam("includeInheritedMetadata", true)
+						.build(branchPath))
+				.retrieve()
+				.bodyToMono(Branch.class)
+				.block();
 	}
 
 	private ChangeResult<DescriptionPojo> getChangeResult(List<ChangeResult<DescriptionPojo>> changeResults, DescriptionPojo description) {
