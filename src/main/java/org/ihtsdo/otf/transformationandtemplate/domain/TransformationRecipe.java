@@ -32,14 +32,16 @@ public class TransformationRecipe {
 
 	public Collection<String> getFieldNames() {
 		List<String> names = new ArrayList<>();
-		for (Object value : fieldMap.values()) {
+		for (Map.Entry<String, Object> entry : fieldMap.entrySet()) {
+			String key = entry.getKey();
+			Object value = entry.getValue();
 			if (value instanceof String) {
-				names.add((String) value);
+				names.add(key);
 			} else if (value instanceof List) {
 				@SuppressWarnings("unchecked")
 				List<Map<String, String>> list = (List<Map<String, String>>) value;
 				for (Map<String, String> map : list) {
-					names.addAll(map.values());
+					names.addAll(map.keySet());
 				}
 			}
 		}

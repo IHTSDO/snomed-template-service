@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -41,10 +42,9 @@ public class TSVComponentTransformation implements ComponentTransformation {
 				List<Map<String, String>> listOfMappings = (List<Map<String, String>>) mapping;
 				Map<String, String> valueMap = new HashMap<>();
 				for (Map<String, String> keyPairMapping : listOfMappings) {
-					String keyMapping = keyPairMapping.get("key");
-					int keyIndex = getTsvIndex(keyMapping);
-					String valueMapping = keyPairMapping.get("value");
-					int valueIndex = getTsvIndex(valueMapping);
+					Iterator<String> values = keyPairMapping.values().iterator();
+					int keyIndex = getTsvIndex(values.next());
+					int valueIndex = getTsvIndex(values.next());
 					if (keyIndex > -1 && columns.length > keyIndex && valueIndex > -1 && columns.length > valueIndex) {
 						valueMap.put(columns[keyIndex], columns[valueIndex]);
 					}

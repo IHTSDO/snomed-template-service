@@ -80,7 +80,7 @@ public class Config extends WebSecurityConfigurerAdapter {
 		return new FilterRegistrationBean(new BranchPathUriRewriteFilter(
 				"/(.*)/templates",
 				"/(.*)/templates/.*",
-				"/(.*)/recipe/.*"
+				"/(.*)/recipes/.*"
 		));
 	}
 	

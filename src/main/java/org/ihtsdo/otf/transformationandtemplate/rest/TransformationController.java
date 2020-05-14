@@ -19,7 +19,7 @@ public class TransformationController {
 	@Autowired
 	private ComponentTransformService componentTransformService;
 
-	@RequestMapping(value = "/{branchPath}/recipe/{recipeName}/run", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/{branchPath}/recipes/{recipeName}/run", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
 	public List<ChangeResult<? extends SnomedComponent>> runTransformation(@PathVariable String branchPath, @PathVariable String recipeName,
 			@RequestParam("tsvFile") MultipartFile tsvFile) throws BusinessServiceException, IOException {

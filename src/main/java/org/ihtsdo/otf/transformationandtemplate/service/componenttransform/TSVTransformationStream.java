@@ -31,7 +31,7 @@ public class TSVTransformationStream implements TransformationStream {
 					"For this transformation %s fields are expected (%s) but found %s.", fieldNames.size(), fieldNames, columns.length));
 		}
 		List<String> columnsList = Arrays.asList(columns);
-		if (fieldNames.containsAll(columnsList)) {
+		if (!fieldNames.containsAll(columnsList)) {
 			throw new BadRequestException(format("First line of TSV file must contain the list of fields. " +
 					"For this transformation the expected fields are %s (not in order) but found %s.", fieldNames, columnsList));
 		}
