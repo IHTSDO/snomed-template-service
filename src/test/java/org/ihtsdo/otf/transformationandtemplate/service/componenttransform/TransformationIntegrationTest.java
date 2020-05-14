@@ -1,7 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
@@ -77,7 +76,7 @@ public class TransformationIntegrationTest {
 		List<ChangeResult<DescriptionPojo>> resultList = changeResultsArgumentCaptor.getValue();
 		assertEquals(3, resultList.size());
 		assertEquals(FALSE, resultList.get(2).getSuccess());
-		assertEquals("At least one valid acceptability entry validation failed.", resultList.get(2).getMessage());
+		assertEquals("Simple validation failed: At least one valid acceptability entry.", resultList.get(2).getMessage());
 	}
 
 }

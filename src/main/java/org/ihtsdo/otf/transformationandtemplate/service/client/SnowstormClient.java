@@ -19,7 +19,9 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult.Severity.ERROR;
 
 @Service
@@ -41,34 +43,87 @@ public class SnowstormClient {
 				.build();
 	}
 
+	public List<ChangeResult<? extends SnomedComponent>> updateDescriptions(List<DescriptionPojo> descriptions,
+			List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException {
+
+		if (descriptions.isEmpty()) {
+			return new ArrayList<>(changes);
+		}
+		logger.info("Starting process to update {} descriptions.", descriptions.size());
+
+		try {
+			// Initial terminology server communication check
+			getBranch("MAIN");
+
+			// Batch load concepts by description id
+			Set<String> descriptionIds = descriptions.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
+			List<ConceptPojo> concepts = webClient.post()
+					.uri(uriBuilder -> uriBuilder
+							.path("/browser/{branch}/concepts/bulk-load")
+							.build(branchPath))
+					.body(BodyInserters.fromObject(ConceptBulkLoadRequest.byDescriptionId(descriptionIds)))
+					.retrieve()
+					.bodyToMono(CONCEPT_LIST_TYPE_REF)
+					.block();
+			logger.info("Loaded {} concepts.", concepts.size());
+
+			// Update existing descriptions
+			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
+			Set<String> descriptionsFound = new HashSet<>();
+			for (ConceptPojo loadedConcept : concepts) {
+				for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
+					DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
+					if (descriptionUpdate != null) {
+						descriptionUpdate.setConceptId(loadedConcept.getConceptId());
+						descriptionsFound.add(descriptionUpdate.getDescriptionId());
+						loadedDescription.setCaseSignificance(descriptionUpdate.getCaseSignificance());
+						if (!isEmpty(descriptionUpdate.getModuleId())) {
+							loadedDescription.setModuleId(descriptionUpdate.getModuleId());
+						}
+						loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+					}
+				}
+			}
+			// Fail all descriptions which were not found to update
+			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
+				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId)).fail("Description not found on the specified branch.");
+			}
+
+			if (!descriptionsFound.isEmpty()) {
+				Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+				bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
+				// Mark all changes which have not failed as successful
+				changes.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
+			}
+		} catch (WebClientException e) {// This RuntimeException is thrown by WebClient
+			logger.error("Failed to communicate with the terminology server.", e);
+			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+		}
+
+		return new ArrayList<>(changes);
+	}
+
 	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(List<DescriptionPojo> descriptions,
 			List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException {
 
 		if (descriptions.isEmpty()) {
 			return new ArrayList<>(changes);
 		}
-
 		logger.info("Starting process to save {} descriptions.", descriptions.size());
 
-		// Initial terminology server communication check
+
 		try {
+			// Initial terminology server communication check
 			getBranch("MAIN");
-		} catch (WebClientException e) {
-			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changes, "Failed to communicate with the terminology server.");
-		}
 
-		// Get branch metadata
-		Branch branch;
-		try {
-			branch = getBranch(branchPath);
-		} catch (WebClientException e) {
-			logger.info("Failed to load branch {} from the terminology server.", branchPath, e);
-			return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", branchPath));
-		}
-		String defaultModuleId = getMetadataString(branch, DEFAULT_MODULE_ID_METADATA_KEY);
+			String defaultModuleId;
+			try {
+				defaultModuleId = getDefaultModuleId(branchPath);
+			} catch (WebClientException e) {
+				logger.info("Failed to load branch {} from the terminology server.", branchPath, e);
+				return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", branchPath));
+			}
 
-		try {
 			// Give new descriptions a temporary UUID
 			descriptions.forEach(description -> {
 				if (description.getDescriptionId() == null) {
@@ -87,7 +142,7 @@ public class SnowstormClient {
 					.uri(uriBuilder -> uriBuilder
 							.path("/browser/{branch}/concepts/bulk-load")
 							.build(branchPath))
-					.body(BodyInserters.fromObject(new ConceptIdsRequest(conceptIds)))
+					.body(BodyInserters.fromObject(ConceptBulkLoadRequest.byConceptId(conceptIds)))
 					.retrieve()
 					.bodyToMono(CONCEPT_LIST_TYPE_REF)
 					.block();
@@ -114,56 +169,9 @@ public class SnowstormClient {
 				}
 			}
 
-			// Run batch validation
-			List<ConceptValidationResult> validationResults = runValidation(branchPath, concepts);
-
-			Map<String, Set<ConceptValidationResult>> conceptValidationResultMap = new HashMap<>();
-			for (ConceptValidationResult validationResult : validationResults) {
-				conceptValidationResultMap.computeIfAbsent(validationResult.getConceptId(), (c) -> new TreeSet<>(CONCEPT_VALIDATION_RESULT_COMPARATOR));
-			}
-
-			// Remove concepts with validation errors
-			// All component changes for this concept will not be saved
-			Set<String> conceptsWithError = validationResults.stream()
-					.filter(validationResult -> validationResult.getSeverity() == ERROR)
-					.map(ConceptValidationResult::getConceptId)
-					.collect(Collectors.toSet());
-			logger.info("{} concepts had validation errors.", conceptsWithError.size());
-			for (String conceptWithError : conceptsWithError) {
-				for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptWithError)) {
-					getChangeResult(changes, description).fail(format("Concept validation errors: %s", toString(conceptValidationResultMap.get(conceptWithError))));
-				}
-				conceptMap.remove(conceptWithError);
-				// Whole concept removed from map so changes will not appear in the update request.
-			}
-
-			// Remove temp description UUIDs
-			descriptions.forEach(description -> {
-				if (description.getDescriptionId().contains("-")) {
-					description.setDescriptionId(null);
-				}
-			});
-
+			bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
 			if (conceptMap.isEmpty()) {
 				return new ArrayList<>(changes);
-			}
-
-			// Bulk update concepts
-			logger.info("Saving {} concepts.", conceptMap.size());
-			ClientResponse bulkUpdateResponse = webClient.post()
-					.uri(uriBuilder -> uriBuilder
-							.path("/browser/{branch}/concepts/bulk")
-							.build(branchPath))
-					.body(BodyInserters.fromObject(conceptMap.values()))
-					.exchange()
-					.block();
-			String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
-			logger.info("Bulk update job url: {}", locationHeader);
-
-			int maxWaitSeconds = conceptMap.size() * 10_000;
-			ConceptChangeBatchStatus status = getBatchStatus(branchPath, locationHeader, maxWaitSeconds);
-			if (ConceptChangeBatchStatus.Status.FAILED == status.getStatus()) {
-				return failAllRemaining(changes, "Persisting concept batch failed with message: " + status.getMessage());
 			}
 
 			// Batch load concepts again to fetch identifiers of new components
@@ -171,7 +179,7 @@ public class SnowstormClient {
 					.uri(uriBuilder -> uriBuilder
 							.path("/browser/{branch}/concepts/bulk-load")
 							.build(branchPath))
-					.body(BodyInserters.fromObject(new ConceptIdsRequest(conceptMap.keySet())))
+					.body(BodyInserters.fromObject(ConceptBulkLoadRequest.byConceptId(conceptMap.keySet())))
 					.retrieve()
 					.bodyToMono(CONCEPT_LIST_TYPE_REF)
 					.block();
@@ -193,10 +201,84 @@ public class SnowstormClient {
 			}
 		} catch (WebClientException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);
-			return failAllRemaining(changes, "Failed to communicate with the terminology server.");
+			failAllRemaining(changes, "Failed to communicate with the terminology server.");
 		}
 
 		return new ArrayList<>(changes);
+	}
+
+	/**
+	 * Any concepts which fail validation or update will be removed from the conceptMap.
+	 * @param conceptMap Map of concepts to be updated.
+	 * @param branchPath Branch path to validation and update against.
+	 * @param descriptionChanges Set of changes contained in the concepts.
+	 * @throws WebClientException Thrown if terminology server communication returns non 2xx status code.
+	 * @throws ProcessingException Thrown if terminology server update times out.
+	 */
+	private void bulkValidateThenUpdateConcepts(Map<String, ConceptPojo> conceptMap, String branchPath,
+			List<ChangeResult<DescriptionPojo>> descriptionChanges) throws WebClientException, ProcessingException {
+
+		// Run batch validation
+		List<ConceptValidationResult> validationResults = runValidation(branchPath, conceptMap.values());
+
+		Map<String, Set<ConceptValidationResult>> conceptValidationResultMap = new HashMap<>();
+		for (ConceptValidationResult validationResult : validationResults) {
+			conceptValidationResultMap.computeIfAbsent(validationResult.getConceptId(), (c) -> new TreeSet<>(CONCEPT_VALIDATION_RESULT_COMPARATOR)).add(validationResult);
+		}
+
+		// Remove concepts with validation errors
+		// All component changes for this concept will not be saved
+		Set<String> conceptsWithError = validationResults.stream()
+				.filter(validationResult -> validationResult.getSeverity() == ERROR)
+				.map(ConceptValidationResult::getConceptId)
+				.collect(Collectors.toSet());
+		logger.info("{} concepts had validation errors.", conceptsWithError.size());
+		for (String conceptWithError : conceptsWithError) {
+			descriptionChanges.stream()
+					.filter(change -> change.getSuccess() == null && change.getComponent().getConceptId().equals(conceptWithError))
+					.forEach(changeResult -> changeResult.fail(format("Concept validation errors: %s", toString(conceptValidationResultMap.get(conceptWithError)))));
+			conceptMap.remove(conceptWithError);
+			// Whole concept removed from map so changes will not appear in the update request.
+		}
+
+		// Remove temp description UUIDs
+		for (ConceptPojo concept : conceptMap.values()) {
+			for (DescriptionPojo description : concept.getDescriptions()) {
+				if (description.getDescriptionId().contains("-")) {
+					description.setDescriptionId(null);
+				}
+			}
+		}
+
+		if (conceptMap.isEmpty()) {
+			return;
+		}
+
+		// Bulk update concepts
+		logger.info("Saving {} concepts.", conceptMap.size());
+		ClientResponse bulkUpdateResponse = webClient.post()
+				.uri(uriBuilder -> uriBuilder
+						.path("/browser/{branch}/concepts/bulk")
+						.build(branchPath))
+				.body(BodyInserters.fromObject(conceptMap.values()))
+				.exchange()
+				.block();
+		String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
+		logger.info("Bulk update job url: {}", locationHeader);
+
+		int maxWaitSeconds = conceptMap.size() * 10_000;
+		ConceptChangeBatchStatus status = getBatchStatus(locationHeader, maxWaitSeconds);
+		if (ConceptChangeBatchStatus.Status.FAILED == status.getStatus()) {
+			failAllRemaining(descriptionChanges, "Persisting concept batch failed with message: " + status.getMessage());
+			conceptMap.clear();
+		}
+	}
+
+	private String getDefaultModuleId(String branchPath) {
+		String defaultModuleId;// Get branch metadata
+		Branch branch = getBranch(branchPath);
+		defaultModuleId = getMetadataString(branch, DEFAULT_MODULE_ID_METADATA_KEY);
+		return defaultModuleId;
 	}
 
 	private String getMetadataString(Branch branch, String key) {
@@ -224,14 +306,11 @@ public class SnowstormClient {
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> failAllRemaining(List<ChangeResult<DescriptionPojo>> changeResults, String message) {
-		changeResults.stream().filter(r -> r.getSuccess() == null).forEach(r -> {
-			r.fail(message);
-		});
-
+		changeResults.stream().filter(r -> r.getSuccess() == null).forEach(r -> r.fail(message));
 		return new ArrayList<>(changeResults);
 	}
 
-	private ConceptChangeBatchStatus getBatchStatus(String branchPath, String locationHeader, int maxWaitSeconds) throws ProcessingException {
+	private ConceptChangeBatchStatus getBatchStatus(String locationHeader, int maxWaitSeconds) throws ProcessingException {
 		int waitSeconds = 0;
 		while (waitSeconds < maxWaitSeconds) {
 			ConceptChangeBatchStatus latestBatchStatus = webClient.get()
@@ -257,7 +336,7 @@ public class SnowstormClient {
 		return conceptValidationResults.toString();
 	}
 
-	private List<ConceptValidationResult> runValidation(String branchPath, List<ConceptPojo> concepts) {
+	private List<ConceptValidationResult> runValidation(String branchPath, Collection<ConceptPojo> concepts) {
 		logger.info("Validating {} concepts.", concepts.size());
 		return webClient.post()
 					.uri(uriBuilder -> uriBuilder
@@ -269,16 +348,30 @@ public class SnowstormClient {
 					.block();
 	}
 
-	private static final class ConceptIdsRequest {
+	private static final class ConceptBulkLoadRequest {
 
 		private final Set<String> conceptIds;
+		private final Set<String> descriptionIds;
 
-		public ConceptIdsRequest(Set<String> conceptIds) {
+		private ConceptBulkLoadRequest(Set<String> conceptIds, Set<String> descriptionIds) {
 			this.conceptIds = conceptIds;
+			this.descriptionIds = descriptionIds;
+		}
+
+		public static ConceptBulkLoadRequest byConceptId(Set<String> conceptIds) {
+			return new ConceptBulkLoadRequest(conceptIds, Collections.emptySet());
+		}
+
+		public static ConceptBulkLoadRequest byDescriptionId(Set<String> descriptionIds) {
+			return new ConceptBulkLoadRequest(Collections.emptySet(), descriptionIds);
 		}
 
 		public Set<String> getConceptIds() {
 			return conceptIds;
+		}
+
+		public Set<String> getDescriptionIds() {
+			return descriptionIds;
 		}
 	}
 }

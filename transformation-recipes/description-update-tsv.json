@@ -1,0 +1,26 @@
+{
+	"name": "Batch Description Update",
+	"source": "tsv",
+	"component": "DESCRIPTION",
+	"changeType": "UPDATE",
+	"fieldMap": {
+		"descriptionId": "$tsv.0",
+		"term": "$tsv.1",
+		"caseSignificanceId": "$tsv.2",
+		"typeId": "$tsv.3",
+		"acceptability": [
+			{
+				"langRefset1": "$tsv.4",
+				"acceptability1": "$tsv.5"
+			},
+			{
+				"langRefset2": "$tsv.6",
+				"acceptability2": "$tsv.7"
+			},
+			{
+				"langRefset3": "$tsv.8",
+				"acceptability3": "$tsv.9"
+			}
+		]
+	}
+}
