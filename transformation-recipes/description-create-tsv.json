@@ -11,8 +11,16 @@
 		"typeId": "$tsv.4",
 		"acceptability": [
 			{
-				"key": "$tsv.5",
-				"value": "$tsv.6"
+				"langRefset1": "$tsv.5",
+				"acceptability1": "$tsv.6"
+			},
+			{
+				"langRefset2": "$tsv.7",
+				"acceptability2": "$tsv.8"
+			},
+			{
+				"langRefset3": "$tsv.9",
+				"acceptability3": "$tsv.10"
 			}
 		]
 	}

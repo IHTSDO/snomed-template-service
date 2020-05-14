@@ -35,8 +35,8 @@ public class TransformationIntegrationTest {
 
 	@Test
 	public void test() throws BusinessServiceException {
-		List<ChangeResult<? extends SnomedComponent>> changeResults = componentTransformService.startBatchTransformation(new ComponentTransformationRequest(
-				"description-create-tsv", "MAIN/KAITEST/KAITEST-100", getClass().getResourceAsStream("description-creation-test-batch.tsv")));
+		componentTransformService.startBatchTransformation(new ComponentTransformationRequest(
+				"description-create-tsv", "MAIN/KAITEST/KAITEST-100", getClass().getResourceAsStream("description-create-tsv-test.tsv")));
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<List<DescriptionPojo>> listArgumentCaptor = ArgumentCaptor.forClass(List.class);
