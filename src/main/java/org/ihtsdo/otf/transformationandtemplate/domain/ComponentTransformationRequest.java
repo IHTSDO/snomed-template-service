@@ -1,12 +1,20 @@
 package org.ihtsdo.otf.transformationandtemplate.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jdk.nashorn.internal.ir.annotations.Ignore;
+
 import java.io.InputStream;
 
 public class ComponentTransformationRequest {
 
-	private final String recipe;
-	private final InputStream tsvValues;
-	private final String branchPath;
+	private String recipe;
+	private InputStream tsvValues;
+	private String branchPath;
+
+	// Required for Jackson
+	@SuppressWarnings("unused")
+	public ComponentTransformationRequest() {
+	}
 
 	public ComponentTransformationRequest(String recipe, String branchPath, InputStream tsvValues) {
 		this.recipe = recipe;
@@ -22,7 +30,12 @@ public class ComponentTransformationRequest {
 		return branchPath;
 	}
 
+	@JsonIgnore
 	public InputStream getTsvValues() {
 		return tsvValues;
+	}
+
+	public void setTsvValues(InputStream tsvValues) {
+		this.tsvValues = tsvValues;
 	}
 }

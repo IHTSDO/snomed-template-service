@@ -2,6 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
+import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
@@ -33,9 +34,17 @@ public class TransformationIntegrationTest {
 	private SnowstormClient snowstormClient;
 
 	@Test
-	public void test() throws BusinessServiceException {
-		componentTransformService.startBatchTransformation(new ComponentTransformationRequest(
-				"description-create-tsv", "MAIN/KAITEST/KAITEST-100", getClass().getResourceAsStream("description-create-tsv-test.tsv")));
+	public void test() throws BusinessServiceException, InterruptedException {
+		String branchPath = "MAIN/KAITEST/KAITEST-100";
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-create-tsv", branchPath, getClass().getResourceAsStream("description-create-tsv-test.tsv")));
+
+		int maxWait = 10;// seconds
+		int wait = 0;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<List<DescriptionPojo>> listArgumentCaptor = ArgumentCaptor.forClass(List.class);
@@ -44,7 +53,7 @@ public class TransformationIntegrationTest {
 		ArgumentCaptor<String> stringArgumentCaptor = ArgumentCaptor.forClass(String.class);
 		verify(snowstormClient).createDescriptions(listArgumentCaptor.capture(), changeResultsArgumentCaptor.capture(), stringArgumentCaptor.capture());
 
-		assertEquals("MAIN/KAITEST/KAITEST-100", stringArgumentCaptor.getValue());
+		assertEquals(branchPath, stringArgumentCaptor.getValue());
 
 		List<DescriptionPojo> descriptionsCreated = listArgumentCaptor.getValue();
 		assertEquals(2, descriptionsCreated.size());

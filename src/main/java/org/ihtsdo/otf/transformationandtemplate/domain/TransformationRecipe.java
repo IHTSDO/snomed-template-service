@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import java.util.*;
@@ -47,6 +48,11 @@ public class TransformationRecipe {
 
 	public String getTitle() {
 		return title;
+	}
+
+	@JsonIgnore
+	public String getTitleOrEmpty() {
+		return title != null ? title : "";
 	}
 
 	public String getDescription() {

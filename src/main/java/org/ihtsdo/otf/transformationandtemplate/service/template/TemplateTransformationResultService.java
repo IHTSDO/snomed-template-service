@@ -2,7 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.ihtsdo.otf.transformationandtemplate.TransformationResourceConfiguration;
+import org.ihtsdo.otf.transformationandtemplate.configuration.TransformationJobResourceConfiguration;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.transformationandtemplate.service.ResourcePathHelper;
 import org.ihtsdo.otf.resourcemanager.ResourceManager;
@@ -30,7 +30,7 @@ public class TemplateTransformationResultService {
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public TemplateTransformationResultService(
-			@Autowired TransformationResourceConfiguration transformationResourceConfiguration,
+			@Autowired TransformationJobResourceConfiguration transformationResourceConfiguration,
 			@Autowired ResourceLoader cloudResourceLoader) {
 		
 		prettyJson = new GsonBuilder().setPrettyPrinting().create();
@@ -50,7 +50,7 @@ public class TemplateTransformationResultService {
 
 			result = prettyJson.fromJson(reader, TransformationResult.class);
 		} catch (Exception e) {
-			String msg = "Failed to get resutls for transformation " + transformationId;
+			String msg = "Failed to get results for transformation " + transformationId;
 			logger.error(msg, e);
 			throw new ServiceException(msg, e);
 		}
