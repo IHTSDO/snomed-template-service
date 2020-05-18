@@ -1,8 +1,10 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ihtsdo.otf.resourcemanager.ResourceManager;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.rest.exception.ProcessingException;
@@ -74,6 +76,14 @@ public class ComponentTransformService {
 		return transformationRecipes;
 	}
 
+	public TransformationRecipe loadRecipeOrThrow(String branchPath, String recipe) throws IOException {
+		TransformationRecipe transformationRecipe = transformationRecipeStore.load(recipe, TransformationRecipe.class);
+		if (transformationRecipe == null) {
+			throw new ResourceNotFoundException("Recipe", recipe);
+		}
+		return transformationRecipe;
+	}
+
 	public ComponentTransformationJob queueBatchTransformation(ComponentTransformationRequest request) throws BusinessServiceException {
 		TransformationRecipe recipe;
 		String recipeKey = request.getRecipe();
@@ -139,6 +149,10 @@ public class ComponentTransformService {
 		return job;
 	}
 
+	public List<ChangeResult<DescriptionPojo>> loadDescriptionTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<DescriptionPojo>>>() {});
+	}
+
 	private List<ChangeResult<? extends SnomedComponent>> doRunTransform(ComponentTransformationJob job, TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		switch (recipe.getComponent()) {
 			case DESCRIPTION:
@@ -147,15 +161,29 @@ public class ComponentTransformService {
 				throw new ProcessingException("Unable to transform component of type " + recipe.getComponent());
 		}
 	}
+
 	private <T> T readJobResource(ComponentTransformationJob job, String resourceName, Class<T> resourceClass) throws BusinessServiceException {
 		String branchPath = job.getRequest().getBranchPath();
 		String id = job.getId();
 		return readJobResource(branchPath, id, resourceName, resourceClass);
 	}
 
+	private <T> T readJobResource(String branchPath, String id, String resourceName, TypeReference<T> typeReference) throws BusinessServiceException {
+		return doReadJobResource(branchPath, id, resourceName, null, typeReference);
+	}
+
 	private <T> T readJobResource(String branchPath, String id, String resourceName, Class<T> resourceClass) throws BusinessServiceException {
+		return doReadJobResource(branchPath, id, resourceName, resourceClass, null);
+	}
+	private <T> T doReadJobResource(String branchPath, String id, String resourceName, Class<T> resourceClass, TypeReference<T> typeReference) throws BusinessServiceException {
 		try {
 			InputStream inputStream = transformationJobResourceManager.readResourceStreamOrNullIfNotExists(getResourcePath(branchPath, id, resourceName));
+			if (inputStream == null) {
+				throw new ResourceNotFoundException(format("Resource %s not found for job id %s, branch %s.", resourceName, id, branchPath));
+			}
+			if (typeReference != null) {
+				return objectMapper.readValue(inputStream, typeReference);
+			}
 			if (resourceClass.equals(InputStream.class)) {
 				return (T) inputStream;
 			} else {
@@ -176,6 +204,7 @@ public class ComponentTransformService {
 		}
 
 	}
+
 	private void persistJobResource(ComponentTransformationJob job, String resourceName, InputStream inputStream) throws BusinessServiceException {
 		try {
 			transformationJobResourceManager.writeResource(getResourcePath(job.getRequest().getBranchPath(), job.getId(), resourceName), inputStream);

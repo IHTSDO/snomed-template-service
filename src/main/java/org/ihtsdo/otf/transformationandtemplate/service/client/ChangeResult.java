@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -10,6 +11,10 @@ public class ChangeResult<T extends SnomedComponent> {
 	private Boolean success;
 	private String message;
 	private T component;
+
+	@SuppressWarnings("unused")// For Jackson
+	public ChangeResult() {
+	}
 
 	public ChangeResult(T component) {
 		this.component = component;
@@ -40,6 +45,11 @@ public class ChangeResult<T extends SnomedComponent> {
 
 	public String getMessage() {
 		return message;
+	}
+
+	@JsonIgnore
+	public String getMessageOrEmpty() {
+		return message != null ? message : "";
 	}
 
 	public T getComponent() {

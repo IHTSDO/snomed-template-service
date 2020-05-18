@@ -1,11 +1,16 @@
 package org.ihtsdo.otf.transformationandtemplate.rest;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import io.swagger.annotations.ApiParam;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
+import org.ihtsdo.otf.transformationandtemplate.domain.ComponentType;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
+import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.ComponentTransformService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,12 +18,18 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
 import java.util.Set;
+
+import static java.lang.String.format;
 
 @RestController
 public class TransformationController {
 
+	public static final String TAB = "\t";
 	@Autowired
 	private ComponentTransformService componentTransformService;
 
@@ -54,6 +65,61 @@ public class TransformationController {
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
 
 		return componentTransformService.loadTransformationJob(branchPath, jobId);
+	}
+
+	@RequestMapping(value = "/{branchPath}/recipes/{recipe}/jobs/{jobId}/result-tsv", method = RequestMethod.GET, produces = "text/tsv")
+	public void getTransformationJobResultAsTsv(
+			@PathVariable String branchPath,
+			@ApiParam("Recipe key")
+			@PathVariable String recipe,
+			@PathVariable String jobId,
+			HttpServletResponse servletResponse) throws BusinessServiceException, IOException {
+
+		branchPath = BranchPathUriUtil.decodePath(branchPath);
+
+		TransformationRecipe transformationRecipe = componentTransformService.loadRecipeOrThrow(branchPath, recipe);
+		ComponentType componentType = transformationRecipe.getComponent();
+
+		if (componentType == ComponentType.DESCRIPTION) {
+			List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, jobId);
+			servletResponse.setContentType("text/tsv");
+			servletResponse.setHeader("Content-Disposition", format("inline; filename=\"batch-transformation-results-%s.txt\"", jobId));
+			writeDescriptionResults(changeResults, servletResponse);
+		} else {
+			throw new BusinessServiceException(format("Writing TSV for type %s is not yet implemented.", componentType));
+		}
+	}
+
+	private <T extends SnomedComponent> List<ChangeResult<T>> getChangeResults(List<ChangeResult<? extends SnomedComponent>> changeResultsGeneric, List<ChangeResult<T>> changeResults) {
+		for (ChangeResult<? extends SnomedComponent> changeResult : changeResultsGeneric) {
+			@SuppressWarnings("unchecked")
+			ChangeResult<T> descriptionPojoChangeResult = (ChangeResult<T>) changeResult;
+			changeResults.add(descriptionPojoChangeResult);
+		}
+		return changeResults;
+	}
+
+	private void writeDescriptionResults(List<ChangeResult<DescriptionPojo>> descriptionChangeResults, HttpServletResponse servletResponse) throws IOException {
+		try (PrintWriter writer = servletResponse.getWriter()) {
+			writer.println(String.join(TAB,
+					"description_id",
+					"concept_id",
+					"term",
+					"success",
+					"message"));
+			for (ChangeResult<DescriptionPojo> changeResult : descriptionChangeResults) {
+				DescriptionPojo description = changeResult.getComponent();
+				writer.println(String.join(TAB,
+						description.getId(),
+						description.getConceptId(),
+						description.getTerm(),
+						changeResult.getSuccess().toString(),
+						changeResult.getMessageOrEmpty()
+				));
+
+			}
+		}
+
 	}
 
 }
