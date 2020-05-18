@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ComponentTransformService {
@@ -23,16 +24,20 @@ public class ComponentTransformService {
 	@Autowired
 	private JsonStore transformationRecipeStore;
 
+	public Set<TransformationRecipe> listRecipes(String branchPath) throws IOException {
+		return transformationRecipeStore.loadAll(TransformationRecipe.class);
+	}
+
 	public List<ChangeResult<? extends SnomedComponent>> startBatchTransformation(ComponentTransformationRequest request) throws BusinessServiceException {
 		TransformationRecipe recipe;
-		String recipeName = request.getRecipe();
+		String recipeKey = request.getRecipe();
 		try {
-			recipe = transformationRecipeStore.load(recipeName, TransformationRecipe.class);
+			recipe = transformationRecipeStore.load(recipeKey, TransformationRecipe.class);
 		} catch (IOException e) {
-			throw new BusinessServiceException(String.format("Failed to load recipe '%s'.", recipeName));
+			throw new BusinessServiceException(String.format("Failed to load recipe '%s'.", recipeKey));
 		}
 		if (recipe == null) {
-			throw new ResourceNotFoundException(String.format("Recipe '%s' not found.", recipeName));
+			throw new ResourceNotFoundException(String.format("Recipe '%s' not found.", recipeKey));
 		}
 
 		switch (recipe.getComponent()) {
@@ -45,5 +50,4 @@ public class ComponentTransformService {
 		}
 		return null;
 	}
-
 }

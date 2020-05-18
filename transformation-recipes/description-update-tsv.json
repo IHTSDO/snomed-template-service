@@ -1,5 +1,7 @@
 {
-	"name": "Batch Description Update",
+	"key": "batch-description-update",
+	"descriptions": "Update the acceptability and case significance of existing descriptions in batch. The 'typeId' and 'term' fields are just for reference, they are ignored by this function.",
+	"title": "Batch Description Update",
 	"source": "tsv",
 	"component": "DESCRIPTION",
 	"changeType": "UPDATE",
