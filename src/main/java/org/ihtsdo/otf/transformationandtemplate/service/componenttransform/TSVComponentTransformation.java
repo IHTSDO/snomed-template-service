@@ -1,9 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +25,26 @@ public class TSVComponentTransformation implements ComponentTransformation {
 				if (tsvIndex > -1 && columns.length > tsvIndex) {
 					return columns[tsvIndex];
 				}
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public List<String> getValueList(String fieldName) {
+		Object mapping = fieldMap.get(fieldName);
+		if (mapping != null) {
+			if (mapping instanceof List) {
+				List<String> valueList = new ArrayList<>();
+				@SuppressWarnings("unchecked")
+				List<String> mappingList = (List<String>) mapping;
+				for (String itemMapping : mappingList) {
+					int tsvIndex = getTsvIndex(itemMapping);
+					if (tsvIndex > -1 && columns.length > tsvIndex) {
+						valueList.add(columns[tsvIndex]);
+					}
+				}
+				return valueList;
 			}
 		}
 		return null;

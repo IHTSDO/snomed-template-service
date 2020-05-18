@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import com.google.common.base.Strings;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
@@ -21,7 +22,9 @@ import java.util.*;
 import java.util.function.Function;
 
 import static java.lang.String.format;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo.InactivationIndicator.NOT_SEMANTICALLY_EQUIVALENT;
 import static org.ihtsdo.otf.utils.SnomedIdentifierUtils.isValidConceptIdFormat;
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Service
 public class DescriptionService {
@@ -39,6 +42,8 @@ public class DescriptionService {
 			case CREATE:
 				return createDescriptions(recipe, request);
 			case UPDATE:
+			case INACTIVATE:
+				// This code for update or inactivate
 				return updateDescriptions(recipe, request);
 			default:
 				throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
@@ -48,18 +53,18 @@ public class DescriptionService {
 	private List<ChangeResult<? extends SnomedComponent>> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
-		readDescriptions(request, recipe, changes, descriptions);
+		readDescriptionChanges(request, recipe, changes, descriptions);
 		return snowstormClient.createDescriptions(descriptions, changes, request.getBranchPath());
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> updateDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
-		readDescriptions(request, recipe, changes, descriptions);
+		readDescriptionChanges(request, recipe, changes, descriptions);
 		return snowstormClient.updateDescriptions(descriptions, changes, request.getBranchPath());
 	}
 
-	private void readDescriptions(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<DescriptionPojo>> changes, List<DescriptionPojo> descriptions) throws BusinessServiceException {
+	private void readDescriptionChanges(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<DescriptionPojo>> changes, List<DescriptionPojo> descriptions) throws BusinessServiceException {
 		try (TransformationStream transformationStream = transformationStreamFactory.createTransformationStream(recipe, request)) {
 			ComponentTransformation componentTransformation;
 			while ((componentTransformation = transformationStream.next()) != null) {
@@ -74,8 +79,27 @@ public class DescriptionService {
 				description.setCaseSignificance(DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("caseSignificanceId")));
 				description.setType(DescriptionPojo.Type.fromConceptId(componentTransformation.getValueString("typeId")));
 				Map<String, String> acceptabilityStrings = componentTransformation.getValueMap("acceptability");
-				Map<String, DescriptionPojo.Acceptability> acceptabilityMap = getAcceptabilityMapFromConceptIdStringMap(acceptabilityStrings);
-				description.setAcceptabilityMap(acceptabilityMap);
+				if (acceptabilityStrings != null) {
+					Map<String, DescriptionPojo.Acceptability> acceptabilityMap = getAcceptabilityMapFromConceptIdStringMap(acceptabilityStrings);
+					description.setAcceptabilityMap(acceptabilityMap);
+				}
+
+				if (recipe.getChangeType() == ChangeType.INACTIVATE) {
+					description.setActive(false);
+				}
+				String inactivationIndicatorId = componentTransformation.getValueString("inactivationIndicator");
+				if (inactivationIndicatorId != null) {
+					description.setInactivationIndicator(ConceptPojo.InactivationIndicator.fromConceptId(inactivationIndicatorId));
+				}
+				List<String> associationTargetIds = componentTransformation.getValueList("associationTargets");
+				HashMap<ConceptPojo.HistoricalAssociation, Set<String>> associationTargets = new HashMap<>();
+				if (!isEmpty(associationTargetIds)) {
+					// Refers To is the only applicable description association type in the authoring platform today.
+					associationTargets.put(ConceptPojo.HistoricalAssociation.REFERS_TO, new HashSet<>(associationTargetIds));
+				}
+				description.setAssociationTargets(associationTargets);
+
+				// Simple validation
 				if (valid(description, changeResult, recipe.getChangeType())) {
 					descriptions.add(description);
 				}
@@ -91,12 +115,24 @@ public class DescriptionService {
 		List<Function<DescriptionPojo, String>> validation = new ArrayList<>(Arrays.asList(
 				descriptionPojo -> descriptionPojo.getDescriptionId() == null ||
 						SnomedIdentifierUtils.isValidDescriptionIdFormat(descriptionPojo.getDescriptionId()) ? null : "Description id format",
-				descriptionPojo -> descriptionPojo.getCaseSignificance() == null ? "Case significance" : null,
-				descriptionPojo -> descriptionPojo.getType() == null ? "Type" : null,
-				descriptionPojo -> descriptionPojo.getAcceptabilityMap().isEmpty() ||
-						descriptionPojo.getAcceptabilityMap().entrySet().stream()
-								.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry" : null
-		));
+				descriptionPojo -> {
+					ConceptPojo.InactivationIndicator inactivationIndicator = description.getInactivationIndicator();
+					Map<ConceptPojo.HistoricalAssociation, Set<String>> associationTargets = descriptionPojo.getAssociationTargets();
+					if (NOT_SEMANTICALLY_EQUIVALENT != inactivationIndicator && !isEmpty(associationTargets)) {
+						return "Unable to process descriptions with association targets unless the inactivation indicator is Not semantically equivalent.";
+					}
+					return null;
+				}
+				));
+		if (changeType == ChangeType.CREATE || changeType == ChangeType.UPDATE) {
+			validation.addAll(Arrays.asList(
+			descriptionPojo -> descriptionPojo.getCaseSignificance() == null ? "Case significance" : null,
+					descriptionPojo -> descriptionPojo.getType() == null ? "Type" : null,
+					descriptionPojo -> descriptionPojo.getAcceptabilityMap().isEmpty() ||
+							descriptionPojo.getAcceptabilityMap().entrySet().stream()
+									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry" : null
+			));
+		}
 		if (changeType == ChangeType.UPDATE) {
 			validation.add(descriptionPojo -> descriptionPojo.getDescriptionId() != null ? null : "Description id is required");
 		}
@@ -119,9 +155,7 @@ public class DescriptionService {
 
 	public static Map<String, DescriptionPojo.Acceptability> getAcceptabilityMapFromConceptIdStringMap(Map<String, String> acceptabilityStrings) {
 		Map<String, DescriptionPojo.Acceptability> acceptabilityMap = new HashMap<>();
-		acceptabilityStrings.forEach((key, value) -> {
-			acceptabilityMap.put(key, DescriptionPojo.Acceptability.fromConceptId(value));
-		});
+		acceptabilityStrings.forEach((key, value) -> acceptabilityMap.put(key, DescriptionPojo.Acceptability.fromConceptId(value)));
 		return acceptabilityMap;
 	}
 

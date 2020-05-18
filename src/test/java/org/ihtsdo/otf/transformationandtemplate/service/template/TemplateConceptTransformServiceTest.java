@@ -26,6 +26,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo.InactivationIndicator.ERRONEOUS;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
@@ -125,7 +126,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		}
 		List<DescriptionPojo> inactiveTerms = concept.getDescriptions().stream().filter(d -> !d.isActive()).collect(Collectors.toList());
 		assertEquals(1, inactiveTerms.size());
-		assertEquals("ERRONEOUS", inactiveTerms.get(0).getInactivationIndicator());
+		assertEquals(ERRONEOUS, inactiveTerms.get(0).getInactivationIndicator());
 		
 		Collection<RelationshipPojo> stated = concept.getClassAxioms().iterator().next().getRelationships();
 		assertEquals(3, stated.size());

@@ -76,11 +76,19 @@ public class SnowstormClient {
 					if (descriptionUpdate != null) {
 						descriptionUpdate.setConceptId(loadedConcept.getConceptId());
 						descriptionsFound.add(descriptionUpdate.getDescriptionId());
-						loadedDescription.setCaseSignificance(descriptionUpdate.getCaseSignificance());
+						if (descriptionUpdate.getCaseSignificance() != null) {
+							loadedDescription.setCaseSignificance(descriptionUpdate.getCaseSignificance());
+						}
 						if (!isEmpty(descriptionUpdate.getModuleId())) {
 							loadedDescription.setModuleId(descriptionUpdate.getModuleId());
 						}
-						loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+						if (descriptionUpdate.getAcceptabilityMap() != null) {
+							loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+						}
+						if (!descriptionUpdate.isActive()) {
+							loadedDescription.setInactivationIndicator(descriptionUpdate.getInactivationIndicator());
+							loadedDescription.setAssociationTargets(descriptionUpdate.getAssociationTargets());
+						}
 					}
 				}
 			}

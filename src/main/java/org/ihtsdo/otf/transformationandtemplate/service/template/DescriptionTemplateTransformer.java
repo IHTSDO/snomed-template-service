@@ -84,7 +84,7 @@ public class DescriptionTemplateTransformer {
 			if (pojo.getType() == DescriptionPojo.Type.FSN) {
 				if (newFsn != null && !newFsn.equals(pojo.getTerm())) {
 					pojo.setActive(false);
-					pojo.setInactivationIndicator(inactivationReason);
+					pojo.setInactivationIndicator(ConceptPojo.InactivationIndicator.valueOf(inactivationReason));
 					pojo.setEffectiveTime(null);
 				}
 			} else if (pojo.getType() == DescriptionPojo.Type.SYNONYM){

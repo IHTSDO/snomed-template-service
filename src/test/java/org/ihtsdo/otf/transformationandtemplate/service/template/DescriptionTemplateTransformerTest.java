@@ -26,7 +26,7 @@ public class DescriptionTemplateTransformerTest {
 	public void testTransform() throws ServiceException {
 		ConceptPojo conceptToTransform = TestDataHelper.createConceptPojo();
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
-		String inactivationReason = "Out_Of_Dated";
+		String inactivationReason = "OUTDATED";
 		ConceptTemplate conceptTempalte = new ConceptTemplate();
 		conceptTempalte.setConceptOutline(conceptOutline);
 		LexicalTemplate lexical = new LexicalTemplate();
@@ -70,7 +70,7 @@ public class DescriptionTemplateTransformerTest {
 		for (DescriptionPojo pojo : inactiveTerms) {
 			assertEquals(FSN, pojo.getType());
 			assertEquals("Allergy to almond (disorder)", pojo.getTerm());
-			assertEquals(inactivationReason, pojo.getInactivationIndicator());
+			assertEquals(inactivationReason, pojo.getInactivationIndicator().toString());
 		}
 	}
 }

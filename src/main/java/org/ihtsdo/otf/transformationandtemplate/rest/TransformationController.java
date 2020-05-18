@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.rest;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
+import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
@@ -67,7 +67,8 @@ public class TransformationController {
 		return componentTransformService.loadTransformationJob(branchPath, jobId);
 	}
 
-	@RequestMapping(value = "/{branchPath}/recipes/{recipe}/jobs/{jobId}/result-tsv", method = RequestMethod.GET, produces = "text/tsv")
+	@RequestMapping(value = "/{branchPath}/recipes/{recipe}/jobs/{jobId}/result-tsv", method = RequestMethod.GET, produces = "text/csv")
+	@ResponseBody
 	public void getTransformationJobResultAsTsv(
 			@PathVariable String branchPath,
 			@ApiParam("Recipe key")
@@ -88,15 +89,6 @@ public class TransformationController {
 		} else {
 			throw new BusinessServiceException(format("Writing TSV for type %s is not yet implemented.", componentType));
 		}
-	}
-
-	private <T extends SnomedComponent> List<ChangeResult<T>> getChangeResults(List<ChangeResult<? extends SnomedComponent>> changeResultsGeneric, List<ChangeResult<T>> changeResults) {
-		for (ChangeResult<? extends SnomedComponent> changeResult : changeResultsGeneric) {
-			@SuppressWarnings("unchecked")
-			ChangeResult<T> descriptionPojoChangeResult = (ChangeResult<T>) changeResult;
-			changeResults.add(descriptionPojoChangeResult);
-		}
-		return changeResults;
 	}
 
 	private void writeDescriptionResults(List<ChangeResult<DescriptionPojo>> descriptionChangeResults, HttpServletResponse servletResponse) throws IOException {

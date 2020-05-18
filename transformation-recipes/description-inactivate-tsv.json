@@ -1,0 +1,14 @@
+{
+	"key": "description-inactivate-tsv",
+	"title": "Batch Description Inactivation",
+	"description": "Make descriptions inactive in batch.",
+	"source": "tsv",
+	"component": "DESCRIPTION",
+	"changeType": "INACTIVATE",
+	"fieldMap": {
+		"descriptionId": "$tsv.0",
+		"term": "$tsv.1",
+		"inactivationIndicator": "$tsv.2",
+		"associationTargets": ["$tsv.3", "$tsv.4", "$tsv.5", "$tsv.6"]
+	}
+}
