@@ -5,16 +5,15 @@ import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.rest.exception.ProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientException;
 
+import java.net.URI;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -24,7 +23,6 @@ import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult.Severity.ERROR;
 
-@Service
 public class SnowstormClient {
 
 	private static final String DEFAULT_MODULE_ID_METADATA_KEY = "defaultModuleId";
@@ -36,11 +34,19 @@ public class SnowstormClient {
 	private final WebClient webClient;
 	private final Logger logger = LoggerFactory.getLogger(SnowstormClient.class);
 
-	public SnowstormClient(@Value("${terminologyserver.url}") String snowstormApiUrl) {
-		webClient = WebClient.builder()
+	public static SnowstormClient createClientForUser(String snowstormApiUrl, String authenticationCookie) {
+		return new SnowstormClient(snowstormApiUrl, authenticationCookie);
+	}
+
+	private SnowstormClient(String snowstormApiUrl, String authenticationCookie) {
+		WebClient.Builder builder = WebClient.builder()
 				.baseUrl(snowstormApiUrl)
-				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-				.build();
+				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+		if (!isEmpty(authenticationCookie) && authenticationCookie.contains("=")) {
+			String[] split = authenticationCookie.split("=");
+			builder.defaultCookie(split[0], split[1]);
+		}
+		webClient = builder.build();
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> updateDescriptions(List<DescriptionPojo> descriptions,

@@ -6,9 +6,12 @@ import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJo
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
+import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -31,7 +34,15 @@ public class TransformationIntegrationTest {
 	private ComponentTransformService componentTransformService;
 
 	@MockBean
+	private SnowstormClientFactory snowstormClientFactory;
+
+	@MockBean
 	private SnowstormClient snowstormClient;
+
+	@Before
+	public void before() {
+		Mockito.when(snowstormClientFactory.getClientForCurrentUser()).thenReturn(snowstormClient);
+	}
 
 	@Test
 	public void test() throws BusinessServiceException, InterruptedException {

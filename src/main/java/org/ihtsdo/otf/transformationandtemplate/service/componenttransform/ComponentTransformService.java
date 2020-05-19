@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -104,7 +106,11 @@ public class ComponentTransformService {
 		persistJobResource(job, INPUT_TSV, job.getRequest().getTsvValues());
 
 		// Job may pause here if all executor threads are in use.
+		SecurityContext securityContext = SecurityContextHolder.getContext();
 		jobExecutorService.submit(() -> {
+			// Bring user security context into thread
+			SecurityContextHolder.setContext(securityContext);
+
 			try {
 				logger.info("Running {} transformation for user {} on branch {} with id {}.", recipeKey, job.getUser(), job.getRequest().getBranchPath(), job.getId());
 				job.updateStatus(TransformationStatus.RUNNING, null);
