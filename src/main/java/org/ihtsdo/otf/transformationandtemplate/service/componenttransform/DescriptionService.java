@@ -25,6 +25,7 @@ import java.util.function.Function;
 import static java.lang.String.format;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo.InactivationIndicator.NOT_SEMANTICALLY_EQUIVALENT;
 import static org.ihtsdo.otf.utils.SnomedIdentifierUtils.isValidConceptIdFormat;
+import static org.ihtsdo.otf.utils.SnomedIdentifierUtils.isValidDescriptionIdFormat;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Service
@@ -116,23 +117,33 @@ public class DescriptionService {
 	private boolean valid(DescriptionPojo description, ChangeResult<DescriptionPojo> changeResult, ChangeType changeType) {
 		List<Function<DescriptionPojo, String>> validation = new ArrayList<>(Arrays.asList(
 				descriptionPojo -> descriptionPojo.getDescriptionId() == null ||
-						SnomedIdentifierUtils.isValidDescriptionIdFormat(descriptionPojo.getDescriptionId()) ? null : "Description id format",
+						isValidDescriptionIdFormat(descriptionPojo.getDescriptionId()) ? null : "Description id format",
 				descriptionPojo -> {
 					ConceptPojo.InactivationIndicator inactivationIndicator = description.getInactivationIndicator();
 					Map<ConceptPojo.HistoricalAssociation, Set<String>> associationTargets = descriptionPojo.getAssociationTargets();
 					if (NOT_SEMANTICALLY_EQUIVALENT != inactivationIndicator && !isEmpty(associationTargets)) {
-						return "Unable to process descriptions with association targets unless the inactivation indicator is Not semantically equivalent.";
+						return "Unable to process descriptions with association targets unless the inactivation indicator is Not semantically equivalent";
+					}
+					for (Set<String> values : associationTargets.values()) {
+						for (String value : values) {
+							if (isValidConceptIdFormat(value)) {
+								return format("Association target value '%s' is not a valid concept id", value);
+							}
+						}
+					}
+					if (inactivationIndicator == null && !isEmpty(associationTargets)) {
+						return "Valid inactivation indicator must be given if association targets are set";
 					}
 					return null;
 				}
 				));
 		if (changeType == ChangeType.CREATE || changeType == ChangeType.UPDATE) {
 			validation.addAll(Arrays.asList(
-			descriptionPojo -> descriptionPojo.getCaseSignificance() == null ? "Case significance" : null,
-					descriptionPojo -> descriptionPojo.getType() == null ? "Type" : null,
+			descriptionPojo -> descriptionPojo.getCaseSignificance() == null ? "Case significance is required" : null,
+					descriptionPojo -> descriptionPojo.getType() == null ? "Type is required" : null,
 					descriptionPojo -> descriptionPojo.getAcceptabilityMap().isEmpty() ||
 							descriptionPojo.getAcceptabilityMap().entrySet().stream()
-									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry" : null
+									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry is required" : null
 			));
 		}
 		if (changeType == ChangeType.UPDATE) {
@@ -141,8 +152,8 @@ public class DescriptionService {
 		if (changeType == ChangeType.CREATE) {
 			validation.addAll(Arrays.asList(
 					descriptionPojo -> isValidConceptIdFormat(descriptionPojo.getConceptId()) ? null : "Concept id format",
-					descriptionPojo -> Strings.isNullOrEmpty(descriptionPojo.getTerm()) ? "Term not empty" : null,
-					descriptionPojo -> Strings.isNullOrEmpty(descriptionPojo.getLang()) ? "Lang not empty" : null
+					descriptionPojo -> Strings.isNullOrEmpty(descriptionPojo.getTerm()) ? "Term is required" : null,
+					descriptionPojo -> Strings.isNullOrEmpty(descriptionPojo.getLang()) ? "Lang is required" : null
 			));
 		}
 		for (Function<DescriptionPojo, String> validationFunction : validation) {
