@@ -13,7 +13,6 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientException;
 
-import java.net.URI;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -177,6 +176,11 @@ public class SnowstormClient {
 							description.setModuleId(conceptPojo.getModuleId());
 						}
 					}
+
+					if (!conceptPojo.isActive()) {
+						getChangeResult(changes, description).addWarning("Adding description to inactive concept");
+					}
+
 				} else {
 					getChangeResult(changes, description).fail(format("Concept %s not found.", description.getConceptId()));
 					// Description not joined to any concept so no will not appear in the update request.
@@ -310,13 +314,15 @@ public class SnowstormClient {
 				.block();
 	}
 
-	private ChangeResult<DescriptionPojo> getChangeResult(List<ChangeResult<DescriptionPojo>> changeResults, DescriptionPojo description) {
+	private ChangeResult<DescriptionPojo> getChangeResult(List<ChangeResult<DescriptionPojo>> changeResults, DescriptionPojo description) throws BusinessServiceException {
 		for (ChangeResult<DescriptionPojo> changeResult : changeResults) {
 			if (DESCRIPTION_WITHOUT_ID_COMPARATOR.compare(changeResult.getComponent(), description) == 0) {
 				return changeResult;
 			}
 		}
-		return null;
+		String message = format("Change result not found for description %s", description.toString());
+		logger.error(message);
+		throw new BusinessServiceException(message);
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> failAllRemaining(List<ChangeResult<DescriptionPojo>> changeResults, String message) {

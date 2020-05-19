@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.springframework.web.reactive.function.BodyInserters;
 
+import static java.lang.String.format;
+
 @JsonPropertyOrder({"success", "id", "message", "component"})
 public class ChangeResult<T extends SnomedComponent> {
 
@@ -29,6 +31,10 @@ public class ChangeResult<T extends SnomedComponent> {
 	public void fail(String message) {
 		success = false;
 		this.message = message;
+	}
+
+	public void addWarning(String message) {
+		this.message = format("Warning: %s. %s", message, this.message != null ? this.message : "");
 	}
 
 	public void success() {
