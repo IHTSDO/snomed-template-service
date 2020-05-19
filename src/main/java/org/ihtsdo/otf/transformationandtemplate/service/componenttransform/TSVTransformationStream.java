@@ -1,14 +1,14 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import org.ihtsdo.otf.rest.exception.BadRequestException;
-import org.ihtsdo.otf.rest.exception.BusinessServiceRuntimeException;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -29,11 +29,6 @@ public class TSVTransformationStream implements TransformationStream {
 		if (columns.length != fieldNames.size()) {
 			throw new BadRequestException(format("First line of TSV file must contain the list of fields. " +
 					"For this transformation %s fields are expected (%s) but found %s.", fieldNames.size(), fieldNames, columns.length));
-		}
-		List<String> columnsList = Arrays.asList(columns);
-		if (!fieldNames.containsAll(columnsList)) {
-			throw new BadRequestException(format("First line of TSV file must contain the list of fields. " +
-					"For this transformation the expected fields are %s (not in order) but found %s.", fieldNames, columnsList));
 		}
 	}
 
