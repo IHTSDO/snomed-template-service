@@ -1,7 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 
 import java.io.InputStream;
 
@@ -10,15 +9,21 @@ public class ComponentTransformationRequest {
 	private String recipe;
 	private InputStream tsvValues;
 	private String branchPath;
+	private String projectKey;
+	private String taskTitle;
+	private int batchSize;
 
 	// Required for Jackson
 	@SuppressWarnings("unused")
 	public ComponentTransformationRequest() {
 	}
 
-	public ComponentTransformationRequest(String recipe, String branchPath, InputStream tsvValues) {
+	public ComponentTransformationRequest(String recipe, String branchPath, String projectKey, String taskTitle, int batchSize, InputStream tsvValues) {
 		this.recipe = recipe;
 		this.branchPath = branchPath;
+		this.projectKey = projectKey;
+		this.taskTitle = taskTitle;
+		this.batchSize = batchSize;
 		this.tsvValues = tsvValues;
 	}
 
@@ -28,6 +33,18 @@ public class ComponentTransformationRequest {
 
 	public String getBranchPath() {
 		return branchPath;
+	}
+
+	public String getProjectKey() {
+		return projectKey;
+	}
+
+	public String getTaskTitle() {
+		return taskTitle;
+	}
+
+	public int getBatchSize() {
+		return batchSize;
 	}
 
 	@JsonIgnore

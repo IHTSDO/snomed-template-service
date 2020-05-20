@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
+import org.ihtsdo.otf.rest.exception.BadRequestException;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
@@ -19,12 +20,14 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Validation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static org.springframework.util.StringUtils.isEmpty;
 
 @RestController
 public class TransformationController {
@@ -45,11 +48,18 @@ public class TransformationController {
 			@PathVariable String branchPath,
 			@ApiParam("Recipe key")
 			@PathVariable String recipe,
+			@ApiParam("Batch size")
+			@RequestParam(defaultValue = "100") int batchSize,
+			@ApiParam("Project key (optional - batches split between tasks)")
+			@RequestParam String projectKey,
+			@ApiParam("Task title (optional)")
+			@RequestParam String taskTitle,
 			@RequestParam("tsvFile") MultipartFile tsvFile,
 			UriComponentsBuilder uriComponentsBuilder) throws BusinessServiceException, IOException {
 
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
-		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(recipe, branchPath, tsvFile.getInputStream()));
+
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(recipe, branchPath, projectKey, taskTitle, batchSize, tsvFile.getInputStream()));
 
 		return ResponseEntity.created(uriComponentsBuilder.path("/{branchPath}/recipes/{recipe}/jobs/{jobId}")
 				.buildAndExpand(branchPath, recipe, job.getId()).toUri()).build();

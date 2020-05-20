@@ -9,10 +9,7 @@ import org.ihtsdo.otf.rest.exception.ProcessingException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ChangeType;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
-import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
-import org.ihtsdo.otf.utils.SnomedIdentifierUtils;
+import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,36 +32,37 @@ public class DescriptionService {
 	private TransformationInputStreamFactory transformationStreamFactory;
 
 	@Autowired
-	private SnowstormClientFactory snowstormClientFactory;
+	private HighLevelAuthoringServiceFactory authoringServiceFactory;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public List<ChangeResult<? extends SnomedComponent>> startBatchTransformation(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
-		SnowstormClient snowstormClient = snowstormClientFactory.getClientForCurrentUser();
 		switch (recipe.getChangeType()) {
 			case CREATE:
-				return createDescriptions(recipe, request, snowstormClient);
+				return createDescriptions(recipe, request);
 			case UPDATE:
 			case INACTIVATE:
 				// This code for update or inactivate
-				return updateDescriptions(recipe, request, snowstormClient);
+				return updateDescriptions(recipe, request);
 			default:
 				throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
 		}
 	}
 
-	private List<ChangeResult<? extends SnomedComponent>> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request, SnowstormClient snowstormClient) throws BusinessServiceException {
+	private List<ChangeResult<? extends SnomedComponent>> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser();
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		readDescriptionChanges(request, recipe, changes, descriptions);
-		return snowstormClient.createDescriptions(descriptions, changes, request.getBranchPath());
+		return authoringServiceForCurrentUser.createDescriptions(request, descriptions, changes);
 	}
 
-	private List<ChangeResult<? extends SnomedComponent>> updateDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request, SnowstormClient snowstormClient) throws BusinessServiceException {
+	private List<ChangeResult<? extends SnomedComponent>> updateDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser();
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		readDescriptionChanges(request, recipe, changes, descriptions);
-		return snowstormClient.updateDescriptions(descriptions, changes, request.getBranchPath());
+		return authoringServiceForCurrentUser.updateDescriptions(request, descriptions, changes);
 	}
 
 	private void readDescriptionChanges(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<DescriptionPojo>> changes, List<DescriptionPojo> descriptions) throws BusinessServiceException {
