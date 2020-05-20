@@ -7,10 +7,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
-import org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
+import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.reactive.function.client.WebClientException;
@@ -82,63 +79,12 @@ public class HighLevelAuthoringService {
 			for (List<String> conceptIdBatch : Iterables.partition(conceptIdToDescriptionMap.keySet(), request.getBatchSize())) {
 
 				batchNumber++;
-				String branchPath = request.getBranchPath();
-//				String projectKey = request.getProjectKey();
-//				if (!isEmpty(projectKey)) {
-//					branchPath = authoringServicesClient.getNextBranch(projectKey);
-//				}
-
-				// Batch load concepts
-				List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptIdBatch), request.getBranchPath());
-
-				// Join new descriptions to concepts
-				Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-				for (DescriptionPojo description : descriptions) {
-					ConceptPojo conceptPojo = conceptMap.get(description.getConceptId());
-					if (conceptPojo != null) {
-						conceptPojo.add(description);
-
-						// Assign description module
-						if (description.getModuleId() == null) {
-							if (defaultModuleId != null) {
-								description.setModuleId(defaultModuleId);
-							} else {
-								description.setModuleId(conceptPojo.getModuleId());
-							}
-						}
-
-						if (!conceptPojo.isActive()) {
-							getChangeResult(changes, description).addWarning("Adding description to inactive concept");
-						}
-
-					} else {
-						getChangeResult(changes, description).fail(format("Concept %s not found.", description.getConceptId()));
-						// Description not joined to any concept so no will not appear in the update request.
-					}
+				String branchPath = getBatchBranch(request, batchNumber);
+				Map<String, Set<DescriptionPojo>> batchMap = new HashMap<>();
+				for (String conceptId : conceptIdBatch) {
+					batchMap.put(conceptId, conceptIdToDescriptionMap.get(conceptId));
 				}
-
-				bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
-				if (conceptMap.isEmpty()) {
-					return new ArrayList<>(changes);
-				}
-
-				// Batch load concepts again to fetch identifiers of new components
-				List<ConceptPojo> updatedConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptMap.keySet()), request.getBranchPath());
-
-				for (ConceptPojo updatedConcept : updatedConcepts) {
-					final Set<DescriptionPojo> savedDescriptions = updatedConcept.getDescriptions();
-					Set<DescriptionPojo> descriptionPojos = conceptIdToDescriptionMap.get(updatedConcept.getConceptId());
-					for (DescriptionPojo descriptionPojo : descriptionPojos) {
-						if (descriptionPojo.getDescriptionId() == null) {
-							// Set description id from updated concept so it's in the final output
-							savedDescriptions.stream()
-									.filter(d -> DESCRIPTION_WITHOUT_ID_COMPARATOR.compare(descriptionPojo, d) == 0)
-									.findFirst()
-									.ifPresent(pojo -> descriptionPojo.setDescriptionId(pojo.getDescriptionId()));
-						}
-						getChangeResult(changes, descriptionPojo).success();
-					}
-				}
+				createDescriptionBatch(batchMap, defaultModuleId, changes, branchPath);
 			}
 
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
@@ -147,6 +93,62 @@ public class HighLevelAuthoringService {
 		}
 
 		return new ArrayList<>(changes);
+	}
+
+	private void createDescriptionBatch(Map<String, Set<DescriptionPojo>> conceptIdToDescriptionMap, String defaultModuleId,
+			List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException, TimeoutException {
+
+		// Batch load concepts
+		List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptIdToDescriptionMap.keySet()), branchPath);
+
+		// Join new descriptions to concepts
+		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+		for (String conceptId : conceptIdToDescriptionMap.keySet()) {
+			ConceptPojo conceptPojo = conceptMap.get(conceptId);
+			for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptId)) {
+				if (conceptPojo != null) {
+					conceptPojo.add(description);
+
+					// Assign description module
+					if (description.getModuleId() == null) {
+						if (defaultModuleId != null) {
+							description.setModuleId(defaultModuleId);
+						} else {
+							description.setModuleId(conceptPojo.getModuleId());
+						}
+					}
+
+					if (!conceptPojo.isActive()) {
+						getChangeResult(changes, description).addWarning("Adding description to inactive concept");
+					}
+
+				} else {
+					getChangeResult(changes, description).fail(format("Concept %s not found.", description.getConceptId()));
+					// Description not joined to any concept so no will not appear in the update request.
+				}
+			}
+		}
+
+		bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
+		if (!conceptMap.isEmpty()) {
+			// Batch load concepts again to fetch identifiers of new components
+			List<ConceptPojo> updatedConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptMap.keySet()), branchPath);
+
+			for (ConceptPojo updatedConcept : updatedConcepts) {
+				final Set<DescriptionPojo> savedDescriptions = updatedConcept.getDescriptions();
+				Set<DescriptionPojo> descriptionPojos = conceptIdToDescriptionMap.get(updatedConcept.getConceptId());
+				for (DescriptionPojo descriptionPojo : descriptionPojos) {
+					if (descriptionPojo.getDescriptionId() == null) {
+						// Set description id from updated concept so it's in the final output
+						savedDescriptions.stream()
+								.filter(d -> DESCRIPTION_WITHOUT_ID_COMPARATOR.compare(descriptionPojo, d) == 0)
+								.findFirst()
+								.ifPresent(pojo -> descriptionPojo.setDescriptionId(pojo.getDescriptionId()));
+					}
+					getChangeResult(changes, descriptionPojo).success();
+				}
+			}
+		}
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> updateDescriptions(
@@ -161,47 +163,16 @@ public class HighLevelAuthoringService {
 			// Initial terminology server communication check
 			snowstormClient.getBranch("MAIN");
 
-			String branchPath = request.getBranchPath();
+			// Split into batches
+			int batchNumber = 0;
+			for (List<DescriptionPojo> descriptionBatch : Iterables.partition(descriptions, request.getBatchSize())) {
+				batchNumber++;
+				String branchPath = getBatchBranch(request, batchNumber);
+				List<ChangeResult<DescriptionPojo>> changesBatch = changes.stream()
+						.filter(descriptionPojoChangeResult -> descriptionBatch.contains(descriptionPojoChangeResult.getComponent()))
+						.collect(Collectors.toList());
+				updateDescriptionBatch(descriptionBatch, changesBatch, branchPath);
 
-			// Batch load concepts by description id
-			Set<String> descriptionIds = descriptions.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
-			List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), branchPath);
-
-			// Update existing descriptions
-			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
-			Set<String> descriptionsFound = new HashSet<>();
-			for (ConceptPojo loadedConcept : concepts) {
-				for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
-					DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
-					if (descriptionUpdate != null) {
-						descriptionUpdate.setConceptId(loadedConcept.getConceptId());
-						descriptionsFound.add(descriptionUpdate.getDescriptionId());
-						if (descriptionUpdate.getCaseSignificance() != null) {
-							loadedDescription.setCaseSignificance(descriptionUpdate.getCaseSignificance());
-						}
-						if (!isEmpty(descriptionUpdate.getModuleId())) {
-							loadedDescription.setModuleId(descriptionUpdate.getModuleId());
-						}
-						if (descriptionUpdate.getAcceptabilityMap() != null) {
-							loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
-						}
-						if (!descriptionUpdate.isActive()) {
-							loadedDescription.setInactivationIndicator(descriptionUpdate.getInactivationIndicator());
-							loadedDescription.setAssociationTargets(descriptionUpdate.getAssociationTargets());
-						}
-					}
-				}
-			}
-			// Fail all descriptions which were not found to update
-			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
-				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId)).fail("Description not found on the specified branch.");
-			}
-
-			if (!descriptionsFound.isEmpty()) {
-				Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-				bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
-				// Mark all changes which have not failed as successful
-				changes.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
 			}
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);
@@ -209,6 +180,63 @@ public class HighLevelAuthoringService {
 		}
 
 		return new ArrayList<>(changes);
+	}
+
+	private void updateDescriptionBatch(List<DescriptionPojo> descriptionBatch, List<ChangeResult<DescriptionPojo>> changesBatch, String branchPath) throws BusinessServiceException, TimeoutException {
+		// Batch load concepts by description id
+		Set<String> descriptionIds = descriptionBatch.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
+		List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), branchPath);
+
+		// Update existing descriptions
+		Map<String, DescriptionPojo> descriptionIdMap = descriptionBatch.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
+		Set<String> descriptionsFound = new HashSet<>();
+		for (ConceptPojo loadedConcept : concepts) {
+			for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
+				DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
+				if (descriptionUpdate != null) {
+					descriptionUpdate.setConceptId(loadedConcept.getConceptId());
+					descriptionsFound.add(descriptionUpdate.getDescriptionId());
+					if (descriptionUpdate.getCaseSignificance() != null) {
+						loadedDescription.setCaseSignificance(descriptionUpdate.getCaseSignificance());
+					}
+					if (!isEmpty(descriptionUpdate.getModuleId())) {
+						loadedDescription.setModuleId(descriptionUpdate.getModuleId());
+					}
+					if (descriptionUpdate.getAcceptabilityMap() != null) {
+						loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+					}
+					if (!descriptionUpdate.isActive()) {
+						loadedDescription.setInactivationIndicator(descriptionUpdate.getInactivationIndicator());
+						loadedDescription.setAssociationTargets(descriptionUpdate.getAssociationTargets());
+					}
+				}
+			}
+		}
+		// Fail all descriptions which were not found to update
+		for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
+			getChangeResult(changesBatch, descriptionIdMap.get(notFoundDescriptionId)).fail("Description not found on the specified branch.");
+		}
+
+		if (!descriptionsFound.isEmpty()) {
+			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+			bulkValidateThenUpdateConcepts(conceptMap, branchPath, changesBatch);
+			// Mark all changes which have not failed as successful
+			changesBatch.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
+		}
+	}
+
+	private String getBatchBranch(ComponentTransformationRequest request, int batchNumber) {
+		String branchPath = request.getBranchPath();
+
+		String projectKey = request.getProjectKey();
+		if (!isEmpty(projectKey)) {
+			AuthoringTask task = authoringServicesClient.createTask(projectKey,
+					format("%s - Batch #%s", request.getTaskTitle(), batchNumber), "Created automatically by the batch processing function.");
+			branchPath = task.getBranchPath();
+			snowstormClient.createBranch(branchPath);
+			authoringServicesClient.putTaskInProgress(task.getProjectKey(), task.getKey());
+		}
+		return branchPath;
 	}
 
 	/**

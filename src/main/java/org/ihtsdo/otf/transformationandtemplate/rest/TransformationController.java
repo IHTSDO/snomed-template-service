@@ -46,14 +46,19 @@ public class TransformationController {
 	@ResponseBody
 	public ResponseEntity<Void> createTransformationJob(
 			@PathVariable String branchPath,
+
 			@ApiParam("Recipe key")
 			@PathVariable String recipe,
+
 			@ApiParam("Batch size")
 			@RequestParam(defaultValue = "100") int batchSize,
+
 			@ApiParam("Project key (optional - batches split between tasks)")
-			@RequestParam String projectKey,
+			@RequestParam(required = false) String projectKey,
+
 			@ApiParam("Task title (optional)")
-			@RequestParam String taskTitle,
+			@RequestParam(required = false) String taskTitle,
+
 			@RequestParam("tsvFile") MultipartFile tsvFile,
 			UriComponentsBuilder uriComponentsBuilder) throws BusinessServiceException, IOException {
 

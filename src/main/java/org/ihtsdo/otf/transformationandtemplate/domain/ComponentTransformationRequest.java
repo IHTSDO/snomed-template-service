@@ -55,4 +55,8 @@ public class ComponentTransformationRequest {
 	public void setTsvValues(InputStream tsvValues) {
 		this.tsvValues = tsvValues;
 	}
+
+	public void setTaskTitle(String taskTitle) {
+		this.taskTitle = taskTitle;
+	}
 }

@@ -160,6 +160,9 @@ public class ComponentTransformService {
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> doRunTransform(ComponentTransformationJob job, TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+		if (request.getTaskTitle() == null) {
+			request.setTaskTitle(recipe.getTitle());
+		}
 		switch (recipe.getComponent()) {
 			case DESCRIPTION:
 				return descriptionService.startBatchTransformation(recipe, request);
