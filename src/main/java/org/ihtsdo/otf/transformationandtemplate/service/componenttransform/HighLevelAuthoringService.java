@@ -234,7 +234,14 @@ public class HighLevelAuthoringService {
 					format("%s - Batch #%s", request.getTaskTitle(), batchNumber), "Created automatically by the batch processing function.");
 			branchPath = task.getBranchPath();
 			snowstormClient.createBranch(branchPath);
-			authoringServicesClient.putTaskInProgress(task.getProjectKey(), task.getKey());
+			task.setStatus("IN_PROGRESS");
+			if (request.getTaskAssignee() != null) {
+				task.setAssignee(new TaskUser(request.getTaskAssignee()));
+			}
+			if (request.getTaskReviewer() != null) {
+				task.setReviewers(Collections.singleton(new TaskUser(request.getTaskReviewer())));
+			}
+			authoringServicesClient.updateAuthoringTaskNotNullFieldsAreSet(task);
 		}
 		return branchPath;
 	}

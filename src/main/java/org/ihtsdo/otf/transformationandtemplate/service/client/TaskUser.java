@@ -5,6 +5,13 @@ public class TaskUser {
 	private String username;
 	private String displayName;
 
+	public TaskUser() {
+	}
+
+	public TaskUser(String username) {
+		this.username = username;
+	}
+
 	public String getUsername() {
 		return username;
 	}

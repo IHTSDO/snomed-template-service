@@ -28,9 +28,15 @@ public class AuthoringServicesClient {
 	}
 
 	public AuthoringTask putTaskInProgress(String projectKey, String taskKey) {
+		AuthoringTask task = new AuthoringTask(taskKey, projectKey)
+				.setStatus("IN_PROGRESS");
+		return updateAuthoringTaskNotNullFieldsAreSet(task);
+	}
+
+	public AuthoringTask updateAuthoringTaskNotNullFieldsAreSet(AuthoringTask task) {
 		return restClient.put()
-				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(projectKey, taskKey))
-				.body(BodyInserters.fromObject(asMap("status", "IN_PROGRESS")))
+				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(task.getProjectKey(), task.getKey()))
+				.body(BodyInserters.fromObject(task))
 				.retrieve()
 				.bodyToMono(AuthoringTask.class)
 				.block();

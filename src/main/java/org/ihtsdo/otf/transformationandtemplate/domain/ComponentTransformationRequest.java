@@ -12,17 +12,22 @@ public class ComponentTransformationRequest {
 	private String projectKey;
 	private String taskTitle;
 	private int batchSize;
+	private String taskAssignee;
+	private String taskReviewer;
 
 	// Required for Jackson
 	@SuppressWarnings("unused")
 	public ComponentTransformationRequest() {
 	}
 
-	public ComponentTransformationRequest(String recipe, String branchPath, String projectKey, String taskTitle, int batchSize, InputStream tsvValues) {
+	public ComponentTransformationRequest(String recipe, String branchPath, String projectKey,
+			String taskTitle, String taskAssignee, String taskReviewer, int batchSize, InputStream tsvValues) {
 		this.recipe = recipe;
 		this.branchPath = branchPath;
 		this.projectKey = projectKey;
 		this.taskTitle = taskTitle;
+		this.taskAssignee = taskAssignee;
+		this.taskReviewer = taskReviewer;
 		this.batchSize = batchSize;
 		this.tsvValues = tsvValues;
 	}
@@ -41,6 +46,14 @@ public class ComponentTransformationRequest {
 
 	public String getTaskTitle() {
 		return taskTitle;
+	}
+
+	public String getTaskAssignee() {
+		return taskAssignee;
+	}
+
+	public String getTaskReviewer() {
+		return taskReviewer;
 	}
 
 	public int getBatchSize() {

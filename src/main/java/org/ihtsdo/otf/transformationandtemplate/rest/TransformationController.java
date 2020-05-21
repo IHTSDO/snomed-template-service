@@ -59,12 +59,19 @@ public class TransformationController {
 			@ApiParam("Task title (optional)")
 			@RequestParam(required = false) String taskTitle,
 
+			@ApiParam("Task assignee (optional)")
+			@RequestParam(required = false) String taskAssignee,
+
+			@ApiParam("Task reviewer (optional)")
+			@RequestParam(required = false) String taskReviewer,
+
 			@RequestParam("tsvFile") MultipartFile tsvFile,
 			UriComponentsBuilder uriComponentsBuilder) throws BusinessServiceException, IOException {
 
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
 
-		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(recipe, branchPath, projectKey, taskTitle, batchSize, tsvFile.getInputStream()));
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation
+				(new ComponentTransformationRequest(recipe, branchPath, projectKey, taskTitle, taskAssignee, taskReviewer, batchSize, tsvFile.getInputStream()));
 
 		return ResponseEntity.created(uriComponentsBuilder.path("/{branchPath}/recipes/{recipe}/jobs/{jobId}")
 				.buildAndExpand(branchPath, recipe, job.getId()).toUri()).build();

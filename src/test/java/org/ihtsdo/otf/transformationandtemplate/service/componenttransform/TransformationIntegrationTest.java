@@ -60,7 +60,7 @@ public class TransformationIntegrationTest {
 		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
 
 		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
-				"description-create-tsv", branchPath, null, null, 100, getClass().getResourceAsStream("description-create-tsv-test.tsv")));
+				"description-create-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-create-tsv-test.tsv")));
 
 		int maxWait = 10;// seconds
 		int wait = 0;
