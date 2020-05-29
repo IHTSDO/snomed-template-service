@@ -1,6 +1,6 @@
 {
 	"key": "description-create-tsv",
-	"title": "Batch Description Creation",
+	"title": "Description Additions",
 	"description": "Add descriptions to existing concepts in batch. Acceptability can be given for up to three language reference sets. Module will be set automatically.",
 	"source": "tsv",
 	"component": "DESCRIPTION",

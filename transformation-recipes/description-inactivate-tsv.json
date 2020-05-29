@@ -1,6 +1,6 @@
 {
 	"key": "description-inactivate-tsv",
-	"title": "Batch Description Inactivation",
+	"title": "Description Inactivations",
 	"description": "Make descriptions inactive in batch.",
 	"source": "tsv",
 	"component": "DESCRIPTION",
