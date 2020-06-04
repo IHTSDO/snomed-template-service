@@ -7,22 +7,23 @@
 	"changeType": "CREATE",
 	"fieldMap": {
 		"conceptId": "$tsv.0",
-		"term": "$tsv.1",
-		"lang": "$tsv.2",
-		"caseSignificanceId": "$tsv.3",
-		"typeId": "$tsv.4",
+		"termRef": "$tsv.1",
+		"term": "$tsv.2",
+		"lang": "$tsv.3",
+		"caseSignificanceId": "$tsv.4",
+		"typeId": "$tsv.5",
 		"acceptability": [
 			{
-				"langRefset1": "$tsv.5",
-				"acceptability1": "$tsv.6"
+				"langRefset1": "$tsv.6",
+				"acceptability1": "$tsv.7"
 			},
 			{
-				"langRefset2": "$tsv.7",
-				"acceptability2": "$tsv.8"
+				"langRefset2": "$tsv.8",
+				"acceptability2": "$tsv.9"
 			},
 			{
-				"langRefset3": "$tsv.9",
-				"acceptability3": "$tsv.10"
+				"langRefset3": "$tsv.10",
+				"acceptability3": "$tsv.11"
 			}
 		]
 	}
