@@ -21,6 +21,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Validation;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -105,7 +106,8 @@ public class TransformationController {
 
 		if (componentType == ComponentType.DESCRIPTION) {
 			List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, jobId);
-			servletResponse.setContentType("text/tsv");
+			servletResponse.setContentType("text/tsv; charset=UTF-8");
+			servletResponse.setCharacterEncoding("UTF-8");
 			servletResponse.setHeader("Content-Disposition", format("inline; filename=\"batch-transformation-results-%s.txt\"", jobId));
 			writeDescriptionResults(changeResults, servletResponse);
 		} else {
