@@ -208,6 +208,7 @@ public class HighLevelAuthoringService {
 					if (!descriptionUpdate.isActive()) {
 						loadedDescription.setInactivationIndicator(descriptionUpdate.getInactivationIndicator());
 						loadedDescription.setAssociationTargets(descriptionUpdate.getAssociationTargets());
+						loadedDescription.setActive(false);
 					}
 				}
 			}
