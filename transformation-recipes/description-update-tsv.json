@@ -8,20 +8,20 @@
 	"fieldMap": {
 		"descriptionId": "$tsv.0",
 		"term": "$tsv.1",
-		"caseSignificanceId": "$tsv.2",
-		"typeId": "$tsv.3",
+		"caseSignificanceId": "$tsv.2|map-constant",
+		"typeId": "$tsv.3|map-constant",
 		"acceptability": [
 			{
-				"langRefset1": "$tsv.4",
-				"acceptability1": "$tsv.5"
+				"langRefset1": "$tsv.4|map-constant",
+				"acceptability1": "$tsv.5|map-constant"
 			},
 			{
-				"langRefset2": "$tsv.6",
-				"acceptability2": "$tsv.7"
+				"langRefset2": "$tsv.6|map-constant",
+				"acceptability2": "$tsv.7|map-constant"
 			},
 			{
-				"langRefset3": "$tsv.8",
-				"acceptability3": "$tsv.9"
+				"langRefset3": "$tsv.8|map-constant",
+				"acceptability3": "$tsv.9|map-constant"
 			}
 		]
 	}

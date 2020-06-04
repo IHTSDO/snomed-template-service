@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 
@@ -54,7 +55,9 @@ public class TransformationIntegrationTest {
 		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
 		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Arrays.asList(
 				new ConceptPojo("272379006").add(new DescriptionPojo("Event (event)").setDescriptionId("123")),
-				new ConceptPojo("242605002").add(new DescriptionPojo("Bite (event)").setDescriptionId("456"))
+				new ConceptPojo("242605002").add(new DescriptionPojo("Bite (event)").setDescriptionId("456")),
+				new ConceptPojo("774007").add(new DescriptionPojo("Bite (event)").setDescriptionId("456")),
+				new ConceptPojo("210958007").add(new DescriptionPojo("Bite (event)").setDescriptionId("456"))
 		));
 		Mockito.when(snowstormClientMock.runValidation(any(), any())).thenReturn(new ArrayList<>());
 		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
@@ -79,6 +82,7 @@ public class TransformationIntegrationTest {
 
 		DescriptionPojo descriptionEvent = null;
 		DescriptionPojo descriptionBite = null;
+		DescriptionPojo descriptionFracture = null;
 		for (ConceptPojo conceptPojo : conceptsSavedCaptor.getValue()) {
 			for (DescriptionPojo description : conceptPojo.getDescriptions()) {
 				if ("The event".equals(description.getTerm())) {
@@ -87,16 +91,19 @@ public class TransformationIntegrationTest {
 				if ("A human bite".equals(description.getTerm())) {
 					descriptionBite = description;
 				}
+				if ("följdtillstånd efter fraktur på handleds- och/eller handnivå".equals(description.getTerm())) {
+					descriptionFracture = description;
+				}
 			}
 		}
 		assertNotNull(descriptionEvent);
 		assertNotNull(descriptionBite);
+		assertNotNull(descriptionFracture);
 
 		assertEquals("272379006", descriptionEvent.getConceptId());
 		assertEquals("The event", descriptionEvent.getTerm());
 		assertEquals("en", descriptionEvent.getLang());
 		assertEquals("900000000000448009", descriptionEvent.getCaseSignificance().getConceptId());
-		assertEquals("900000000000013009", descriptionEvent.getType().getConceptId());
 		assertEquals("900000000000013009", descriptionEvent.getType().getConceptId());
 		Map<String, DescriptionPojo.Acceptability> acceptabilityMap = descriptionEvent.getAcceptabilityMap();
 		assertEquals(1, acceptabilityMap.size());
@@ -108,17 +115,29 @@ public class TransformationIntegrationTest {
 		assertEquals("en", descriptionBite.getLang());
 		assertEquals("900000000000448009", descriptionBite.getCaseSignificance().getConceptId());
 		assertEquals("900000000000013009", descriptionBite.getType().getConceptId());
-		assertEquals("900000000000013009", descriptionBite.getType().getConceptId());
 		acceptabilityMap = descriptionBite.getAcceptabilityMap();
 		assertEquals(1, acceptabilityMap.size());
 		assertTrue(acceptabilityMap.containsKey("900000000000509007"));
 		assertEquals(ACCEPTABLE, acceptabilityMap.get("900000000000509007"));
 
+		// 210958007	Disorder due to and following fracture at wrist and/or hand level (disorder)	följdtillstånd efter fraktur på handleds- och/eller handnivå	sv	ci	SYNONYM	Swedish	PREFERRED
+		assertEquals("210958007", descriptionFracture.getConceptId());
+		assertEquals("följdtillstånd efter fraktur på handleds- och/eller handnivå", descriptionFracture.getTerm());
+		assertEquals("sv", descriptionFracture.getLang());
+		assertEquals("900000000000448009", descriptionFracture.getCaseSignificance().getConceptId());
+		assertEquals("900000000000013009", descriptionFracture.getType().getConceptId());
+		acceptabilityMap = descriptionFracture.getAcceptabilityMap();
+		assertEquals(1, acceptabilityMap.size());
+		assertTrue(acceptabilityMap.containsKey("46011000052107"));
+		assertEquals(PREFERRED, acceptabilityMap.get("46011000052107"));
+
 		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
-		assertEquals(3, changeResults.size());
+		assertEquals(5, changeResults.size());
 		assertEquals(TRUE, changeResults.get(0).getSuccess());
 		assertEquals(TRUE, changeResults.get(1).getSuccess());
 		assertEquals(FALSE, changeResults.get(2).getSuccess());
+		assertEquals(TRUE, changeResults.get(3).getSuccess());
+		assertEquals(TRUE, changeResults.get(4).getSuccess());
 		assertEquals("Simple validation failed: At least one valid acceptability entry is required.", changeResults.get(2).getMessage());
 	}
 

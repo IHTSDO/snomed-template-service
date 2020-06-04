@@ -1,15 +1,17 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
+import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.valueprovider.ValueProvider;
+import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.valueprovider.ValueProviderFactory;
+
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import static org.apache.commons.lang.StringUtils.isEmpty;
 
 public class TSVComponentTransformation implements ComponentTransformation {
 
-	private static final Pattern TSV_FIELD_INDEX_PATTERN = Pattern.compile("\\$tsv.([0-9]{1,2})");
-
 	private final Map<String, Object> fieldMap;
 	private final String[] columns;
+	private final ValueProviderFactory valueProviderFactory = new ValueProviderFactory();
 
 	public TSVComponentTransformation(Map<String, Object> fieldMap, String[] columns) {
 		this.fieldMap = fieldMap;
@@ -21,10 +23,8 @@ public class TSVComponentTransformation implements ComponentTransformation {
 		Object mapping = fieldMap.get(fieldName);
 		if (mapping != null) {
 			if (mapping instanceof String) {
-				int tsvIndex = getTsvIndex((String) mapping);
-				if (tsvIndex > -1 && columns.length > tsvIndex) {
-					return columns[tsvIndex];
-				}
+				ValueProvider valueProvider = valueProviderFactory.getProvider((String) mapping);
+				return valueProvider.getValue(columns);
 			}
 		}
 		return null;
@@ -39,9 +39,10 @@ public class TSVComponentTransformation implements ComponentTransformation {
 				@SuppressWarnings("unchecked")
 				List<String> mappingList = (List<String>) mapping;
 				for (String itemMapping : mappingList) {
-					int tsvIndex = getTsvIndex(itemMapping);
-					if (tsvIndex > -1 && columns.length > tsvIndex) {
-						valueList.add(columns[tsvIndex]);
+					ValueProvider valueProvider = valueProviderFactory.getProvider(itemMapping);
+					String value = valueProvider.getValue(columns);
+					if (!isEmpty(value)) {
+						valueList.add(value);
 					}
 				}
 				return valueList;
@@ -60,24 +61,16 @@ public class TSVComponentTransformation implements ComponentTransformation {
 				Map<String, String> valueMap = new HashMap<>();
 				for (Map<String, String> keyPairMapping : listOfMappings) {
 					Iterator<String> values = keyPairMapping.values().iterator();
-					int keyIndex = getTsvIndex(values.next());
-					int valueIndex = getTsvIndex(values.next());
-					if (keyIndex > -1 && columns.length > keyIndex && valueIndex > -1 && columns.length > valueIndex) {
-						valueMap.put(columns[keyIndex], columns[valueIndex]);
+					String key = valueProviderFactory.getProvider(values.next()).getValue(columns);
+					String value = valueProviderFactory.getProvider(values.next()).getValue(columns);
+					if (!isEmpty(key) && !isEmpty(value)) {
+						valueMap.put(key, value);
 					}
 				}
 				return valueMap;
 			}
 		}
 		return null;
-	}
-
-	private int getTsvIndex(String tsvFieldRef) {
-		Matcher matcher = TSV_FIELD_INDEX_PATTERN.matcher(tsvFieldRef);
-		if (matcher.matches()) {
-			return Integer.parseInt(matcher.group(1));
-		}
-		return -1;
 	}
 
 }

@@ -8,7 +8,7 @@
 	"fieldMap": {
 		"descriptionId": "$tsv.0",
 		"term": "$tsv.1",
-		"inactivationIndicator": "$tsv.2",
+		"inactivationIndicator": "$tsv.2|map-constant",
 		"associationTargets": ["$tsv.3", "$tsv.4", "$tsv.5", "$tsv.6"]
 	}
 }

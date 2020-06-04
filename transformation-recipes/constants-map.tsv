@@ -1,0 +1,45 @@
+term	sctid
+
+# Acceptability
+PREFERRED	900000000000548007
+ACCEPTABLE	900000000000549004
+
+# Description Types
+SYNONYM	900000000000013009
+FSN	900000000000003001
+
+# Case Significance
+ci	900000000000448009
+CS	900000000000017005
+cI	900000000000020002
+
+# Language Reference Sets
+Belgian French	21000172104
+Belgian Dutch	31000172101
+GB English	900000000000508004
+US English	900000000000509007
+Irish	21000220103
+Danish	554461000005103
+Swiss German	2041000195100
+Swiss French	2021000195106
+Swiss Italian	2031000195108
+Norwegian Bokmål	61000202103
+Norwegian Nynorsk	91000202106
+Estonian	71000181105
+Swedish	46011000052107
+
+# Description Inactivation Reason
+Not semantically equivalent	723278000
+Outdated	900000000000483008
+Erroneous	900000000000485001
+Non-conformance to editorial policy	723277005
+Duplicate	900000000000482003
+Ambiguous	900000000000484000
+Moved elsewhere	900000000000487009
+Limited	900000000000486000
+
+# Concept Inactivation Reason
+Not semantically equivalent	723278000
+Outdated	900000000000483008
+Erroneous	900000000000485001
+Non-conformance to editorial policy	723277005

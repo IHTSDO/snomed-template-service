@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
+import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.valueprovider.ValueProviderFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +28,7 @@ import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 
 import static com.google.common.base.Predicates.not;
@@ -52,7 +54,8 @@ public class Config extends WebSecurityConfigurerAdapter {
 	}
 
 	@Bean("transformationRecipeStore")
-	public JsonStore getTransformationRecipeJsonStore(@Value("${transformationRecipeStorePath}") String transformationRecipeStorePath) {
+	public JsonStore getTransformationRecipeJsonStore(@Value("${transformationRecipeStorePath}") String transformationRecipeStorePath) throws IOException {
+		ValueProviderFactory.loadConstantMap(transformationRecipeStorePath);
 		return new JsonStore(new File(transformationRecipeStorePath), getGeneralMapper());
 	}
 
