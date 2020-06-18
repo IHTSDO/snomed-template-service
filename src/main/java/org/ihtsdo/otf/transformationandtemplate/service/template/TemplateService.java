@@ -12,6 +12,7 @@ import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -87,9 +88,9 @@ public class TemplateService {
 		if (!ArrayUtils.isEmpty(descendantOf) || !ArrayUtils.isEmpty(ancestorOf)) {
 			// Group templates by focus concept to reduce the number of ECL queries
 			Map<String, List<ConceptTemplate>> templatesByFocusConcept = templates.stream().collect(Collectors.groupingBy(ConceptTemplate::getFocusConcept));
-			SecurityContext securityContext = SecurityContextHolder.getContext();
+			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 			return templatesByFocusConcept.entrySet().stream().filter(entry -> {
-				SecurityContextHolder.setContext(securityContext);
+				SecurityContextHolder.getContext().setAuthentication(authentication);
 				String focusConcept = entry.getKey();
 				String ecl = "";
 				for (int i = 0; descendantOf != null && i < descendantOf.length; i++) {
