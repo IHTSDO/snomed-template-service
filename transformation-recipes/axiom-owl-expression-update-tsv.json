@@ -1,0 +1,13 @@
+{
+	"key": "axiom-owl-expression-update-tsv",
+	"descriptions": "Update axioms in batch using OWL functional syntax. The 'axiomId' field is only required if the concept has multiple axioms, this could be set on a case by case basis after the first run which would identify cases with this issue in the report.",
+	"title": "Axiom OWL Expressions Updates",
+	"source": "tsv",
+	"component": "AXIOM",
+	"changeType": "UPDATE",
+	"fieldMap": {
+		"conceptId": "$tsv.0",
+		"axiomId": "$tsv.1",
+		"owlExpression": "$tsv.2"
+	}
+}

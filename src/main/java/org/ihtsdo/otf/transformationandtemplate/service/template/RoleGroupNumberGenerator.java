@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 
 public class RoleGroupNumberGenerator {
@@ -56,7 +56,7 @@ public class RoleGroupNumberGenerator {
 	
 	private boolean containsISA(List<RelationshipPojo> roleGroup) {
 		for (RelationshipPojo rel : roleGroup) {
-			if (Constants.IS_A.equals(rel.getType().getConceptId())) {
+			if (ConstantStrings.IS_A.equals(rel.getType().getConceptId())) {
 				return true;
 			}
 		}

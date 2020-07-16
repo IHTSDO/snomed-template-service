@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ihtsdo.otf.resourcemanager.ResourceManager;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
@@ -24,7 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -51,6 +51,9 @@ public class ComponentTransformService {
 
 	@Autowired
 	private DescriptionService descriptionService;
+
+	@Autowired
+	private AxiomService axiomService;
 
 	@Autowired
 	private JsonStore transformationRecipeStore;
@@ -160,6 +163,10 @@ public class ComponentTransformService {
 		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<DescriptionPojo>>>() {});
 	}
 
+	public List<ChangeResult<AxiomPojo>> loadAxiomTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<AxiomPojo>>>() {});
+	}
+
 	private List<ChangeResult<? extends SnomedComponent>> doRunTransform(ComponentTransformationJob job, TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		if (request.getTaskTitle() == null) {
 			request.setTaskTitle(recipe.getTitle());
@@ -167,6 +174,8 @@ public class ComponentTransformService {
 		switch (recipe.getComponent()) {
 			case DESCRIPTION:
 				return descriptionService.startBatchTransformation(recipe, request);
+			case AXIOM:
+				return axiomService.startBatchTransformation(recipe, request);
 			default:
 				throw new ProcessingException("Unable to transform component of type " + recipe.getComponent());
 		}

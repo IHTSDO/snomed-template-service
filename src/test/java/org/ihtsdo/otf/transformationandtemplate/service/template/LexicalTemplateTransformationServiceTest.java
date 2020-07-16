@@ -6,17 +6,15 @@ import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.*;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.Constants.PREFERRED;
+import static org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings.PREFERRED;
 import static org.junit.Assert.assertEquals;
 import static org.snomed.authoringtemplate.domain.CaseSignificance.*;
 

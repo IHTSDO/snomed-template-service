@@ -8,14 +8,12 @@ import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo.DescriptionMiniPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
-import org.skyscreamer.jsonassert.JSONAssert;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 

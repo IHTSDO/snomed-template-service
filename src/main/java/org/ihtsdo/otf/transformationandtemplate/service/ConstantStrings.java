@@ -1,6 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service;
 
-public class Constants {
+public class ConstantStrings {
 	public static final String STATED = "STATED_RELATIONSHIP";
 	public static final String INFERRED = "INFERRED_RELATIONSHIP";
 	public static final String EXISTENTIAL = "EXISTENTIAL";

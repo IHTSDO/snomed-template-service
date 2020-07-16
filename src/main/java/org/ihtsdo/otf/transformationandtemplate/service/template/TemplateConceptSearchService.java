@@ -1,6 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
@@ -207,8 +207,8 @@ public class TemplateConceptSearchService {
 
 		Set<String> ungrouped = new HashSet<>();
 		Set<String> mandatoryUngrouped = new HashSet<>();
-		ungrouped.add(Constants.IS_A);
-		mandatoryUngrouped.add(Constants.IS_A);
+		ungrouped.add(ConstantStrings.IS_A);
+		mandatoryUngrouped.add(ConstantStrings.IS_A);
 		for (Attribute attr : unGroupedAttributes) {
 			ungrouped.add(attr.getType());
 			if ("1".equals(attr.getCardinalityMin())) {
@@ -234,7 +234,7 @@ public class TemplateConceptSearchService {
 			} else {
 				activeRelationships = concept.getRelationships().stream()
 						.filter(RelationshipPojo::isActive)
-						.filter(r -> r.getCharacteristicType().equals(Constants.INFERRED))
+						.filter(r -> r.getCharacteristicType().equals(ConstantStrings.INFERRED))
 						.collect(Collectors.toList());
 			}
 			

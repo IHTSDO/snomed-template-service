@@ -1,6 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
@@ -156,7 +156,7 @@ public class RelationshipTemplateTransformer {
 		pojo.setActive(true);
 		pojo.setCharacteristicType(relationship.getCharacteristicType());
 		pojo.setGroupId(relationship.getGroupId());
-		pojo.setModifier(Constants.EXISTENTIAL);
+		pojo.setModifier(ConstantStrings.EXISTENTIAL);
 		pojo.setModuleId(getModuleId());
 		if (relationship.getTarget() != null) {
 			pojo.setTarget(constructConceptMiniPojo(relationship.getTarget().getConceptId()));

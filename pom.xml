@@ -48,12 +48,17 @@
 		<dependency>
 			<groupId>org.ihtsdo.otf.common</groupId>
 			<artifactId>otf-common</artifactId>
-			<version>4.0.0</version>
+			<version>4.1.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.ihtsdo.otf.common</groupId>
 			<artifactId>resource-manager</artifactId>
 			<version>4.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.snomed.otf</groupId>
+			<artifactId>snomed-owl-toolkit</artifactId>
+			<version>2.9.1-SNAPSHOT</version>
 		</dependency>
 		<!-- Spring Cloud -->
 		<dependency>

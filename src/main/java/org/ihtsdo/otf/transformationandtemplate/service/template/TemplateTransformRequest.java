@@ -2,7 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import java.util.Set;
 
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -50,7 +50,7 @@ public class TemplateTransformRequest {
 
 	public String getInactivationReason() {
 		if (inactivationReason == null || inactivationReason.isEmpty()) {
-			return Constants.NONCONFORMANCE;
+			return ConstantStrings.NONCONFORMANCE;
 		}
 		return this.inactivationReason;
 	}

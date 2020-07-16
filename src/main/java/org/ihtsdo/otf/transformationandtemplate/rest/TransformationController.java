@@ -1,11 +1,9 @@
 package org.ihtsdo.otf.transformationandtemplate.rest;
 
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
-import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
-import org.ihtsdo.otf.rest.exception.BadRequestException;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
@@ -20,15 +18,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Validation;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
-import static org.springframework.util.StringUtils.isEmpty;
 
 @RestController
 public class TransformationController {
@@ -106,13 +101,21 @@ public class TransformationController {
 
 		if (componentType == ComponentType.DESCRIPTION) {
 			List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, jobId);
-			servletResponse.setContentType("text/tsv; charset=UTF-8");
-			servletResponse.setCharacterEncoding("UTF-8");
-			servletResponse.setHeader("Content-Disposition", format("inline; filename=\"batch-transformation-results-%s.txt\"", jobId));
+			setTSVHeaders(jobId, servletResponse);
 			writeDescriptionResults(changeResults, servletResponse);
+		} else if (componentType == ComponentType.AXIOM) {
+			List<ChangeResult<AxiomPojo>> changeResults = componentTransformService.loadAxiomTransformationJobResults(branchPath, jobId);
+			setTSVHeaders(jobId, servletResponse);
+			writeAxiomResults(changeResults, servletResponse);
 		} else {
 			throw new BusinessServiceException(format("Writing TSV for type %s is not yet implemented.", componentType));
 		}
+	}
+
+	private void setTSVHeaders(@PathVariable String jobId, HttpServletResponse servletResponse) {
+		servletResponse.setContentType("text/tsv; charset=UTF-8");
+		servletResponse.setCharacterEncoding("UTF-8");
+		servletResponse.setHeader("Content-Disposition", format("inline; filename=\"batch-transformation-results-%s.txt\"", jobId));
 	}
 
 	private void writeDescriptionResults(List<ChangeResult<DescriptionPojo>> descriptionChangeResults, HttpServletResponse servletResponse) throws IOException {
@@ -132,10 +135,29 @@ public class TransformationController {
 						changeResult.getSuccess().toString(),
 						changeResult.getMessageOrEmpty()
 				));
-
 			}
 		}
+	}
 
+	private void writeAxiomResults(List<ChangeResult<AxiomPojo>> changeResults, HttpServletResponse servletResponse) throws IOException {
+		try (PrintWriter writer = servletResponse.getWriter()) {
+			writer.println(String.join(TAB,
+					"concept_id",
+					"axiom_id",
+					"owlExpression",
+					"success",
+					"message"));
+			for (ChangeResult<AxiomPojo> changeResult : changeResults) {
+				AxiomPojo axiom = changeResult.getComponent();
+				writer.println(String.join(TAB,
+						axiom.getConceptId(),
+						axiom.getId(),
+						axiom.getOwlExpression(),
+						changeResult.getSuccess().toString(),
+						changeResult.getMessageOrEmpty()
+				));
+			}
+		}
 	}
 
 }

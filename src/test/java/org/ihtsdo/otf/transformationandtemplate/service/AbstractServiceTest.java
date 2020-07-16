@@ -10,7 +10,6 @@ import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceExcepti
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
-import org.junit.runner.RunWith;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.Description;
@@ -19,7 +18,6 @@ import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 public abstract class AbstractServiceTest extends AbstractTest {
 
@@ -41,10 +39,10 @@ public abstract class AbstractServiceTest extends AbstractTest {
 		templateRequest.addLexicalTemplate(new LexicalTemplate("actionTerm", "Procedure", "action", Lists.newArrayList(" - action")));
 		Description fsn = new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance (procedure)");
 		fsn.setType(DescriptionType.FSN);
-		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(Constants.PREFERRED, Constants.PREFERRED));
+		fsn.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(ConstantStrings.PREFERRED, ConstantStrings.PREFERRED));
 		Description pt = new Description("$actionTerm$ of $procSiteTerm$ using computed tomography guidance");
 		pt.setType(DescriptionType.SYNONYM);
-		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(Constants.PREFERRED, Constants.PREFERRED));
+		pt.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMapStrings(ConstantStrings.PREFERRED, ConstantStrings.PREFERRED));
 		templateRequest.setConceptOutline(new ConceptOutline().addDescription(fsn).addDescription(pt));
 		templateService.create("CT Guided Procedure of X", templateRequest);
 	}

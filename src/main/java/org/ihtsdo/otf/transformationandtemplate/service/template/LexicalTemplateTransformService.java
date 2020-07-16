@@ -2,7 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
-import org.ihtsdo.otf.transformationandtemplate.service.Constants;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +61,7 @@ public class LexicalTemplateTransformService {
 		List<Description> pts = descriptions.stream()
 				.filter(d -> DescriptionType.SYNONYM == d.getType())
 				.filter(d -> d.getAcceptabilityMap() != null)
-				.filter(d -> d.getAcceptabilityMap().containsValue(Constants.PREFERRED))
+				.filter(d -> d.getAcceptabilityMap().containsValue(ConstantStrings.PREFERRED))
 				.collect(Collectors.toList());
 		
 		List<Description> others = new ArrayList<>(descriptions);
@@ -101,7 +101,7 @@ public class LexicalTemplateTransformService {
 			for (String refsetId : description.getAcceptabilityMap().keySet()) {
 				Description pt = description.clone();
 				Map<String, String> acceptabilityMap = new HashMap<>();
-				acceptabilityMap.put(refsetId, Constants.PREFERRED);
+				acceptabilityMap.put(refsetId, ConstantStrings.PREFERRED);
 				pt.setAcceptabilityMap(acceptabilityMap);
 				String term = pt.getTermTemplate();
 				Set<String> termSlotNames = TemplateUtil.getSlots(Collections.singleton(term));
@@ -128,7 +128,7 @@ public class LexicalTemplateTransformService {
 			if (ptTerms.size() == 1) {
 				Map<String, String> acceptabilityMap = new HashMap<>();
 				for (String key : description.getAcceptabilityMap().keySet()) {
-					acceptabilityMap.put(key, Constants.PREFERRED);
+					acceptabilityMap.put(key, ConstantStrings.PREFERRED);
 				}
 				Description mergedPt = temp.get(0);
 				mergedPt.setAcceptabilityMap(acceptabilityMap);

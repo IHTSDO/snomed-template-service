@@ -61,4 +61,13 @@ public class ChangeResult<T extends SnomedComponent> {
 	public T getComponent() {
 		return component;
 	}
+
+	@Override
+	public String toString() {
+		return "ChangeResult{" +
+				"success=" + success +
+				", message='" + message + '\'' +
+				", component=" + component +
+				'}';
+	}
 }
