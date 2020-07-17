@@ -29,15 +29,18 @@ public class HighLevelAuthoringService {
 
 	private final AuthoringServicesClient authoringServicesClient;
 
+	private int processingBatchMaxSize;
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITHOUT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang);
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang).thenComparing(DescriptionPojo::getConceptId);
 	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR = Comparator.comparing(ConceptValidationResult::getSeverity);
 
-	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient) {
+	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient, int processingBatchMaxSize) {
 		this.snowstormClient = snowstormClient;
 		this.authoringServicesClient = authoringServicesClient;
+		this.processingBatchMaxSize = processingBatchMaxSize;
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(
@@ -72,17 +75,21 @@ public class HighLevelAuthoringService {
 				conceptIdToDescriptionMap.computeIfAbsent(description.getConceptId(), (key) -> new HashSet<>()).add(description);
 			}
 
-			// Split into batches
+			// Split into batches of how many changes per branch / task
 			int batchNumber = 0;
-			for (List<String> conceptIdBatch : Iterables.partition(conceptIdToDescriptionMap.keySet(), request.getBatchSize())) {
+			for (List<String> conceptIdTaskBatch : Iterables.partition(conceptIdToDescriptionMap.keySet(), request.getBatchSize())) {
 
 				batchNumber++;
 				String branchPath = getBatchBranch(request, batchNumber);
-				Map<String, Set<DescriptionPojo>> batchMap = new HashMap<>();
-				for (String conceptId : conceptIdBatch) {
-					batchMap.put(conceptId, conceptIdToDescriptionMap.get(conceptId));
+
+				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+				for (List<String> conceptIdProcessingBatch : Iterables.partition(conceptIdTaskBatch, processingBatchMaxSize)) {
+					Map<String, Set<DescriptionPojo>> batchMap = new HashMap<>();
+					for (String conceptId : conceptIdProcessingBatch) {
+						batchMap.put(conceptId, conceptIdToDescriptionMap.get(conceptId));
+					}
+					createDescriptionBatch(batchMap, defaultModuleId, changes, branchPath);
 				}
-				createDescriptionBatch(batchMap, defaultModuleId, changes, branchPath);
 			}
 
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
@@ -163,13 +170,17 @@ public class HighLevelAuthoringService {
 
 			// Split into batches
 			int batchNumber = 0;
-			for (List<DescriptionPojo> descriptionBatch : Iterables.partition(descriptions, request.getBatchSize())) {
+			for (List<DescriptionPojo> descriptionTaskBatch : Iterables.partition(descriptions, request.getBatchSize())) {
 				batchNumber++;
 				String branchPath = getBatchBranch(request, batchNumber);
-				List<ChangeResult<DescriptionPojo>> changesBatch = changes.stream()
-						.filter(descriptionPojoChangeResult -> descriptionBatch.contains(descriptionPojoChangeResult.getComponent()))
-						.collect(Collectors.toList());
-				updateDescriptionBatch(descriptionBatch, changesBatch, branchPath);
+
+				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+				for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptionTaskBatch, processingBatchMaxSize)) {
+					List<ChangeResult<DescriptionPojo>> changesBatch = changes.stream()
+							.filter(descriptionPojoChangeResult -> descriptionProcessingBatch.contains(descriptionPojoChangeResult.getComponent()))
+							.collect(Collectors.toList());
+					updateDescriptionBatch(descriptionProcessingBatch, changesBatch, branchPath);
+				}
 
 			}
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
@@ -192,15 +203,19 @@ public class HighLevelAuthoringService {
 			// Initial terminology server communication check
 			snowstormClient.getBranch("MAIN");
 
-			// Split into batches
+			// Split into batches, changes per task
 			int batchNumber = 0;
-			for (List<AxiomPojo> axiomsBatch : Iterables.partition(axioms, request.getBatchSize())) {
+			for (List<AxiomPojo> axiomsTaskBatch : Iterables.partition(axioms, request.getBatchSize())) {
 				batchNumber++;
 				String branchPath = getBatchBranch(request, batchNumber);
-				List<ChangeResult<AxiomPojo>> changesBatch = changes.stream()
-						.filter(axiomPojoChangeResult -> axiomsBatch.contains(axiomPojoChangeResult.getComponent()))
-						.collect(Collectors.toList());
-				updateAxiomBatch(axiomsBatch, changesBatch, branchPath);
+
+				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+				for (List<AxiomPojo> axiomsProcessingBatch : Iterables.partition(axiomsTaskBatch, processingBatchMaxSize)) {
+					List<ChangeResult<AxiomPojo>> changesBatch = changes.stream()
+							.filter(axiomPojoChangeResult -> axiomsProcessingBatch.contains(axiomPojoChangeResult.getComponent()))
+							.collect(Collectors.toList());
+					updateAxiomBatch(axiomsProcessingBatch, changesBatch, branchPath);
+				}
 			}
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);

@@ -11,6 +11,8 @@ public class ComponentTransformationRequest {
 	private String branchPath;
 	private String projectKey;
 	private String taskTitle;
+
+	// The number of changes per task.
 	private int batchSize;
 	private String taskAssignee;
 	private String taskReviewer;
