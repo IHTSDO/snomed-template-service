@@ -220,18 +220,20 @@ public class TemplateConceptTransformService {
 		// validate using attribute slot range when there is more than one value for a given slot
 		Map<String, ConceptMiniPojo> slotToValuesMap = new HashMap<>();
 		for (String slot : slotToAttrbuteValuesMap.keySet()) {
-			List<String> conceptIds = slotToAttrbuteValuesMap.get(slot).stream().map(ConceptMiniPojo :: getConceptId).collect(Collectors.toList());
-			if (conceptIds.size() > 1) {
-				String rangeEcl = TemplateUtil.constructRangeValidationEcl(inputData.getDestinationSlotToAttributeMap().get(slot).getAllowableRangeECL().trim(), conceptIds);
-				Set<String> conceptsWithinRange = restClient.eclQuery(inputData.getBranchPath(), rangeEcl, conceptIds.size());
-				for (ConceptMiniPojo pojo : slotToAttrbuteValuesMap.get(slot)) {
-					if (conceptsWithinRange.contains(pojo.getConceptId())) {
-						slotToValuesMap.put(slot, pojo);
-						break;
+			if (slotToAttrbuteValuesMap.get(slot) != null) {
+				List<String> conceptIds = slotToAttrbuteValuesMap.get(slot).stream().map(ConceptMiniPojo :: getConceptId).collect(Collectors.toList());
+				if (conceptIds.size() > 1) {
+					String rangeEcl = TemplateUtil.constructRangeValidationEcl(inputData.getDestinationSlotToAttributeMap().get(slot).getAllowableRangeECL().trim(), conceptIds);
+					Set<String> conceptsWithinRange = restClient.eclQuery(inputData.getBranchPath(), rangeEcl, conceptIds.size());
+					for (ConceptMiniPojo pojo : slotToAttrbuteValuesMap.get(slot)) {
+						if (conceptsWithinRange.contains(pojo.getConceptId())) {
+							slotToValuesMap.put(slot, pojo);
+							break;
+						}
 					}
+				} else {
+					slotToValuesMap.put(slot, slotToAttrbuteValuesMap.get(slot).iterator().next());
 				}
-			} else {
-				slotToValuesMap.put(slot, slotToAttrbuteValuesMap.get(slot).iterator().next());
 			}
 		}
 		return slotToValuesMap;
