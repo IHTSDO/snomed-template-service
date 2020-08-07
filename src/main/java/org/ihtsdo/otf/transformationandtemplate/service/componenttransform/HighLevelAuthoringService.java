@@ -35,6 +35,7 @@ public class HighLevelAuthoringService {
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITHOUT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang);
+	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang).thenComparing(DescriptionPojo::getConceptId);
 	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR = Comparator.comparing(ConceptValidationResult::getSeverity);
 
 	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient) {
@@ -119,11 +120,11 @@ public class HighLevelAuthoringService {
 					}
 
 					if (!conceptPojo.isActive()) {
-						getChangeResult(changes, description).addWarning("Adding description to inactive concept");
+						getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).addWarning("Adding description to inactive concept");
 					}
 
 				} else {
-					getChangeResult(changes, description).fail(format("Concept %s not found.", description.getConceptId()));
+					getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Concept %s not found.", description.getConceptId()));
 					// Description not joined to any concept so no will not appear in the update request.
 				}
 			}
@@ -145,7 +146,7 @@ public class HighLevelAuthoringService {
 								.findFirst()
 								.ifPresent(pojo -> descriptionPojo.setDescriptionId(pojo.getDescriptionId()));
 					}
-					getChangeResult(changes, descriptionPojo).success();
+					getChangeResult(changes, descriptionPojo, DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR).success();
 				}
 			}
 		}
@@ -215,7 +216,7 @@ public class HighLevelAuthoringService {
 		}
 		// Fail all descriptions which were not found to update
 		for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
-			getChangeResult(changesBatch, descriptionIdMap.get(notFoundDescriptionId)).fail("Description not found on the specified branch.");
+			getChangeResult(changesBatch, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITHOUT_ID_COMPARATOR).fail("Description not found on the specified branch.");
 		}
 
 		if (!descriptionsFound.isEmpty()) {
@@ -304,9 +305,9 @@ public class HighLevelAuthoringService {
 	}
 
 
-	private ChangeResult<DescriptionPojo> getChangeResult(List<ChangeResult<DescriptionPojo>> changeResults, DescriptionPojo description) throws BusinessServiceException {
+	private ChangeResult<DescriptionPojo> getChangeResult(List<ChangeResult<DescriptionPojo>> changeResults, DescriptionPojo description, Comparator<DescriptionPojo> comparator) throws BusinessServiceException {
 		for (ChangeResult<DescriptionPojo> changeResult : changeResults) {
-			if (DESCRIPTION_WITHOUT_ID_COMPARATOR.compare(changeResult.getComponent(), description) == 0) {
+			if (comparator.compare(changeResult.getComponent(), description) == 0) {
 				return changeResult;
 			}
 		}
