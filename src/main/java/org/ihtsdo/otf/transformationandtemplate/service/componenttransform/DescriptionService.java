@@ -50,7 +50,7 @@ public class DescriptionService {
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
-		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser();
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser(request.isSkipDroolsValidation());
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		readDescriptionChanges(request, recipe, changes, descriptions);
@@ -58,7 +58,7 @@ public class DescriptionService {
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> updateDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
-		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser();
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser(request.isSkipDroolsValidation());
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		readDescriptionChanges(request, recipe, changes, descriptions);

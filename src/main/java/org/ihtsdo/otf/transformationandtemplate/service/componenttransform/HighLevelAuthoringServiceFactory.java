@@ -20,11 +20,11 @@ public class HighLevelAuthoringServiceFactory {
 	@Value("${transformation.batch.max}")
 	private int processingBatchMaxSize;
 
-	public HighLevelAuthoringService createServiceForCurrentUser() {
+	public HighLevelAuthoringService createServiceForCurrentUser(boolean skipDroolsValidation) {
 		// Create clients using the current user's security context
 		SnowstormClient snowstormClient = snowstormClientFactory.getClientForCurrentUser();
 		AuthoringServicesClient authoringServicesClient = authoringServicesClientFactory.getClientForCurrentUser();
-		return new HighLevelAuthoringService(snowstormClient, authoringServicesClient, processingBatchMaxSize);
+		return new HighLevelAuthoringService(snowstormClient, authoringServicesClient, processingBatchMaxSize, skipDroolsValidation);
 	}
 
 }

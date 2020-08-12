@@ -59,7 +59,7 @@ public class AxiomService {
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> updateAxioms(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
-		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser();
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser(request.isSkipDroolsValidation());
 		List<ChangeResult<AxiomPojo>> changes = new ArrayList<>();
 		List<AxiomPojo> axioms = new ArrayList<>();
 		readAxiomChanges(request, recipe, changes, axioms);

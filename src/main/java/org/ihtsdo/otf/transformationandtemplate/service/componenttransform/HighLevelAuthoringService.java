@@ -28,6 +28,7 @@ public class HighLevelAuthoringService {
 	private final SnowstormClient snowstormClient;
 
 	private final AuthoringServicesClient authoringServicesClient;
+	private final boolean skipDroolsValidation;
 
 	private int processingBatchMaxSize;
 
@@ -37,10 +38,11 @@ public class HighLevelAuthoringService {
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang).thenComparing(DescriptionPojo::getConceptId);
 	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR = Comparator.comparing(ConceptValidationResult::getSeverity);
 
-	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient, int processingBatchMaxSize) {
+	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient, int processingBatchMaxSize, boolean skipDroolsValidation) {
 		this.snowstormClient = snowstormClient;
 		this.authoringServicesClient = authoringServicesClient;
 		this.processingBatchMaxSize = processingBatchMaxSize;
+		this.skipDroolsValidation = skipDroolsValidation;
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(
@@ -351,27 +353,29 @@ public class HighLevelAuthoringService {
 	public <T extends SnomedComponent> void bulkValidateThenUpdateConcepts(Map<String, ConceptPojo> conceptMap, String branchPath,
 			List<ChangeResult<T>> changes) throws WebClientException, TimeoutException {
 
-		// Run batch validation
-		List<ConceptValidationResult> validationResults = snowstormClient.runValidation(branchPath, conceptMap.values());
+		if (!skipDroolsValidation) {
+			// Run batch validation
+			List<ConceptValidationResult> validationResults = snowstormClient.runValidation(branchPath, conceptMap.values());
 
-		Map<String, Set<ConceptValidationResult>> conceptValidationResultMap = new HashMap<>();
-		for (ConceptValidationResult validationResult : validationResults) {
-			conceptValidationResultMap.computeIfAbsent(validationResult.getConceptId(), (c) -> new TreeSet<>(CONCEPT_VALIDATION_RESULT_COMPARATOR)).add(validationResult);
-		}
+			Map<String, Set<ConceptValidationResult>> conceptValidationResultMap = new HashMap<>();
+			for (ConceptValidationResult validationResult : validationResults) {
+				conceptValidationResultMap.computeIfAbsent(validationResult.getConceptId(), (c) -> new TreeSet<>(CONCEPT_VALIDATION_RESULT_COMPARATOR)).add(validationResult);
+			}
 
-		// Remove concepts with validation errors
-		// All component changes for this concept will not be saved
-		Set<String> conceptsWithError = validationResults.stream()
-				.filter(validationResult -> validationResult.getSeverity() == ERROR)
-				.map(ConceptValidationResult::getConceptId)
-				.collect(Collectors.toSet());
-		logger.info("{} concepts had validation errors.", conceptsWithError.size());
-		for (String conceptWithError : conceptsWithError) {
-			changes.stream()
-					.filter(change -> change.getSuccess() == null && change.getComponent().getConceptId().equals(conceptWithError))
-					.forEach(changeResult -> changeResult.fail(format("Concept validation errors: %s", conceptValidationResultMap.get(conceptWithError).toString())));
-			conceptMap.remove(conceptWithError);
-			// Whole concept removed from map so changes will not appear in the update request.
+			// Remove concepts with validation errors
+			// All component changes for this concept will not be saved
+			Set<String> conceptsWithError = validationResults.stream()
+					.filter(validationResult -> validationResult.getSeverity() == ERROR)
+					.map(ConceptValidationResult::getConceptId)
+					.collect(Collectors.toSet());
+			logger.info("{} concepts had validation errors.", conceptsWithError.size());
+			for (String conceptWithError : conceptsWithError) {
+				changes.stream()
+						.filter(change -> change.getSuccess() == null && change.getComponent().getConceptId().equals(conceptWithError))
+						.forEach(changeResult -> changeResult.fail(format("Concept validation errors: %s", conceptValidationResultMap.get(conceptWithError).toString())));
+				conceptMap.remove(conceptWithError);
+				// Whole concept removed from map so changes will not appear in the update request.
+			}
 		}
 
 		// Remove temp description UUIDs

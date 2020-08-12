@@ -11,6 +11,7 @@ public class ComponentTransformationRequest {
 	private String branchPath;
 	private String projectKey;
 	private String taskTitle;
+	private boolean skipDroolsValidation;
 
 	// The number of changes per task.
 	private int batchSize;
@@ -23,7 +24,7 @@ public class ComponentTransformationRequest {
 	}
 
 	public ComponentTransformationRequest(String recipe, String branchPath, String projectKey,
-			String taskTitle, String taskAssignee, String taskReviewer, int batchSize, InputStream tsvValues) {
+			String taskTitle, String taskAssignee, String taskReviewer, int batchSize, InputStream tsvValues, boolean skipDroolsValidation) {
 		this.recipe = recipe;
 		this.branchPath = branchPath;
 		this.projectKey = projectKey;
@@ -32,6 +33,7 @@ public class ComponentTransformationRequest {
 		this.taskReviewer = taskReviewer;
 		this.batchSize = batchSize;
 		this.tsvValues = tsvValues;
+		this.skipDroolsValidation = skipDroolsValidation;
 	}
 
 	public String getRecipe() {
@@ -65,6 +67,10 @@ public class ComponentTransformationRequest {
 	@JsonIgnore
 	public InputStream getTsvValues() {
 		return tsvValues;
+	}
+
+	public boolean isSkipDroolsValidation() {
+		return skipDroolsValidation;
 	}
 
 	public void setTsvValues(InputStream tsvValues) {

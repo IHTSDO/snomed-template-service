@@ -62,12 +62,15 @@ public class TransformationController {
 			@RequestParam(required = false) String taskReviewer,
 
 			@RequestParam("tsvFile") MultipartFile tsvFile,
-			UriComponentsBuilder uriComponentsBuilder) throws BusinessServiceException, IOException {
+			UriComponentsBuilder uriComponentsBuilder,
+
+			@ApiParam("Skip SNOMED Drools validation (optional)")
+			@RequestParam(required = false, defaultValue = "false") boolean skipDroolsValidation) throws BusinessServiceException, IOException {
 
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
 
 		ComponentTransformationJob job = componentTransformService.queueBatchTransformation
-				(new ComponentTransformationRequest(recipe, branchPath, projectKey, taskTitle, taskAssignee, taskReviewer, batchSize, tsvFile.getInputStream()));
+				(new ComponentTransformationRequest(recipe, branchPath, projectKey, taskTitle, taskAssignee, taskReviewer, batchSize, tsvFile.getInputStream(), skipDroolsValidation));
 
 		return ResponseEntity.created(uriComponentsBuilder.path("/{branchPath}/recipes/{recipe}/jobs/{jobId}")
 				.buildAndExpand(branchPath, recipe, job.getId()).toUri()).build();
