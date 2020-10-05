@@ -4,7 +4,7 @@ SNOMED CT Transformation and Template Service
 ## Overview
 SNOMED Transformation and Template Service is a REST API with the following functions:
 
-- Authoring using SNOMED Templates
+- Authoring using [SNOMED Templates](https://github.com/IHTSDO/snomed-templates)
 - Searching concepts by template logically, lexically or both
 - Generating new concepts that conformed to a given template
 - Transforming concepts from a source template to a destination template
