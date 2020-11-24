@@ -24,6 +24,7 @@
 				"langRefset3": "$tsv.9|map-constant",
 				"acceptability3": "$tsv.10|map-constant"
 			}
-		]
+		],
+		"notes": "$tsv.11"
 	}
 }
