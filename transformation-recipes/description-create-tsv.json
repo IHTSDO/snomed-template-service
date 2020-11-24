@@ -8,22 +8,23 @@
 	"fieldMap": {
 		"conceptId": "$tsv.0",
 		"termRef": "$tsv.1",
-		"term": "$tsv.2",
-		"lang": "$tsv.3",
-		"caseSignificanceId": "$tsv.4|map-constant",
-		"typeId": "$tsv.5|map-constant",
+		"preferredTerm": "$tsv.2",
+		"term": "$tsv.3",
+		"lang": "$tsv.4",
+		"caseSignificanceId": "$tsv.5|map-constant",
+		"typeId": "$tsv.6|map-constant",
 		"acceptability": [
 			{
-				"langRefset1": "$tsv.6|map-constant",
-				"acceptability1": "$tsv.7|map-constant"
+				"langRefset1": "$tsv.7|map-constant",
+				"acceptability1": "$tsv.8|map-constant"
 			},
 			{
-				"langRefset2": "$tsv.8|map-constant",
-				"acceptability2": "$tsv.9|map-constant"
+				"langRefset2": "$tsv.9|map-constant",
+				"acceptability2": "$tsv.10|map-constant"
 			},
 			{
-				"langRefset3": "$tsv.10|map-constant",
-				"acceptability3": "$tsv.11|map-constant"
+				"langRefset3": "$tsv.11|map-constant",
+				"acceptability3": "$tsv.12|map-constant"
 			}
 		]
 	}

@@ -1,6 +1,6 @@
-conceptId	termRef	term	lang	caseSignificanceId	typeId	langRefset1	acceptability1	langRefset2	acceptability2	langRefset3	acceptability3
-272379006		The event	en	900000000000448009	900000000000013009	900000000000508004	900000000000549004
-242605002		A human bite	en	900000000000448009	900000000000013009	900000000000509007	900000000000549004
-242605002		A human bite	en	900000000000448009	900000000000013009	900000000000509007	90000000000054900
-774007	Structure of head and/or neck (body structure)	huvud och/eller hals, struktur	sv	ci	SYNONYM	Swedish	PREFERRED
-210958007	Disorder due to and following fracture at wrist and/or hand level (disorder)	följdtillstånd efter fraktur på handleds- och/eller handnivå	sv	ci	SYNONYM	Swedish	PREFERRED
+conceptId	termRef	preferredTerm	term	lang	caseSignificanceId	typeId	langRefset1	acceptability1	langRefset2	acceptability2	langRefset3	acceptability3
+272379006			The event	en	900000000000448009	900000000000013009	900000000000508004	900000000000549004
+242605002			A human bite	en	900000000000448009	900000000000013009	900000000000509007	900000000000549004
+242605002			A human bite	en	900000000000448009	900000000000013009	900000000000509007	90000000000054900
+774007	Structure of head and/or neck (body structure)		huvud och/eller hals, struktur	sv	ci	SYNONYM	Swedish	PREFERRED
+210958007	Disorder due to and following fracture at wrist and/or hand level (disorder)		följdtillstånd efter fraktur på handleds- och/eller handnivå	sv	ci	SYNONYM	Swedish	PREFERRED
