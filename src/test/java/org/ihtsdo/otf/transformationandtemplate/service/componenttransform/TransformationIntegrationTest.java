@@ -52,12 +52,22 @@ public class TransformationIntegrationTest {
 	public void test() throws BusinessServiceException, InterruptedException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-100";
 
+		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå").setDescriptionId("789");
+
+		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap();
+		svDescription.setLang("sv");
+		svDescription.setType(DescriptionPojo.Type.SYNONYM);
+		svAcceptabilityMap.put("46011000052107", PREFERRED);
+		svDescription.setAcceptabilityMap(svAcceptabilityMap);
+		svDescription.setModuleId("45991000052106");
+
 		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("45991000052106");
 		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Arrays.asList(
 				new ConceptPojo("272379006").add(new DescriptionPojo("Event (event)").setDescriptionId("123")),
 				new ConceptPojo("242605002").add(new DescriptionPojo("Bite (event)").setDescriptionId("456")),
 				new ConceptPojo("774007").add(new DescriptionPojo("Bite (event)").setDescriptionId("456")),
-				new ConceptPojo("210958007").add(new DescriptionPojo("Bite (event)").setDescriptionId("456"))
+				new ConceptPojo("210958007").add(new DescriptionPojo("Bite (event)").setDescriptionId("456")).add(svDescription)
 		));
 		Mockito.when(snowstormClientMock.runValidation(any(), any())).thenReturn(new ArrayList<>());
 		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
@@ -83,6 +93,7 @@ public class TransformationIntegrationTest {
 		DescriptionPojo descriptionEvent = null;
 		DescriptionPojo descriptionBite = null;
 		DescriptionPojo descriptionFracture = null;
+		DescriptionPojo descriptionFractureSV = null;
 		for (ConceptPojo conceptPojo : conceptsSavedCaptor.getValue()) {
 			for (DescriptionPojo description : conceptPojo.getDescriptions()) {
 				if ("The event".equals(description.getTerm())) {
@@ -94,11 +105,15 @@ public class TransformationIntegrationTest {
 				if ("följdtillstånd efter fraktur på handleds- och/eller handnivå".equals(description.getTerm())) {
 					descriptionFracture = description;
 				}
+				if ("följdtillstånd efter fraktur på handleds- och handnivå".equals(description.getTerm())) {
+					descriptionFractureSV = description;
+				}
 			}
 		}
 		assertNotNull(descriptionEvent);
 		assertNotNull(descriptionBite);
 		assertNotNull(descriptionFracture);
+		assertNotNull(descriptionFractureSV);
 
 		assertEquals("272379006", descriptionEvent.getConceptId());
 		assertEquals("The event", descriptionEvent.getTerm());
@@ -130,6 +145,13 @@ public class TransformationIntegrationTest {
 		assertEquals(1, acceptabilityMap.size());
 		assertTrue(acceptabilityMap.containsKey("46011000052107"));
 		assertEquals(PREFERRED, acceptabilityMap.get("46011000052107"));
+
+		assertEquals("följdtillstånd efter fraktur på handleds- och handnivå", descriptionFractureSV.getTerm());
+		assertEquals("sv", descriptionFractureSV.getLang());
+		acceptabilityMap = descriptionFractureSV.getAcceptabilityMap();
+		assertEquals(1, acceptabilityMap.size());
+		assertTrue(acceptabilityMap.containsKey("46011000052107"));
+		assertEquals(ACCEPTABLE, acceptabilityMap.get("46011000052107"));
 
 		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
 		assertEquals(5, changeResults.size());

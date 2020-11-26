@@ -18,6 +18,8 @@ import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult.Severity.ERROR;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
 
 /**
  * Service which acts as the logged in user and provides high level authoring functionality.
@@ -112,6 +114,7 @@ public class HighLevelAuthoringService {
 		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
 		for (String conceptId : conceptIdToDescriptionMap.keySet()) {
 			ConceptPojo conceptPojo = conceptMap.get(conceptId);
+			List<String> preferredLanguageRefsets = new ArrayList<>();
 			for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptId)) {
 				if (conceptPojo != null) {
 					conceptPojo.add(description);
@@ -125,6 +128,16 @@ public class HighLevelAuthoringService {
 						}
 					}
 
+					// Get preferred language refset within new description
+					if (description.getAcceptabilityMap() != null) {
+						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
+						for (String languageRefset : acceptabilityMap.keySet()) {
+							if (PREFERRED.equals(acceptabilityMap.get(languageRefset))) {
+								preferredLanguageRefsets.add(languageRefset);
+							}
+						}
+					}
+
 					if (!conceptPojo.isActive()) {
 						getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).addWarning("Adding description to inactive concept");
 					}
@@ -132,6 +145,23 @@ public class HighLevelAuthoringService {
 				} else {
 					getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Concept %s not found.", description.getConceptId()));
 					// Description not joined to any concept so no will not appear in the update request.
+				}
+			}
+
+			// Set the the existing PT automatically to acceptable if any
+			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty()) {
+				for (DescriptionPojo description : conceptPojo.getDescriptions()) {
+					if (description.isActive() &&
+						defaultModuleId.equals(description.getModuleId()) &&
+						!description.getDescriptionId().contains("-")) {
+						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
+						for (String languageRefset : acceptabilityMap.keySet()) {
+							if (PREFERRED.equals(acceptabilityMap.get(languageRefset)) && preferredLanguageRefsets.contains(languageRefset)) {
+								acceptabilityMap.put(languageRefset, ACCEPTABLE);
+							}
+						}
+						description.setAcceptabilityMap(acceptabilityMap);
+					}
 				}
 			}
 		}
