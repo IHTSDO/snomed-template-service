@@ -38,6 +38,7 @@ public class HighLevelAuthoringService {
 
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITHOUT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang);
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang).thenComparing(DescriptionPojo::getConceptId);
+	private static final Comparator<DescriptionReplacementPojo> CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionReplacementPojo::getConceptId);
 	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR = Comparator.comparing(ConceptValidationResult::getSeverity);
 
 	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient, int processingBatchMaxSize, boolean skipDroolsValidation) {
@@ -221,6 +222,174 @@ public class HighLevelAuthoringService {
 		}
 
 		return new ArrayList<>(changes);
+	}
+
+	public List<ChangeResult<? extends SnomedComponent>> replaceDescriptions(
+			ComponentTransformationRequest request, List<DescriptionPojo> descriptions, List<ChangeResult<DescriptionReplacementPojo>> changes) throws BusinessServiceException {
+		if (descriptions.isEmpty()) {
+			return new ArrayList<>(changes);
+		}
+		logger.info("Starting process to replace {} descriptions.", descriptions.size());
+
+		try {
+			// Initial terminology server communication check
+			snowstormClient.getBranch("MAIN");
+
+			String defaultModuleId;
+			try {
+				defaultModuleId = snowstormClient.getDefaultModuleId(request.getBranchPath());
+			} catch (WebClientException e) {
+				logger.info("Failed to load branch {} from the terminology server.", request, e);
+				return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", request));
+			}
+
+			// Give new descriptions a temporary UUID
+			descriptions.forEach(description -> {
+				if (description.getDescriptionId() == null) {
+					description.setDescriptionId(UUID.randomUUID().toString());
+				}
+			});
+
+			Map<String, Set<DescriptionPojo>> conceptIdToDescriptionMap = new HashMap<>();
+			for (DescriptionPojo description : descriptions) {
+				conceptIdToDescriptionMap.computeIfAbsent(description.getConceptId(), (key) -> new HashSet<>()).add(description);
+			}
+
+			Map<String, DescriptionReplacementPojo> conceptIdToDescriptionReplacementMap = new HashMap<>();
+			for (ChangeResult<DescriptionReplacementPojo> changeResultDescriptionReplacement : changes) {
+				conceptIdToDescriptionReplacementMap.computeIfAbsent(changeResultDescriptionReplacement.getComponent().getInactivatedDescription().getConceptId(), (key) -> changeResultDescriptionReplacement.getComponent());
+			}
+
+			// Split into batches of how many changes per branch / task
+			int batchNumber = 0;
+			for (List<String> conceptIdTaskBatch : Iterables.partition(conceptIdToDescriptionMap.keySet(), request.getBatchSize())) {
+
+				batchNumber++;
+				String branchPath = getBatchBranch(request, batchNumber);
+
+				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+				for (List<String> conceptIdProcessingBatch : Iterables.partition(conceptIdTaskBatch, processingBatchMaxSize)) {
+					Map<String, Set<DescriptionPojo>> batchMap = new HashMap<>();
+					for (String conceptId : conceptIdProcessingBatch) {
+						batchMap.put(conceptId, conceptIdToDescriptionMap.get(conceptId));
+					}
+					replaceDescriptionBatch(batchMap, defaultModuleId, changes, conceptIdToDescriptionReplacementMap, branchPath);
+				}
+			}
+
+		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
+			logger.error("Failed to communicate with the terminology server.", e);
+			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+		}
+
+		return new ArrayList<>(changes);
+	}
+	private void replaceDescriptionBatch(Map <String, Set <DescriptionPojo>> conceptIdToDescriptionMap, String defaultModuleId,
+										 List <ChangeResult <DescriptionReplacementPojo>> changes, Map <String, DescriptionReplacementPojo> conceptIdToDescriptionReplacementMap, String branchPath) throws BusinessServiceException, TimeoutException {
+
+		// Batch load concepts
+		List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptIdToDescriptionMap.keySet()), branchPath);
+
+		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+		Map<String, ConceptPojo> updatedConceptMap = new HashMap <>();
+		for (String conceptId : conceptIdToDescriptionMap.keySet()) {
+			ConceptPojo conceptPojo = conceptMap.get(conceptId);
+			if (conceptPojo == null) {
+				getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Concept %s not found.", conceptId));
+			} else {
+				boolean newDescriptionFound = false;
+				boolean inactiveDescriptionFound = false;
+				boolean updatedDescriptionFound = false;
+				Map<String, DescriptionPojo>  descriptionMap = conceptPojo.getDescriptions().stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
+				for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptId)) {
+					// Join new description
+					if (description.getDescriptionId().contains("-")) {
+						newDescriptionFound = true;
+						conceptPojo.add(description);
+
+						// Assign description module
+						if (description.getModuleId() == null) {
+							if (defaultModuleId != null) {
+								description.setModuleId(defaultModuleId);
+							} else {
+								description.setModuleId(conceptPojo.getModuleId());
+							}
+						}
+					} else {
+						// Update the replacement description if specified and inactivate the provided description
+						for (DescriptionPojo loadedDescription : conceptPojo.getDescriptions()) {
+							if (loadedDescription.getDescriptionId().equals(description.getDescriptionId())) {
+								if (loadedDescription.getModuleId().equals(defaultModuleId)) {
+									if (!description.isActive()) {
+										if (!loadedDescription.isActive()) {
+											getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not inactivate the inactive description with Id {}.", loadedDescription.getDescriptionId()));
+										} else if (!loadedDescription.isReleased()) {
+											getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not inactivate the un-published description with Id {}.", loadedDescription.getDescriptionId()));
+										} else {
+											loadedDescription.setInactivationIndicator(description.getInactivationIndicator());
+											loadedDescription.setAssociationTargets(description.getAssociationTargets());
+											loadedDescription.setActive(false);
+											inactiveDescriptionFound = true;
+										}
+									} else {
+										DescriptionPojo inactivatedDescription = descriptionMap.get(conceptIdToDescriptionReplacementMap.get(conceptId).getInactivatedDescription().getDescriptionId());
+										if (inactivatedDescription != null) {
+											// Get acceptability from the inactivated description
+											Map<String, DescriptionPojo.Acceptability> acceptabilityMap = inactivatedDescription.getAcceptabilityMap();
+											List<String> udpatedAcceptabilities = new ArrayList <>();
+											for (String key : acceptabilityMap.keySet()) {
+												if (PREFERRED.equals(acceptabilityMap.get(key))) {
+													udpatedAcceptabilities.add(key);
+												}
+											}
+
+											// update new acceptability for replaced description
+											if (!udpatedAcceptabilities.isEmpty()) {
+												acceptabilityMap = loadedDescription.getAcceptabilityMap();
+												for (String languageRefset : udpatedAcceptabilities) {
+													acceptabilityMap.put(languageRefset, PREFERRED);
+												}
+												loadedDescription.setAcceptabilityMap(acceptabilityMap);
+												loadedDescription.setActive(true);
+												updatedDescriptionFound = true;
+											} else {
+												getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("No Preferred Acceptability in description {}", inactivatedDescription.getDescriptionId()));
+											}
+										}
+									}
+								} else {
+									getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Concept update description with Id {} against module {}.", loadedDescription.getDescriptionId(), defaultModuleId));
+								}
+							}
+						}
+					}
+
+					if (!conceptPojo.isActive()) {
+						getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).addWarning("Adding or replacing description to inactive concept");
+					}
+				}
+				if (inactiveDescriptionFound && (newDescriptionFound || updatedDescriptionFound)) {
+					updatedConceptMap.put(conceptId, conceptPojo);
+				} else {
+					String error = "";
+					if (!inactiveDescriptionFound) {
+						error = "Inactivated description not found";
+					} else {
+						if (conceptIdToDescriptionReplacementMap.get(conceptId).getUpdatedDescription() != null) {
+							error = "Replaced description not found";
+						}
+					}
+					getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(error);
+				}
+			}
+		}
+
+		if (!updatedConceptMap.isEmpty()) {
+			bulkValidateThenUpdateConcepts(updatedConceptMap, branchPath, changes);
+
+			// Mark all changes which have not failed as successful
+			changes.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
+		}
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> updateAxioms(
@@ -438,6 +607,17 @@ public class HighLevelAuthoringService {
 			}
 		}
 		String message = format("Change result not found for description %s", description.toString());
+		logger.error(message);
+		throw new BusinessServiceException(message);
+	}
+
+	private ChangeResult<DescriptionReplacementPojo> getChangeResult(List<ChangeResult<DescriptionReplacementPojo>> changeResults, DescriptionReplacementPojo descriptionReplacement, Comparator<DescriptionReplacementPojo> comparator) throws BusinessServiceException {
+		for (ChangeResult<DescriptionReplacementPojo> changeResult : changeResults) {
+			if (comparator.compare(changeResult.getComponent(), descriptionReplacement) == 0) {
+				return changeResult;
+			}
+		}
+		String message = format("Change result not found for description %s", descriptionReplacement.toString());
 		logger.error(message);
 		throw new BusinessServiceException(message);
 	}

@@ -1,0 +1,37 @@
+{
+	"key": "description-replacement-tsv",
+	"descriptions": "Inactivate an existing PT or FSN and either replace with a new one or set an existing one to preferred",
+	"title": "Description replacement",
+	"source": "tsv",
+	"component": "DESCRIPTION",
+	"changeType": "REPLACE",
+	"fieldMap": {
+		"conceptId": "$tsv.0",
+		"descriptionId": "$tsv.1",
+		"preferredTerm": "$tsv.2",
+		"term": "$tsv.3",
+		"inactivationIndicator": "$tsv.4|map-constant",
+		"associationTargets": ["$tsv.5", "$tsv.6", "$tsv.7", "$tsv.8"],
+		"replacementDescriptionId": "$tsv.9",
+		"replacementTerm": "$tsv.10",
+		"newTerm": "$tsv.11",
+		"lang": "$tsv.12",
+		"caseSignificanceId": "$tsv.13|map-constant",
+		"typeId": "$tsv.14|map-constant",
+		"acceptability": [
+			{
+				"langRefset1": "$tsv.15|map-constant",
+				"acceptability1": "$tsv.16|map-constant"
+			},
+			{
+				"langRefset2": "$tsv.17|map-constant",
+				"acceptability2": "$tsv.18|map-constant"
+			},
+			{
+				"langRefset3": "$tsv.19|map-constant",
+				"acceptability3": "$tsv.20|map-constant"
+			}
+		],
+		"notes": "$tsv.21"
+	}
+}

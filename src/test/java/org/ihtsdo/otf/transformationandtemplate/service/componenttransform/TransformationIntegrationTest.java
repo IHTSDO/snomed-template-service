@@ -163,4 +163,110 @@ public class TransformationIntegrationTest {
 		assertEquals("Simple validation failed: At least one valid acceptability entry is required.", changeResults.get(2).getMessage());
 	}
 
+	@Test
+	public void testDescriptionReplacements() throws BusinessServiceException, InterruptedException, TimeoutException {
+		String branchPath = "MAIN/KAITEST/KAITEST-100";
+
+		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå");
+		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap();
+		svDescription.setLang("sv");
+		svDescription.setType(DescriptionPojo.Type.SYNONYM);
+		svAcceptabilityMap.put("46011000052107", PREFERRED);
+		svDescription.setAcceptabilityMap(svAcceptabilityMap);
+		svDescription.setModuleId("45991000052106");
+		svDescription.setReleased(true);
+		svDescription.setDescriptionId("3112261000052114");
+
+		DescriptionPojo svDescription1 = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå 1");
+		svDescription1.setLang("sv");
+		svDescription1.setType(DescriptionPojo.Type.SYNONYM);
+		svAcceptabilityMap = new HashMap();
+		svAcceptabilityMap.put("46011000052107", PREFERRED);
+		svDescription1.setAcceptabilityMap(svAcceptabilityMap);
+		svDescription1.setModuleId("45991000052106");
+		svDescription1.setReleased(true);
+		svDescription1.setDescriptionId("2579921000052110");
+
+		DescriptionPojo svDescription2 = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå 2");
+		svDescription2.setLang("sv");
+		svDescription2.setType(DescriptionPojo.Type.SYNONYM);
+		svAcceptabilityMap = new HashMap();
+		svAcceptabilityMap.put("46011000052107", ACCEPTABLE);
+		svDescription2.setAcceptabilityMap(svAcceptabilityMap);
+		svDescription2.setModuleId("45991000052106");
+		svDescription2.setDescriptionId("846011000052110");
+
+		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("45991000052106");
+		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Arrays.asList(
+				new ConceptPojo("410058007").add(new DescriptionPojo("Bite (event)").setDescriptionId("111")).add(svDescription),
+				new ConceptPojo("54352009").add(new DescriptionPojo("Bite 1 (event)").setDescriptionId("222")).add(svDescription1).add(svDescription2)
+		));
+		Mockito.when(snowstormClientMock.runValidation(any(), any())).thenReturn(new ArrayList<>());
+		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
+
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-replacement-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-replacement-tsv-test.tsv"), false));
+
+		int maxWait = 10;// seconds
+		int wait = 0;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
+		ArgumentCaptor<String> stringArgumentCaptor = ArgumentCaptor.forClass(String.class);
+
+		Mockito.verify(snowstormClientMock).saveUpdateConceptsNoValidation(conceptsSavedCaptor.capture(), stringArgumentCaptor.capture());
+
+		assertEquals(branchPath, stringArgumentCaptor.getValue());
+
+		DescriptionPojo inactiveDescription1 = null;
+		DescriptionPojo inactiveDescription2 = null;
+		DescriptionPojo createdDescription = null;
+		DescriptionPojo updatedDescription = null;
+		for (ConceptPojo conceptPojo : conceptsSavedCaptor.getValue()) {
+			for (DescriptionPojo description : conceptPojo.getDescriptions()) {
+				if ("3112261000052114".equals(description.getDescriptionId())) {
+					inactiveDescription1 = description;
+				}
+				if ("2579921000052110".equals(description.getDescriptionId())) {
+					inactiveDescription2 = description;
+				}
+				if ("846011000052110".equals(description.getDescriptionId())) {
+					updatedDescription = description;
+				}
+				if ("New replacement term".equals(description.getTerm())) {
+					createdDescription = description;
+				}
+			}
+		}
+		assertNotNull(inactiveDescription1);
+		assertNotNull(inactiveDescription2);
+		assertNotNull(updatedDescription);
+		assertNotNull(createdDescription);
+
+		assertFalse(inactiveDescription1.isActive());
+		assertFalse(inactiveDescription2.isActive());
+
+		Map<String, DescriptionPojo.Acceptability> acceptabilityMap = updatedDescription.getAcceptabilityMap();
+		assertEquals(1, acceptabilityMap.size());
+		assertTrue(acceptabilityMap.containsKey("46011000052107"));
+		assertEquals(PREFERRED, acceptabilityMap.get("46011000052107"));
+
+		assertEquals("410058007", createdDescription.getConceptId());
+		assertEquals("New replacement term", createdDescription.getTerm());
+		acceptabilityMap = createdDescription.getAcceptabilityMap();
+		assertEquals(1, acceptabilityMap.size());
+		assertTrue(acceptabilityMap.containsKey("46011000052107"));
+		assertEquals(PREFERRED, acceptabilityMap.get("46011000052107"));
+
+
+		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
+		assertEquals(5, changeResults.size());
+		assertEquals(TRUE, changeResults.get(0).getSuccess());
+		assertEquals(TRUE, changeResults.get(1).getSuccess());
+	}
 }

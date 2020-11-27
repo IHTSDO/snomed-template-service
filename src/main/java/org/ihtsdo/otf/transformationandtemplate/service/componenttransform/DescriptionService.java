@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -40,6 +41,8 @@ public class DescriptionService {
 		switch (recipe.getChangeType()) {
 			case CREATE:
 				return createDescriptions(recipe, request);
+			case REPLACE:
+				return replaceDescriptions(recipe, request);
 			case UPDATE:
 			case INACTIVATE:
 				// This code for update or inactivate
@@ -47,6 +50,14 @@ public class DescriptionService {
 			default:
 				throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
 		}
+	}
+
+	private List<ChangeResult<? extends SnomedComponent>> replaceDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser(request.isSkipDroolsValidation());
+		List<ChangeResult<DescriptionReplacementPojo>> changes = new ArrayList<>();
+		List<DescriptionPojo> descriptions = new ArrayList<>();
+		readDescriptionReplacementChanges(request, recipe, changes, descriptions);
+		return authoringServiceForCurrentUser.replaceDescriptions(request, descriptions, changes);
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> createDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
@@ -63,6 +74,72 @@ public class DescriptionService {
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		readDescriptionChanges(request, recipe, changes, descriptions);
 		return authoringServiceForCurrentUser.updateDescriptions(request, descriptions, changes);
+	}
+
+	private void readDescriptionReplacementChanges(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<DescriptionReplacementPojo>> changes, List<DescriptionPojo> descriptions) throws BusinessServiceException {
+		try (TransformationStream transformationStream = transformationStreamFactory.createTransformationStream(recipe, request)) {
+			ComponentTransformation componentTransformation;
+			while ((componentTransformation = transformationStream.next()) != null) {
+				DescriptionReplacementPojo descriptionReplacement = new DescriptionReplacementPojo();
+				ChangeResult<DescriptionReplacementPojo> changeResult = new ChangeResult<>(descriptionReplacement);
+				changes.add(changeResult);
+
+				DescriptionPojo inactivatedDescription = new DescriptionPojo();
+				String conceptId = componentTransformation.getValueString("conceptId");
+				inactivatedDescription.setConceptId(conceptId);
+				inactivatedDescription.setDescriptionId(componentTransformation.getValueString("descriptionId"));
+				inactivatedDescription.setActive(false);
+				String inactivationIndicatorId = componentTransformation.getValueString("inactivationIndicator");
+				if (inactivationIndicatorId != null) {
+					inactivatedDescription.setInactivationIndicator(ConceptPojo.InactivationIndicator.fromConceptId(inactivationIndicatorId));
+				}
+				List<String> associationTargetIds = componentTransformation.getValueList("associationTargets");
+				HashMap<ConceptPojo.HistoricalAssociation, Set<String>> associationTargets = new HashMap<>();
+				if (!isEmpty(associationTargetIds)) {
+					// Refers To is the only applicable description association type in the authoring platform today.
+					associationTargets.put(ConceptPojo.HistoricalAssociation.REFERS_TO, new HashSet<>(associationTargetIds));
+				}
+				inactivatedDescription.setAssociationTargets(associationTargets);
+
+				descriptionReplacement.setInactivatedDescription(inactivatedDescription);
+
+				String replacementDescriptionId = componentTransformation.getValueString("replacementDescriptionId");
+				if (!StringUtils.isEmpty(replacementDescriptionId)) {
+					DescriptionPojo updatedDescription = new DescriptionPojo();
+
+					updatedDescription.setConceptId(conceptId);
+					updatedDescription.setDescriptionId(componentTransformation.getValueString("replacementDescriptionId"));
+					descriptionReplacement.setUpdatedDescription(updatedDescription);
+				} else {
+					DescriptionPojo createdDescription = new DescriptionPojo();
+
+					createdDescription.setActive(true);
+					createdDescription.setConceptId(conceptId);
+					createdDescription.setTerm(componentTransformation.getValueString("newTerm"));
+					createdDescription.setLang(componentTransformation.getValueString("lang"));
+					createdDescription.setCaseSignificance(DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("caseSignificanceId")));
+					createdDescription.setType(DescriptionPojo.Type.fromConceptId(componentTransformation.getValueString("typeId")));
+					Map<String, String> acceptabilityStrings = componentTransformation.getValueMap("acceptability");
+					if (acceptabilityStrings != null) {
+						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = getAcceptabilityMapFromConceptIdStringMap(acceptabilityStrings);
+						createdDescription.setAcceptabilityMap(acceptabilityMap);
+					}
+					descriptionReplacement.setCreatedDescription(createdDescription);
+				}
+				// Simple validation
+				if (valid(descriptionReplacement, changeResult)) {
+					descriptions.add(descriptionReplacement.getInactivatedDescription());
+					if (descriptionReplacement.getCreatedDescription() != null) {
+						descriptions.add(descriptionReplacement.getCreatedDescription());
+					} else {
+						descriptions.add(descriptionReplacement.getUpdatedDescription());
+					}
+				}
+			}
+		} catch (IOException e) {
+			throw new BusinessServiceException("Failed to read transformation stream.", e);
+		}
+		logger.info("{} of {} descriptions passed simple internal checks.", descriptions.size(), changes.size());
 	}
 
 	private void readDescriptionChanges(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<DescriptionPojo>> changes, List<DescriptionPojo> descriptions) throws BusinessServiceException {
@@ -156,6 +233,62 @@ public class DescriptionService {
 		}
 		for (Function<DescriptionPojo, String> validationFunction : validation) {
 			String message = validationFunction.apply(description);
+			if (message != null) {
+				changeResult.fail(format("Simple validation failed: %s.", message));
+				return false;
+			}
+		}
+		return true;
+	}
+
+	// Some basic validation like identifier formats
+	private boolean valid(DescriptionReplacementPojo descriptionReplacement, ChangeResult<DescriptionReplacementPojo> changeResult) {
+		List<Function<DescriptionReplacementPojo, String>> validation = new ArrayList<>(Arrays.asList(
+				descriptionReplacementPojo -> descriptionReplacementPojo.getInactivatedDescription() == null ? "Inactivation description must be set" : null,
+				descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription() == null && descriptionReplacementPojo.getUpdatedDescription() == null ? "Either new description or replaced description must be set" : null,
+				descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription() != null && descriptionReplacementPojo.getUpdatedDescription() != null ? "New description and replaced description should not appear at the same time" : null
+		));
+		if (descriptionReplacement.getInactivatedDescription() != null) {
+			validation.addAll(Arrays.asList(
+					descriptionReplacementPojo -> descriptionReplacementPojo.getInactivatedDescription().getDescriptionId() == null ||
+							isValidDescriptionIdFormat(descriptionReplacementPojo.getInactivatedDescription().getDescriptionId()) ? null : "Description id format",
+					descriptionReplacementPojo -> {
+						ConceptPojo.InactivationIndicator inactivationIndicator = descriptionReplacement.getInactivatedDescription().getInactivationIndicator();
+						Map<ConceptPojo.HistoricalAssociation, Set<String>> associationTargets = descriptionReplacement.getInactivatedDescription().getAssociationTargets();
+						if (NOT_SEMANTICALLY_EQUIVALENT != inactivationIndicator && !isEmpty(associationTargets)) {
+							return "Unable to process descriptions with association targets unless the inactivation indicator is Not semantically equivalent";
+						}
+						for (Set<String> values : associationTargets.values()) {
+							for (String value : values) {
+								if (isValidConceptIdFormat(value)) {
+									return format("Association target value '%s' is not a valid concept id", value);
+								}
+							}
+						}
+						if (inactivationIndicator == null && !isEmpty(associationTargets)) {
+							return "Valid inactivation indicator must be given if association targets are set";
+						}
+						return null;
+					}
+			));
+		}
+		if (descriptionReplacement.getCreatedDescription() != null) {
+			validation.addAll(Arrays.asList(
+					descriptionReplacementPojo -> isValidConceptIdFormat(descriptionReplacementPojo.getCreatedDescription().getConceptId()) ? null : "Concept id format",
+					descriptionReplacementPojo -> Strings.isNullOrEmpty(descriptionReplacementPojo.getCreatedDescription().getTerm()) ? "Term is required" : null,
+					descriptionReplacementPojo -> Strings.isNullOrEmpty(descriptionReplacementPojo.getCreatedDescription().getLang()) ? "Lang is required" : null,
+					descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription().getCaseSignificance() == null ? "Case significance is required" : null,
+					descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription().getType() == null ? "Type is required" : null,
+					descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription().getAcceptabilityMap().isEmpty() ||
+							descriptionReplacementPojo.getCreatedDescription().getAcceptabilityMap().entrySet().stream()
+									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry is required" : null
+			));
+		}
+		if (descriptionReplacement.getUpdatedDescription() != null) {
+			validation.add(descriptionReplacementPojo -> descriptionReplacementPojo.getUpdatedDescription().getDescriptionId() != null ? null : "Description id is required");
+		}
+		for (Function<DescriptionReplacementPojo, String> validationFunction : validation) {
+			String message = validationFunction.apply(descriptionReplacement);
 			if (message != null) {
 				changeResult.fail(format("Simple validation failed: %s.", message));
 				return false;
