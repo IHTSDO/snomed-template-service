@@ -10,6 +10,7 @@
 		"preferredTerm": "$tsv.1",
 		"term": "$tsv.2",
 		"inactivationIndicator": "$tsv.3|map-constant",
-		"associationTargets": ["$tsv.4", "$tsv.5", "$tsv.6", "$tsv.7"]
+		"associationTargets": ["$tsv.4", "$tsv.5", "$tsv.6", "$tsv.7"],
+		"notes": "$tsv.8"
 	}
 }
