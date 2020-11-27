@@ -1,7 +1,7 @@
 {
 	"key": "description-replacement-tsv",
 	"descriptions": "Inactivate an existing PT or FSN and either replace with a new one or set an existing one to preferred",
-	"title": "Description replacement",
+	"title": "Description replacements",
 	"source": "tsv",
 	"component": "DESCRIPTION",
 	"changeType": "REPLACE",

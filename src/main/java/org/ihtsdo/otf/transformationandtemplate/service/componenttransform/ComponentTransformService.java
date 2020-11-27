@@ -17,6 +17,7 @@ import org.ihtsdo.otf.transformationandtemplate.domain.StatusAndMessage;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
+import org.ihtsdo.otf.transformationandtemplate.service.client.DescriptionReplacementPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TransformationStatus;
 import org.ihtsdo.sso.integration.SecurityUtil;
 import org.slf4j.Logger;
@@ -161,6 +162,10 @@ public class ComponentTransformService {
 
 	public List<ChangeResult<DescriptionPojo>> loadDescriptionTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
 		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<DescriptionPojo>>>() {});
+	}
+
+	public List<ChangeResult<DescriptionReplacementPojo>> loadDescriptionReplacementTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<DescriptionReplacementPojo>>>() {});
 	}
 
 	public List<ChangeResult<AxiomPojo>> loadAxiomTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {

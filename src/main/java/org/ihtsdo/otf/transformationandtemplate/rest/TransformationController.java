@@ -5,11 +5,9 @@ import io.swagger.annotations.ApiParam;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
-import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
-import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
-import org.ihtsdo.otf.transformationandtemplate.domain.ComponentType;
-import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
+import org.ihtsdo.otf.transformationandtemplate.domain.*;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
+import org.ihtsdo.otf.transformationandtemplate.service.client.DescriptionReplacementPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.ComponentTransformService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -101,11 +99,18 @@ public class TransformationController {
 
 		TransformationRecipe transformationRecipe = componentTransformService.loadRecipeOrThrow(branchPath, recipe);
 		ComponentType componentType = transformationRecipe.getComponent();
+		ChangeType chanageType = transformationRecipe.getChangeType();
 
 		if (componentType == ComponentType.DESCRIPTION) {
-			List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, jobId);
 			setTSVHeaders(jobId, servletResponse);
-			writeDescriptionResults(changeResults, servletResponse);
+			if (ChangeType.REPLACE == chanageType) {
+				List<ChangeResult<DescriptionReplacementPojo>> changeResults = componentTransformService.loadDescriptionReplacementTransformationJobResults(branchPath, jobId);
+				writeDescriptionReplacementResults(changeResults, servletResponse);
+			} else {
+				List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, jobId);
+				writeDescriptionResults(changeResults, servletResponse);
+			}
+
 		} else if (componentType == ComponentType.AXIOM) {
 			List<ChangeResult<AxiomPojo>> changeResults = componentTransformService.loadAxiomTransformationJobResults(branchPath, jobId);
 			setTSVHeaders(jobId, servletResponse);
@@ -135,6 +140,25 @@ public class TransformationController {
 						description.getId(),
 						description.getConceptId(),
 						description.getTerm(),
+						changeResult.getSuccess().toString(),
+						changeResult.getMessageOrEmpty()
+				));
+			}
+		}
+	}
+
+	private void writeDescriptionReplacementResults(List<ChangeResult<DescriptionReplacementPojo>> descriptionChangeResults, HttpServletResponse servletResponse) throws IOException {
+		try (PrintWriter writer = servletResponse.getWriter()) {
+			writer.println(String.join(TAB,
+					"description_id",
+					"concept_id",
+					"success",
+					"message"));
+			for (ChangeResult<DescriptionReplacementPojo> changeResult : descriptionChangeResults) {
+				DescriptionReplacementPojo descriptionReplacement = changeResult.getComponent();
+				writer.println(String.join(TAB,
+						descriptionReplacement.getId(),
+						descriptionReplacement.getConceptId(),
 						changeResult.getSuccess().toString(),
 						changeResult.getMessageOrEmpty()
 				));

@@ -323,10 +323,10 @@ public class HighLevelAuthoringService {
 								if (loadedDescription.getModuleId().equals(defaultModuleId)) {
 									if (!description.isActive()) {
 										if (!loadedDescription.isActive()) {
-											getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not inactivate the inactive description with Id {}.", loadedDescription.getDescriptionId()));
+											getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not inactivate an existing inactive description with Id %s.", loadedDescription.getDescriptionId()));
 											skipUpdatingConcept = true;
 										} else if (!loadedDescription.isReleased()) {
-											getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not inactivate the un-published description with Id {}.", loadedDescription.getDescriptionId()));
+											getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not inactivate the un-published description with Id %s.", loadedDescription.getDescriptionId()));
 											skipUpdatingConcept = true;
 										} else {
 											loadedDescription.setInactivationIndicator(description.getInactivationIndicator());
@@ -339,30 +339,31 @@ public class HighLevelAuthoringService {
 										if (inactivatedDescription != null) {
 											// Get acceptability from the inactivated description
 											Map<String, DescriptionPojo.Acceptability> acceptabilityMap = inactivatedDescription.getAcceptabilityMap();
-											List<String> udpatedAcceptabilities = new ArrayList <>();
+											List<String> updatedAcceptabilities = new ArrayList <>();
 											for (String key : acceptabilityMap.keySet()) {
 												if (PREFERRED.equals(acceptabilityMap.get(key))) {
-													udpatedAcceptabilities.add(key);
+													updatedAcceptabilities.add(key);
 												}
 											}
 
 											// update new acceptability for replaced description
-											if (!udpatedAcceptabilities.isEmpty()) {
+											if (!updatedAcceptabilities.isEmpty()) {
 												acceptabilityMap = loadedDescription.getAcceptabilityMap();
-												for (String languageRefset : udpatedAcceptabilities) {
+												for (String languageRefset : updatedAcceptabilities) {
 													acceptabilityMap.put(languageRefset, PREFERRED);
 												}
 												loadedDescription.setAcceptabilityMap(acceptabilityMap);
 												loadedDescription.setActive(true);
 												updatedDescriptionFound = true;
 											} else {
-												getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("No Preferred Acceptability in description {}", inactivatedDescription.getDescriptionId()));
+												getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("No Preferred Acceptability in description %s", inactivatedDescription.getDescriptionId()));
 												skipUpdatingConcept = true;
 											}
 										}
 									}
 								} else {
-									getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Concept update description with Id {} against module {}.", loadedDescription.getDescriptionId(), defaultModuleId));
+									getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(format("Could not update description with Id %s against module %s.", loadedDescription.getDescriptionId(), defaultModuleId));
+									skipUpdatingConcept = true;
 								}
 							}
 						}
@@ -376,12 +377,14 @@ public class HighLevelAuthoringService {
 					if (inactiveDescriptionFound && (newDescriptionFound || updatedDescriptionFound)) {
 						updatedConceptMap.put(conceptId, conceptPojo);
 					} else {
-						String error = "";
+						String error;
 						if (!inactiveDescriptionFound) {
-							error = "Inactivated description not found";
+							error = format("Inactivated description with Id %s not found", conceptIdToDescriptionReplacementMap.get(conceptId).getInactivatedDescription().getDescriptionId());
 						} else {
 							if (conceptIdToDescriptionReplacementMap.get(conceptId).getUpdatedDescription() != null) {
-								error = "Replaced description not found";
+								error = format("Replaced description with Id %s not found", conceptIdToDescriptionReplacementMap.get(conceptId).getUpdatedDescription().getDescriptionId());
+							} else {
+								error = format("No new term or replaced description specified");
 							}
 						}
 						getChangeResult(changes, conceptIdToDescriptionReplacementMap.get(conceptId), CONCEPT_ID_COMPARATOR).fail(error);
