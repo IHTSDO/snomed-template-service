@@ -265,7 +265,7 @@ public class TransformationIntegrationTest {
 
 
 		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
-		assertEquals(5, changeResults.size());
+		assertEquals(2, changeResults.size());
 		assertEquals(TRUE, changeResults.get(0).getSuccess());
 		assertEquals(TRUE, changeResults.get(1).getSuccess());
 	}
