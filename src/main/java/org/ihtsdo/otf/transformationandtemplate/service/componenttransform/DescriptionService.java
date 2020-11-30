@@ -201,7 +201,7 @@ public class DescriptionService {
 					}
 					for (Set<String> values : associationTargets.values()) {
 						for (String value : values) {
-							if (isValidConceptIdFormat(value)) {
+							if (!isValidConceptIdFormat(value)) {
 								return format("Association target value '%s' is not a valid concept id", value);
 							}
 						}
@@ -260,7 +260,7 @@ public class DescriptionService {
 						}
 						for (Set<String> values : associationTargets.values()) {
 							for (String value : values) {
-								if (isValidConceptIdFormat(value)) {
+								if (!isValidConceptIdFormat(value)) {
 									return format("Association target value '%s' is not a valid concept id", value);
 								}
 							}
