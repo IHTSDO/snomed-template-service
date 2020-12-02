@@ -369,6 +369,14 @@ public class HighLevelAuthoringService {
 									description.setModuleId(concept.getModuleId());
 								}
 							}
+							if (DescriptionPojo.Type.FSN == description.getType()) {
+								for (DescriptionPojo loadedDescription : concept.getDescriptions()) {
+									if (loadedDescription.isActive() && DescriptionPojo.Type.FSN == loadedDescription.getType()) {
+										description.setAcceptabilityMap(loadedDescription.getAcceptabilityMap());
+										break;
+									}
+								}
+							}
 						} else {
 							// Update the replacement description if specified and inactivate the provided description
 							for (DescriptionPojo loadedDescription : concept.getDescriptions()) {
@@ -385,21 +393,28 @@ public class HighLevelAuthoringService {
 												DescriptionPojo inactivatedDescription = descriptionMap.get(descriptionReplacement.getInactivatedDescription().getDescriptionId());
 												if (inactivatedDescription != null) {
 													Map<String, DescriptionPojo.Acceptability> acceptabilityMap = inactivatedDescription.getAcceptabilityMap();
-													List<String> updatedAcceptabilities = new ArrayList <>();
-													for (String key : acceptabilityMap.keySet()) {
-														if (PREFERRED.equals(acceptabilityMap.get(key))) {
-															updatedAcceptabilities.add(key);
-														}
-													}
-
-													// update new acceptability for replaced description
-													if (!updatedAcceptabilities.isEmpty()) {
-														acceptabilityMap = loadedDescription.getAcceptabilityMap();
-														for (String languageRefset : updatedAcceptabilities) {
-															acceptabilityMap.put(languageRefset, PREFERRED);
-														}
+													if (DescriptionPojo.Type.FSN == inactivatedDescription.getType()) {
 														loadedDescription.setAcceptabilityMap(acceptabilityMap);
-														loadedDescription.setActive(true);
+													} else {
+														List<String> updatedAcceptabilities = new ArrayList <>();
+														for (String key : acceptabilityMap.keySet()) {
+															if (PREFERRED.equals(acceptabilityMap.get(key))) {
+																updatedAcceptabilities.add(key);
+															}
+														}
+
+														// update new acceptability for replaced description
+														if (!updatedAcceptabilities.isEmpty()) {
+															acceptabilityMap = loadedDescription.getAcceptabilityMap();
+															if (acceptabilityMap == null) {
+																acceptabilityMap = new HashMap <>();
+															}
+															for (String languageRefset : updatedAcceptabilities) {
+																acceptabilityMap.put(languageRefset, PREFERRED);
+															}
+															loadedDescription.setAcceptabilityMap(acceptabilityMap);
+															loadedDescription.setActive(true);
+														}
 													}
 												}
 											}
