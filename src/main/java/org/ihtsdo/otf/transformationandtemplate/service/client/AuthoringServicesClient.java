@@ -33,6 +33,14 @@ public class AuthoringServicesClient {
 		return updateAuthoringTaskNotNullFieldsAreSet(task);
 	}
 
+	public AuthoringProject retrieveProject(String projectKey) {
+		return restClient.get()
+				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}").build(projectKey))
+				.retrieve()
+				.bodyToMono(AuthoringProject.class)
+				.block();
+	}
+
 	public AuthoringTask updateAuthoringTaskNotNullFieldsAreSet(AuthoringTask task) {
 		return restClient.put()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(task.getProjectKey(), task.getKey()))

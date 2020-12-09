@@ -37,6 +37,7 @@ public class HighLevelAuthoringService {
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITHOUT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang);
+	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getDescriptionId);
 	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang).thenComparing(DescriptionPojo::getConceptId);
 	private static final Comparator<DescriptionReplacementPojo> DESCRIPTION_REPLACEMENT_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionReplacementPojo::getId).thenComparing(DescriptionReplacementPojo::getConceptId);
 	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR = Comparator.comparing(ConceptValidationResult::getSeverity);
@@ -201,21 +202,38 @@ public class HighLevelAuthoringService {
 			// Initial terminology server communication check
 			snowstormClient.getBranch("MAIN");
 
+			// Project branch path
+			String projectBranchPath = authoringServicesClient.retrieveProject(request.getProjectKey()).getBranchPath();
+
+			// retrieve all concepts before processing update
+			List<ConceptPojo> concepts = new ArrayList <>();
+			for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
+				Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
+				concepts.addAll(snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath));
+			}
+
+			Set<String> descriptionsFound = new HashSet<>();
+			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
 			// Split into batches
 			int batchNumber = 0;
-			for (List<DescriptionPojo> descriptionTaskBatch : Iterables.partition(descriptions, request.getBatchSize())) {
+			for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(conceptMap.values(), request.getBatchSize())) {
 				batchNumber++;
 				String branchPath = getBatchBranch(request, batchNumber);
 
 				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
-				for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptionTaskBatch, processingBatchMaxSize)) {
-					List<ChangeResult<DescriptionPojo>> changesBatch = changes.stream()
-							.filter(descriptionPojoChangeResult -> descriptionProcessingBatch.contains(descriptionPojoChangeResult.getComponent()))
-							.collect(Collectors.toList());
-					updateDescriptionBatch(descriptionProcessingBatch, changesBatch, branchPath);
+				for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
+					descriptionsFound.addAll(updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath));
 				}
-
 			}
+
+			// Fail all descriptions which were not found to update
+			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
+				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITH_ID_COMPARATOR).fail("Description not found on the specified branch.");
+			}
+
+			// Mark all changes which have not failed as successful
+			changes.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
 			logger.error("Failed to communicate with the terminology server.", e);
 			failAllRemaining(changes, "Failed to communicate with the terminology server.");
@@ -504,13 +522,8 @@ public class HighLevelAuthoringService {
 		return new ArrayList<>(changes);
 	}
 
-	private void updateDescriptionBatch(List<DescriptionPojo> descriptionBatch, List<ChangeResult<DescriptionPojo>> changesBatch, String branchPath) throws BusinessServiceException, TimeoutException {
-		// Batch load concepts by description id
-		Set<String> descriptionIds = descriptionBatch.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
-		List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), branchPath);
-
+	private Set<String> updateDescriptionBatch(List<ConceptPojo> concepts,  Map<String, DescriptionPojo> descriptionIdMap, List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException, TimeoutException {
 		// Update existing descriptions
-		Map<String, DescriptionPojo> descriptionIdMap = descriptionBatch.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
 		Set<String> descriptionsFound = new HashSet<>();
 		for (ConceptPojo loadedConcept : concepts) {
 			for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
@@ -535,17 +548,13 @@ public class HighLevelAuthoringService {
 				}
 			}
 		}
-		// Fail all descriptions which were not found to update
-		for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
-			getChangeResult(changesBatch, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITHOUT_ID_COMPARATOR).fail("Description not found on the specified branch.");
-		}
 
 		if (!descriptionsFound.isEmpty()) {
 			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-			bulkValidateThenUpdateConcepts(conceptMap, branchPath, changesBatch);
-			// Mark all changes which have not failed as successful
-			changesBatch.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
+			bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
 		}
+
+		return descriptionsFound;
 	}
 
 	private void updateAxiomBatch(List<AxiomPojo> axiomBatch, List<ChangeResult<AxiomPojo>> changesBatch, String branchPath) throws BusinessServiceException, TimeoutException {
