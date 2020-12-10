@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
@@ -209,12 +210,38 @@ public class HighLevelAuthoringService {
 			List<ConceptPojo> concepts = new ArrayList <>();
 			for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
 				Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
-				concepts.addAll(snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath));
+				List<ConceptPojo> fullConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath);
+				concepts.addAll(fullConcepts.stream()
+								.filter(c1 -> concepts.stream().noneMatch(c2 -> c1.equals(c2)))
+								.collect(Collectors.toList())
+				);
 			}
 
-			Set<String> descriptionsFound = new HashSet<>();
 			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
 			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
+
+			Map<String, String > descriptionsFound = new HashMap <>();
+			for (ConceptPojo loadedConcept : concepts) {
+				for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
+					DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
+					if (descriptionUpdate != null) {
+						descriptionsFound.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+					}
+				}
+			}
+
+			// Fail all descriptions which were not found to update
+			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound.keySet())) {
+				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITH_ID_COMPARATOR).fail("Description not found on the specified branch.");
+			}
+
+			// Update conceptID to ChangeResult
+			for (ChangeResult<DescriptionPojo> changeResult : changes) {
+				if (descriptionsFound.containsKey(changeResult.id())) {
+					changeResult.getComponent().setConceptId(descriptionsFound.get(changeResult.id()));
+				}
+			}
+
 			// Split into batches
 			int batchNumber = 0;
 			for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(conceptMap.values(), request.getBatchSize())) {
@@ -223,13 +250,8 @@ public class HighLevelAuthoringService {
 
 				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
 				for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
-					descriptionsFound.addAll(updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath));
+					updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath);
 				}
-			}
-
-			// Fail all descriptions which were not found to update
-			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound)) {
-				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITH_ID_COMPARATOR).fail("Description not found on the specified branch.");
 			}
 
 			// Mark all changes which have not failed as successful
@@ -522,15 +544,13 @@ public class HighLevelAuthoringService {
 		return new ArrayList<>(changes);
 	}
 
-	private Set<String> updateDescriptionBatch(List<ConceptPojo> concepts,  Map<String, DescriptionPojo> descriptionIdMap, List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException, TimeoutException {
+	private void updateDescriptionBatch(List<ConceptPojo> concepts,  Map<String, DescriptionPojo> descriptionIdMap, List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException, TimeoutException {
 		// Update existing descriptions
-		Set<String> descriptionsFound = new HashSet<>();
 		for (ConceptPojo loadedConcept : concepts) {
 			for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
 				DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
 				if (descriptionUpdate != null) {
 					descriptionUpdate.setConceptId(loadedConcept.getConceptId());
-					descriptionsFound.add(descriptionUpdate.getDescriptionId());
 					if (descriptionUpdate.getCaseSignificance() != null) {
 						loadedDescription.setCaseSignificance(descriptionUpdate.getCaseSignificance());
 					}
@@ -549,12 +569,8 @@ public class HighLevelAuthoringService {
 			}
 		}
 
-		if (!descriptionsFound.isEmpty()) {
-			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-			bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
-		}
-
-		return descriptionsFound;
+		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+		bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
 	}
 
 	private void updateAxiomBatch(List<AxiomPojo> axiomBatch, List<ChangeResult<AxiomPojo>> changesBatch, String branchPath) throws BusinessServiceException, TimeoutException {
@@ -657,7 +673,7 @@ public class HighLevelAuthoringService {
 			logger.info("{} concepts had validation errors.", conceptsWithError.size());
 			for (String conceptWithError : conceptsWithError) {
 				changes.stream()
-						.filter(change -> change.getSuccess() == null && change.getComponent().getConceptId().equals(conceptWithError))
+						.filter(change -> change.getSuccess() == null && change.getComponent().getConceptId() != null && change.getComponent().getConceptId().equals(conceptWithError))
 						.forEach(changeResult -> changeResult.fail(format("Concept validation errors: %s", conceptValidationResultMap.get(conceptWithError).toString())));
 				conceptMap.remove(conceptWithError);
 				// Whole concept removed from map so changes will not appear in the update request.
