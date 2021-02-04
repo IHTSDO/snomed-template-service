@@ -353,7 +353,7 @@ public class HighLevelAuthoringService {
                         for (DescriptionPojo loadedDescription : concept.getDescriptions()) {
                             if (loadedDescription.getDescriptionId().equals(descriptionId)) {
                                 descriptionFound = true;
-                                if (loadedDescription.getModuleId().equals(defaultModuleId)) {
+                                if (defaultModuleId == null || loadedDescription.getModuleId().equals(defaultModuleId)) {
                                     if (!description.isActive()) {
                                         if (!loadedDescription.isActive() || !loadedDescription.isReleased()) {
                                             error = format("Could not inactivate %s with Id %s.", !loadedDescription.isActive() ? "an existing inactive description" : "the unpublished description" , loadedDescription.getDescriptionId());
@@ -381,9 +381,6 @@ public class HighLevelAuthoringService {
                                             }
                                         }
                                     }
-                                } else {
-                                    error = format("Could not update description with Id %s against module %s.", loadedDescription.getDescriptionId(), defaultModuleId);
-                                    break;
                                 }
                             }
                         }
