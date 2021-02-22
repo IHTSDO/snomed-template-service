@@ -155,7 +155,7 @@ public class HighLevelAuthoringService {
 			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty()) {
 				for (DescriptionPojo description : conceptPojo.getDescriptions()) {
 					if (description.isActive() &&
-						defaultModuleId.equals(description.getModuleId()) &&
+						(defaultModuleId == null || defaultModuleId.equals(description.getModuleId())) &&
 						!description.getDescriptionId().contains("-")) {
 						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
 						for (String languageRefset : acceptabilityMap.keySet()) {
