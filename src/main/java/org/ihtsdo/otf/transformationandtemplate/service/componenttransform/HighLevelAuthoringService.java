@@ -118,6 +118,7 @@ public class HighLevelAuthoringService {
 		for (String conceptId : conceptIdToDescriptionMap.keySet()) {
 			ConceptPojo conceptPojo = conceptMap.get(conceptId);
 			List<String> preferredLanguageRefsets = new ArrayList<>();
+			List<DescriptionPojo.Type> updatedDescriptionTypes = new ArrayList<>();
 			for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptId)) {
 				if (conceptPojo != null) {
 					conceptPojo.add(description);
@@ -137,6 +138,9 @@ public class HighLevelAuthoringService {
 						for (String languageRefset : acceptabilityMap.keySet()) {
 							if (PREFERRED.equals(acceptabilityMap.get(languageRefset))) {
 								preferredLanguageRefsets.add(languageRefset);
+								if (!updatedDescriptionTypes.contains(description.getType())) {
+									updatedDescriptionTypes.add(description.getType());
+								}
 							}
 						}
 					}
@@ -152,11 +156,12 @@ public class HighLevelAuthoringService {
 			}
 
 			// Set the the existing PT automatically to acceptable if any
-			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty()) {
+			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty() && !updatedDescriptionTypes.isEmpty()) {
 				for (DescriptionPojo description : conceptPojo.getDescriptions()) {
 					if (description.isActive() &&
 						(defaultModuleId == null || defaultModuleId.equals(description.getModuleId())) &&
-						!description.getDescriptionId().contains("-")) {
+						!description.getDescriptionId().contains("-") &&
+						updatedDescriptionTypes.contains(description.getType())) {
 						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
 						for (String languageRefset : acceptabilityMap.keySet()) {
 							if (PREFERRED.equals(acceptabilityMap.get(languageRefset)) && preferredLanguageRefsets.contains(languageRefset)) {
