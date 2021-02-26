@@ -1,11 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
@@ -28,17 +23,27 @@ public class RoleGroupNumberGenerator {
 		int groupNum;
 		Map<Integer, Integer> publishedGroupNumberCounterMap = getGroupNumberCounterMap(roleGroup, true);
 		Map<Integer, Integer> newGroupNumberCounterMap = getGroupNumberCounterMap(roleGroup, false);
-		Map.Entry<Integer, Integer> publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
-		Map.Entry<Integer, Integer> newMaxEntry = newGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByKey()).get();
-		
-		if (publishedMaxEntry.getValue() >= 2 || publishedMaxEntry.getValue() >= newMaxEntry.getValue()) {
+		Map.Entry<Integer, Integer> publishedMaxEntry = null;
+		if (!publishedGroupNumberCounterMap.entrySet().isEmpty()) {
+			publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
+		}
+		Map.Entry<Integer, Integer> newMaxEntry = null;
+		if (!newGroupNumberCounterMap.entrySet().isEmpty()) {
+			newMaxEntry = newGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByKey()).get();
+		}
+
+		if (publishedMaxEntry != null && (publishedMaxEntry.getValue() >= 2 || (newMaxEntry != null && publishedMaxEntry.getValue() >= newMaxEntry.getValue()))) {
 			groupNum = publishedMaxEntry.getKey();
 			if (groupInUse.contains(groupNum) && groupNum > 0) {
 				// Use existing published group
 				return groupNum;
 			}
 		} else {
-			groupNum = newMaxEntry.getKey();
+			if (newMaxEntry != null) {
+				groupNum = newMaxEntry.getKey();
+			} else {
+				groupNum = 0;
+			}
 		}
 		
 		if (groupNum == 0 && !containsISA(roleGroup)) {
@@ -67,9 +72,11 @@ public class RoleGroupNumberGenerator {
 		Set<Integer> groupInUse = new HashSet<>();
 		for (List<RelationshipPojo> rels : relationshipGroups) {
 			Map<Integer, Integer> publishedGroupNumberCounterMap = getGroupNumberCounterMap(rels, true);
-			Map.Entry<Integer, Integer> publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
-			if (publishedMaxEntry.getValue() >=2) {
-				groupInUse.add(publishedMaxEntry.getKey());
+			if (!publishedGroupNumberCounterMap.entrySet().isEmpty()) {
+				Map.Entry<Integer, Integer> publishedMaxEntry = publishedGroupNumberCounterMap.entrySet().stream().max(Map.Entry.comparingByValue()).get();
+				if (publishedMaxEntry.getValue() >= 2) {
+					groupInUse.add(publishedMaxEntry.getKey());
+				}
 			}
 		}
 		return groupInUse;
