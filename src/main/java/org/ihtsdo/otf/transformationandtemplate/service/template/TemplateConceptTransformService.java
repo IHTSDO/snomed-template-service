@@ -1,12 +1,12 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -216,23 +216,32 @@ public class TemplateConceptTransformService {
 	}
 
 	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowstormRestClient restClient) throws RestClientException {
-		Map<String, Set<ConceptMiniPojo>> slotToAttrbuteValuesMap = TemplateUtil.getSlotNameToAttributeValueMap(inputData.getDestinationSlotToAttributeMap(), conceptPojo);
+		Map<String, Attribute> destinationSlotToAttributeMap = inputData.getDestinationSlotToAttributeMap();
+		Map<String, Set<ConceptMiniPojo>> slotToAttrbuteValuesMap = TemplateUtil.getSlotNameToAttributeValueMap(destinationSlotToAttributeMap, conceptPojo);
 		// validate using attribute slot range when there is more than one value for a given slot
 		Map<String, ConceptMiniPojo> slotToValuesMap = new HashMap<>();
+		Map<String, ConceptMiniPojo> conceptMiniPojoCache = new HashMap<>();
 		for (String slot : slotToAttrbuteValuesMap.keySet()) {
-			if (slotToAttrbuteValuesMap.get(slot) != null) {
-				List<String> conceptIds = slotToAttrbuteValuesMap.get(slot).stream().map(ConceptMiniPojo :: getConceptId).collect(Collectors.toList());
+			Set<ConceptMiniPojo> slotToAttributeValues = slotToAttrbuteValuesMap.get(slot);
+			if (slotToAttributeValues != null) {
+				List<String> conceptIds = slotToAttributeValues.stream().map(ConceptMiniPojo::getConceptId).collect(Collectors.toList());
 				if (conceptIds.size() > 1) {
-					String rangeEcl = TemplateUtil.constructRangeValidationEcl(inputData.getDestinationSlotToAttributeMap().get(slot).getAllowableRangeECL().trim(), conceptIds);
-					Set<String> conceptsWithinRange = restClient.eclQuery(inputData.getBranchPath(), rangeEcl, conceptIds.size());
-					for (ConceptMiniPojo pojo : slotToAttrbuteValuesMap.get(slot)) {
-						if (conceptsWithinRange.contains(pojo.getConceptId())) {
-							slotToValuesMap.put(slot, pojo);
-							break;
+					String rangeEcl = TemplateUtil.constructRangeValidationEcl(destinationSlotToAttributeMap.get(slot).getAllowableRangeECL().trim(), conceptIds);
+					ConceptMiniPojo cachedConceptMiniPojo = conceptMiniPojoCache.get(rangeEcl);
+					if (cachedConceptMiniPojo != null) {
+						slotToValuesMap.put(slot, cachedConceptMiniPojo);
+					} else {
+						Set<String> conceptsWithinRange = restClient.eclQuery(inputData.getBranchPath(), rangeEcl, conceptIds.size());
+						for (ConceptMiniPojo pojo : slotToAttributeValues) {
+							if (conceptsWithinRange.contains(pojo.getConceptId())) {
+								slotToValuesMap.put(slot, pojo);
+								conceptMiniPojoCache.put(rangeEcl, pojo);
+								break;
+							}
 						}
 					}
 				} else {
-					slotToValuesMap.put(slot, slotToAttrbuteValuesMap.get(slot).iterator().next());
+					slotToValuesMap.put(slot, slotToAttributeValues.iterator().next());
 				}
 			}
 		}
