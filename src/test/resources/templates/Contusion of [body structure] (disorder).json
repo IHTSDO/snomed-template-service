@@ -1,0 +1,78 @@
+{
+  "name": "Contusion of [body structure] (disorder)",
+  "domain": "<< 125667009 |Contusion (disorder)|",
+  "version": 1,
+  "logicalTemplate": "64572001 |Disease (disorder)|:\n  [[~0..1]] {\n    [[~0..1]] 263502005 |Clinical course (attribute)| = [[+id (< 288524001 |Courses (qualifier value)|) @course]]\n  },\n  [[~1..1]] {\n    [[~1..1]] 42752001 |Due to (attribute)| = [[+id (<< 773760007 |Traumatic event (event)|) @dueTo]]\n  },\n  [[~1..1]] {\n    [[~1..1]] 116676008 |Associated morphology (attribute)| = [[+id (<< 308492005 |Contusion - lesion (morphologic abnormality)|) @contusionMorphology]],\n    [[~0..1]] 363698007 |Finding site (attribute)| = [[+id (< 442083009 |Anatomical or acquired body structure (body structure)|) @bodyStructure]]\n  },\n  [[~0..*]] {\n    [[~0..1]] 116676008 |Associated morphology (attribute)| = [[+id ((<< 49755003 |Morphologically abnormal structure (morphologic abnormality)| MINUS << 308492005 |Contusion - lesion (morphologic abnormality)|)) @morphology]],\n    [[~0..1]] 363698007 |Finding site (attribute)| = [[+id (< 442083009 |Anatomical or acquired body structure (body structure)|) @morphBodyStructure]]\n  }\n",
+  "conceptOutline": {
+    "definitionStatus": "FULLY_DEFINED",
+    "descriptions": [
+      {
+        "type": "FSN",
+        "lang": "en",
+        "termTemplate": "$course$ contusion of $bodyStructure$ (disorder)",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      },
+      {
+        "type": "SYNONYM",
+        "lang": "en",
+        "termTemplate": "$course$ contusion of $bodyStructure$",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000508004": "PREFERRED",
+          "900000000000509007": "PREFERRED"
+        }
+      },
+      {
+        "type": "SYNONYM",
+        "lang": "en",
+        "termTemplate": "$course$ bruise of $bodyStructure$",
+        "caseSignificance": "CASE_INSENSITIVE",
+        "acceptabilityMap": {
+          "900000000000509007": "ACCEPTABLE",
+          "900000000000508004": "ACCEPTABLE"
+        }
+      }
+    ]
+  },
+  "lexicalTemplates": [
+    {
+      "name": "course",
+      "displayName": "[Course]",
+      "takeFSNFromSlot": "course"
+    },
+    {
+      "name": "dueTo",
+      "displayName": "[due to]",
+      "takeFSNFromSlot": "dueTo"
+    },
+    {
+      "name": "contusionMorphology",
+      "displayName": "[Contusion morphology]",
+      "takeFSNFromSlot": "contusionMorphology"
+    },
+    {
+      "name": "bodyStructure",
+      "displayName": "[body structure]",
+      "takeFSNFromSlot": "bodyStructure",
+      "removeParts": [
+        "Structure of",
+        "structure of",
+        "structure"
+      ]
+    },
+    {
+      "name": "morphology",
+      "displayName": "[morphology]",
+      "takeFSNFromSlot": "morphology"
+    },
+    {
+      "name": "morphBodyStructure",
+      "displayName": "[morphBodyStructure]",
+      "takeFSNFromSlot": "morphBodyStructure"
+    }
+  ]
+}

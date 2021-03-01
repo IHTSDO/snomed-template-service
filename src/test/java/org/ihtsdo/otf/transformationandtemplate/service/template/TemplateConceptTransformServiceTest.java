@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
+	private static final String CONTUSION_OF_BODY_STRUCTURE = "Contusion of [body structure] (disorder)";
 
 	@Autowired
 	private TemplateConceptTransformService transformService;
@@ -62,7 +63,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		source = "Allergy to [substance]";
 		destination = "Allergy to [substance] V2";
 		transformRequest = new TemplateTransformRequest(source, destination);
-		setUpTemplates(source, destination);
+		setUpTemplates(source, destination, CONTUSION_OF_BODY_STRUCTURE);
 	}
 	
 	@Test
@@ -426,5 +427,165 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		if (!transformedConcept.equals(transformed)) {
 			assertEquals(transformedConcept.toString().replace(",", ",\n"), transformed.toString().replace(",", ",\n"));
 		}
+	}
+
+	@Test
+	public void transformConcept_ShouldReturnExpectedResult_WhenGivenDuplicateAttributeGroups() throws IOException, ServiceException, RestClientException {
+		//given
+		mockTerminologyServerClient();
+		transformRequest = new TemplateTransformRequest(null, CONTUSION_OF_BODY_STRUCTURE);
+
+		//263502005 |Clinical course (attribute)|
+		DescriptionMiniPojo clinicalCourseDescription = new DescriptionMiniPojo("Clinical course (attribute)", null);
+		ConceptMiniPojo clinicalCourseConcept = new ConceptMiniPojo("263502005");
+		clinicalCourseConcept.setFsn(clinicalCourseDescription);
+		clinicalCourseConcept.setPt(clinicalCourseDescription);
+
+		//363698007 |Finding site (attribute)|
+		DescriptionMiniPojo findingSiteDescription = new DescriptionMiniPojo("Finding site (attribute)", null);
+		ConceptMiniPojo findingSiteConcept = new ConceptMiniPojo("363698007");
+		findingSiteConcept.setFsn(findingSiteDescription);
+		findingSiteConcept.setPt(findingSiteDescription);
+
+		//116676008 |Associated morphology (attribute)|
+		DescriptionMiniPojo associatedMorphologyDescription = new DescriptionMiniPojo("Associated morphology (attribute)", null);
+		ConceptMiniPojo associatedMorphologyConcept = new ConceptMiniPojo("116676008");
+		associatedMorphologyConcept.setFsn(associatedMorphologyDescription);
+		associatedMorphologyConcept.setPt(associatedMorphologyDescription);
+
+		//116680003 |Is a (attribute)|
+		DescriptionMiniPojo isADescription = new DescriptionMiniPojo("Is a (attribute)", null);
+		ConceptMiniPojo isAConcept = new ConceptMiniPojo("116680003");
+		isAConcept.setFsn(isADescription);
+		isAConcept.setPt(isADescription);
+
+		//42752001 |Due to (attribute)|
+		DescriptionMiniPojo dueToDescription = new DescriptionMiniPojo("Due to (attribute)", null);
+		ConceptMiniPojo dueToConcept = new ConceptMiniPojo("42752001");
+		dueToConcept.setFsn(dueToDescription);
+		dueToConcept.setPt(dueToDescription);
+
+		//Axioms
+		//62459000 |Chronic persistent (qualifier value)|
+		DescriptionMiniPojo d1 = new DescriptionMiniPojo("Chronic persistent (qualifier value)", null);
+		ConceptMiniPojo c1 = new ConceptMiniPojo("62459000");
+		c1.setFsn(d1);
+		RelationshipPojo r1 = new RelationshipPojo();
+		r1.setModuleId("900000000000207008");
+		r1.setTarget(c1);
+		r1.setGroupId(1);
+		r1.setType(clinicalCourseConcept);
+		r1.setCharacteristicType("STATED_RELATIONSHIP");
+
+		//89545001 |Face structure (body structure)|
+		DescriptionMiniPojo d2 = new DescriptionMiniPojo("Face structure (body structure)", null);
+		ConceptMiniPojo c2 = new ConceptMiniPojo("89545001");
+		c2.setFsn(d2);
+		RelationshipPojo r2 = new RelationshipPojo();
+		r2.setModuleId("900000000000207008");
+		r2.setTarget(c2);
+		r2.setGroupId(4);
+		r2.setType(findingSiteConcept);
+		r2.setCharacteristicType("STATED_RELATIONSHIP");
+
+		//12402003 |Scar (morphologic abnormality)|
+		DescriptionMiniPojo d3 = new DescriptionMiniPojo("Scar (morphologic abnormality)", null);
+		ConceptMiniPojo c3 = new ConceptMiniPojo("12402003");
+		c3.setFsn(d3);
+		RelationshipPojo r3 = new RelationshipPojo();
+		r3.setModuleId("900000000000207008");
+		r3.setTarget(c3);
+		r3.setGroupId(4);
+		r3.setType(associatedMorphologyConcept);
+		r3.setCharacteristicType("STATED_RELATIONSHIP");
+
+		//64572001 |Disease (disorder)|
+		DescriptionMiniPojo d4 = new DescriptionMiniPojo("Disease (disorder)", null);
+		ConceptMiniPojo c4 = new ConceptMiniPojo("64572001");
+		c4.setFsn(d4);
+		RelationshipPojo r4 = new RelationshipPojo();
+		r4.setModuleId("900000000000207008");
+		r4.setTarget(c4);
+		r4.setGroupId(0);
+		r4.setType(isAConcept);
+		r4.setCharacteristicType("STATED_RELATIONSHIP");
+
+		//1004049005 |Exposure to extreme temperature (event)|
+		DescriptionMiniPojo d5 = new DescriptionMiniPojo("Exposure to extreme temperature (event)", null);
+		ConceptMiniPojo c5 = new ConceptMiniPojo("1004049005");
+		c5.setFsn(d5);
+		RelationshipPojo r5 = new RelationshipPojo();
+		r5.setModuleId("900000000000207008");
+		r5.setTarget(c5);
+		r5.setGroupId(2);
+		r5.setType(dueToConcept);
+		r5.setCharacteristicType("STATED_RELATIONSHIP");
+
+		//302549007 |Entire face (body structure)|
+		DescriptionMiniPojo d6 = new DescriptionMiniPojo("Entire face (body structure)", null);
+		ConceptMiniPojo c6 = new ConceptMiniPojo("302549007");
+		c6.setFsn(d6);
+		RelationshipPojo r6 = new RelationshipPojo();
+		r6.setModuleId("900000000000207008");
+		r6.setTarget(c6);
+		r6.setGroupId(3);
+		r6.setType(findingSiteConcept);
+		r6.setCharacteristicType("STATED_RELATIONSHIP");
+
+		//308492005 |Contusion - lesion (morphologic abnormality)|
+		DescriptionMiniPojo d7 = new DescriptionMiniPojo("Contusion - lesion (morphologic abnormality)", null);
+		ConceptMiniPojo c7 = new ConceptMiniPojo("308492005");
+		c7.setFsn(d7);
+		RelationshipPojo r7 = new RelationshipPojo();
+		r7.setModuleId("900000000000207008");
+		r7.setTarget(c7);
+		r7.setGroupId(3);
+		r7.setType(associatedMorphologyConcept);
+		r7.setCharacteristicType("STATED_RELATIONSHIP");
+
+		Set<RelationshipPojo> relationships = new HashSet<>();
+		Collections.addAll(relationships, r1, r2, r3, r4, r5, r6, r7);
+
+		AxiomPojo axiom = new AxiomPojo();
+		axiom.setAxiomId("9cdd8e9a-377b-4cb6-9134-448bd4338bde");
+		axiom.setModuleId("900000000000207008");
+		axiom.setActive(true);
+		axiom.setRelationships(relationships);
+
+		Set<AxiomPojo> axioms = new HashSet<>();
+		axioms.add(axiom);
+
+		ConceptPojo conceptPojo = new ConceptPojo();
+		conceptPojo.setModuleId("900000000000207008");
+		conceptPojo.setDefinitionStatus(DefinitionStatus.PRIMITIVE);
+		conceptPojo.setClassAxioms(axioms);
+		conceptPojo.setDescriptions(Collections.emptySet());
+
+		Set<String> conceptsWithinRange = new HashSet<>();
+
+		conceptsWithinRange.add("89545001");
+		conceptsWithinRange.add("302549007");
+		when(terminologyServerClient.eclQuery(eq("MAIN"), eq("(< 442083009 |Anatomical or acquired body structure (body structure)| AND (89545001 OR 302549007))"), anyInt())).thenReturn(conceptsWithinRange);
+
+		conceptsWithinRange.clear();
+		conceptsWithinRange.add("308492005");
+		when(terminologyServerClient.eclQuery(eq("MAIN"), eq("(<< 308492005 |Contusion - lesion (morphologic abnormality)| AND (12402003 OR 308492005))"), anyInt())).thenReturn(conceptsWithinRange);
+
+		conceptsWithinRange.clear();
+		conceptsWithinRange.add("12402003");
+		when(terminologyServerClient.eclQuery(eq("MAIN"), eq("((<< 49755003 |Morphologically abnormal structure (morphologic abnormality)| MINUS << 308492005 |Contusion - lesion (morphologic abnormality)|) AND (12402003 OR 308492005))"), anyInt())).thenReturn(conceptsWithinRange);
+
+		//when
+		ConceptPojo result = transformService.transformConcept("MAIN", transformRequest, conceptPojo, terminologyServerClient);
+		List<DescriptionPojo> descriptions = new ArrayList<>(result.getDescriptions());
+		Set<AxiomPojo> classAxioms = result.getClassAxioms();
+
+		//then
+		assertNotNull(result);
+		assertEquals(3, descriptions.size());
+		assertEquals("Contusion of (disorder)", descriptions.get(0).getTerm());
+		assertEquals("Bruise of", descriptions.get(1).getTerm());
+		assertEquals("Contusion of", descriptions.get(2).getTerm());
+		assertEquals(1, classAxioms.size());
 	}
 }
