@@ -1,8 +1,8 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import org.apache.commons.lang.StringUtils;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.*;
@@ -233,15 +233,15 @@ public class TemplateUtil {
 		StringBuilder eclBuilder = new StringBuilder();
 		eclBuilder.append("(");
 		eclBuilder.append(slotRangeEcl);
-		eclBuilder.append(") AND (");
-		
-		for (int i = 0; i< conceptIds.size(); i++) {
+		eclBuilder.append(" AND (");
+
+		for (int i = 0; i < conceptIds.size(); i++) {
 			if (i > 0) {
 				eclBuilder.append(" OR ");
 			}
 			eclBuilder.append(conceptIds.get(i));
 		}
-		eclBuilder.append(")");
+		eclBuilder.append("))");
 		return eclBuilder.toString();
 	}
 }
