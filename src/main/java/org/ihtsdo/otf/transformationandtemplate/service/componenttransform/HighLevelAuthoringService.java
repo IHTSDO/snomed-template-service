@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
@@ -211,6 +210,14 @@ public class HighLevelAuthoringService {
 			// Project branch path
 			String projectBranchPath = authoringServicesClient.retrieveProject(request.getProjectKey()).getBranchPath();
 
+			String defaultModuleId;
+			try {
+				defaultModuleId = snowstormClient.getDefaultModuleId(request.getBranchPath());
+			} catch (WebClientException e) {
+				logger.info("Failed to load branch {} from the terminology server.", request, e);
+				return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", request));
+			}
+
 			// retrieve all concepts before processing update
 			List<ConceptPojo> concepts = new ArrayList <>();
 			for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
@@ -226,18 +233,34 @@ public class HighLevelAuthoringService {
 			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
 
 			Map<String, String > descriptionsFound = new HashMap <>();
+			Map<String, String > invalidModuleDescriptions = new HashMap <>();
 			for (ConceptPojo loadedConcept : concepts) {
 				for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
 					DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
 					if (descriptionUpdate != null) {
-						descriptionsFound.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+						if (defaultModuleId == null || defaultModuleId.equals(loadedDescription.getModuleId())) {
+							descriptionsFound.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+						} else {
+							invalidModuleDescriptions.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+						}
 					}
 				}
 			}
+			Set<String> descriptionIdsFound = new HashSet <>();
+			descriptionIdsFound.addAll(descriptionsFound.keySet());
+			descriptionIdsFound.addAll(invalidModuleDescriptions.keySet());
 
 			// Fail all descriptions which were not found to update
-			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionsFound.keySet())) {
+			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionIdsFound)) {
 				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITH_ID_COMPARATOR).fail("Description not found on the specified branch.");
+				descriptionIdMap.remove(notFoundDescriptionId);
+			}
+
+			// Fail all descriptions which have invalid module
+			for (String descriptionId : invalidModuleDescriptions.keySet()) {
+				getChangeResult(changes, descriptionIdMap.get(descriptionId), DESCRIPTION_WITH_ID_COMPARATOR)
+						.fail(String.format("Could not update description %s.", defaultModuleId != null ? "in the core module" : "against module id " + defaultModuleId));
+				descriptionIdMap.remove(descriptionId);
 			}
 
 			// Update conceptID to ChangeResult
@@ -247,15 +270,17 @@ public class HighLevelAuthoringService {
 				}
 			}
 
-			// Split into batches
-			int batchNumber = 0;
-			for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(conceptMap.values(), request.getBatchSize())) {
-				batchNumber++;
-				String branchPath = getBatchBranch(request, batchNumber);
+			if(!descriptionIdMap.keySet().isEmpty()) {
+				// Split into batches
+				int batchNumber = 0;
+				for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(conceptMap.values(), request.getBatchSize())) {
+					batchNumber++;
+					String branchPath = getBatchBranch(request, batchNumber);
 
-				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
-				for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
-					updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath);
+					// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+					for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
+						updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath);
+					}
 				}
 			}
 

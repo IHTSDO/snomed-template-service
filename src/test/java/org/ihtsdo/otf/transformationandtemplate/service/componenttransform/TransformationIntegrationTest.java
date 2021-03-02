@@ -7,9 +7,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
-import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
+import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -43,9 +41,17 @@ public class TransformationIntegrationTest {
 	@MockBean
 	private SnowstormClient snowstormClientMock;
 
+	@MockBean
+	private AuthoringServicesClient authoringServicesClientMock;
+
+	@MockBean
+	private AuthoringServicesClientFactory authoringServicesClientFactory;
+
+
 	@Before
 	public void before() {
 		Mockito.when(snowstormClientFactory.getClientForCurrentUser()).thenReturn(snowstormClientMock);
+		Mockito.when(authoringServicesClientFactory.getClientForCurrentUser()).thenReturn(authoringServicesClientMock);
 	}
 
 	@Test
@@ -161,6 +167,43 @@ public class TransformationIntegrationTest {
 		assertEquals(TRUE, changeResults.get(3).getSuccess());
 		assertEquals(TRUE, changeResults.get(4).getSuccess());
 		assertEquals("Simple validation failed: At least one valid acceptability entry is required.", changeResults.get(2).getMessage());
+	}
+
+	@Test
+	public void testUpdateDesriptionAgainstInvalidModule() throws BusinessServiceException, InterruptedException, TimeoutException {
+		String branchPath = "MAIN/KAITEST/KAITEST-101";
+
+		DescriptionPojo enDescription = new DescriptionPojo("Test").setDescriptionId("2148514019");
+		Map<String, DescriptionPojo.Acceptability> enAcceptabilityMap = new HashMap();
+		enDescription.setLang("en");
+		enDescription.setType(DescriptionPojo.Type.SYNONYM);
+		enAcceptabilityMap.put("900000000000509007", PREFERRED);
+		enAcceptabilityMap.put("900000000000508004", PREFERRED);
+		enDescription.setAcceptabilityMap(enAcceptabilityMap);
+		enDescription.setModuleId("900000000000207008"); // core module
+
+		Mockito.when(authoringServicesClientMock.retrieveProject(any())).thenReturn(new AuthoringProject());
+		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("45991000052106"); // sv module
+		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Arrays.asList(
+				new ConceptPojo("272379006").add(enDescription)
+		));
+
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-inactivate-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-inactivate-tsv-test.tsv"), false));
+
+		int maxWait = 10;// seconds
+		int wait = 0;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
+
+
+		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
+		assertEquals(1, changeResults.size());
+		assertEquals(FALSE, changeResults.get(0).getSuccess());
+		assertEquals("Could not update description in the core module.", changeResults.get(0).getMessage());
 	}
 
 	@Test
