@@ -365,8 +365,13 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	}
 	
 	private void mockSearchAttributeValuesWithinRange(String rangeEcl, List<String> conceptIds) throws RestClientException {
-		when(terminologyServerClient.eclQuery(anyString(), contains(rangeEcl), anyInt()))
-		.thenReturn(new HashSet<String>(conceptIds));
+		Set<SimpleConceptPojo> simpleConceptPojos = new HashSet<>();
+		for (String conceptId : conceptIds) {
+			SimpleConceptPojo simpleConceptPojo = new SimpleConceptPojo();
+			simpleConceptPojo.setId(conceptId);
+			simpleConceptPojos.add(simpleConceptPojo);
+		}
+		when(terminologyServerClient.getConcepts(anyString(), contains(rangeEcl), any(), any(), anyInt())).thenReturn(simpleConceptPojos);
 	}
 
 	private List<ConceptPojo> getTransformationResults(List<Future<TransformationResult>> results) {

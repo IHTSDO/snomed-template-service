@@ -228,20 +228,4 @@ public class TemplateUtil {
 		} 
 		return term;
 	}
-	
-	public static String constructRangeValidationEcl(String slotRangeEcl, List<String> conceptIds) {
-		StringBuilder eclBuilder = new StringBuilder();
-		eclBuilder.append("(");
-		eclBuilder.append(slotRangeEcl);
-		eclBuilder.append(") AND (");
-		
-		for (int i = 0; i< conceptIds.size(); i++) {
-			if (i > 0) {
-				eclBuilder.append(" OR ");
-			}
-			eclBuilder.append(conceptIds.get(i));
-		}
-		eclBuilder.append(")");
-		return eclBuilder.toString();
-	}
 }
