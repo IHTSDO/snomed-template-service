@@ -9,19 +9,19 @@ public class AuthoringServicesClient {
 
 	private final WebClient restClient;
 
-	private AuthoringServicesClient(String apiUrl, String authenticationToken) {
-		restClient = RestClientHelper.getRestClient(apiUrl, authenticationToken);
+	private AuthoringServicesClient(String apiUrl, String authenticationToken, String codecMaxInMemorySize) {
+		restClient = RestClientHelper.getRestClient(apiUrl, authenticationToken, codecMaxInMemorySize);
 	}
 
-	public static AuthoringServicesClient createClientForUser(String apiUrl, String authenticationToken) {
-		return new AuthoringServicesClient(apiUrl, authenticationToken);
+	public static AuthoringServicesClient createClientForUser(String apiUrl, String authenticationToken, String codecMaxInMemorySize) {
+		return new AuthoringServicesClient(apiUrl, authenticationToken, codecMaxInMemorySize);
 	}
 
 	public AuthoringTask createTask(String projectKey, String title, String description) {
 		// Create a new task using project key and return branch path
 		return restClient.post()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks").build(projectKey))
-				.body(BodyInserters.fromObject(asMap("summary", title, "description", description)))
+				.body(BodyInserters.fromValue(asMap("summary", title, "description", description)))
 				.retrieve()
 				.bodyToMono(AuthoringTask.class)
 				.block();
@@ -44,7 +44,7 @@ public class AuthoringServicesClient {
 	public AuthoringTask updateAuthoringTaskNotNullFieldsAreSet(AuthoringTask task) {
 		return restClient.put()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(task.getProjectKey(), task.getKey()))
-				.body(BodyInserters.fromObject(task))
+				.body(BodyInserters.fromValue(task))
 				.retrieve()
 				.bodyToMono(AuthoringTask.class)
 				.block();

@@ -19,18 +19,18 @@ import java.util.concurrent.TimeoutException;
 public class SnowstormClient {
 
 	private static final String DEFAULT_MODULE_ID_METADATA_KEY = "defaultModuleId";
-	private static final ParameterizedTypeReference<List<ConceptPojo>> CONCEPT_LIST_TYPE_REF = new ParameterizedTypeReference<List<ConceptPojo>>() {};
-	private static final ParameterizedTypeReference<List<ConceptValidationResult>> CONCEPT_VALIDATION_RESULT_TYPE_REF = new ParameterizedTypeReference<List<ConceptValidationResult>>() {};
+	private static final ParameterizedTypeReference<List<ConceptPojo>> CONCEPT_LIST_TYPE_REF = new ParameterizedTypeReference<>() {};
+	private static final ParameterizedTypeReference<List<ConceptValidationResult>> CONCEPT_VALIDATION_RESULT_TYPE_REF = new ParameterizedTypeReference<>() {};
 
 	private final WebClient webClient;
 	private final Logger logger = LoggerFactory.getLogger(SnowstormClient.class);
 
-	public static SnowstormClient createClientForUser(String snowstormApiUrl, String authenticationCookie) {
-		return new SnowstormClient(snowstormApiUrl, authenticationCookie);
+	public static SnowstormClient createClientForUser(String snowstormApiUrl, String authenticationCookie, String codecMaxInMemorySize) {
+		return new SnowstormClient(snowstormApiUrl, authenticationCookie, codecMaxInMemorySize);
 	}
 
-	private SnowstormClient(String snowstormApiUrl, String authenticationCookie) {
-		webClient = RestClientHelper.getRestClient(snowstormApiUrl, authenticationCookie);
+	private SnowstormClient(String snowstormApiUrl, String authenticationCookie, String codecMaxInMemorySize) {
+		webClient = RestClientHelper.getRestClient(snowstormApiUrl, authenticationCookie, codecMaxInMemorySize);
 	}
 
 	public List<ConceptPojo> getFullConcepts(ConceptBulkLoadRequest conceptBulkLoadRequest, String branchPath) {
@@ -38,7 +38,7 @@ public class SnowstormClient {
 				.uri(uriBuilder -> uriBuilder
 						.path("/browser/{branch}/concepts/bulk-load")
 						.build(branchPath))
-				.body(BodyInserters.fromObject(conceptBulkLoadRequest))
+				.body(BodyInserters.fromValue(conceptBulkLoadRequest))
 				.retrieve()
 				.bodyToMono(CONCEPT_LIST_TYPE_REF)
 				.block();
@@ -52,7 +52,7 @@ public class SnowstormClient {
 				.uri(uriBuilder -> uriBuilder
 						.path("/browser/{branch}/concepts/bulk")
 						.build(branchPath))
-				.body(BodyInserters.fromObject(conceptPojos))
+				.body(BodyInserters.fromValue(conceptPojos))
 				.exchange()
 				.block();
 		String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
@@ -112,7 +112,7 @@ public class SnowstormClient {
 					.uri(uriBuilder -> uriBuilder
 							.path("/browser/{branch}/validate/concepts")
 							.build(branchPath))
-					.body(BodyInserters.fromObject(concepts))
+					.body(BodyInserters.fromValue(concepts))
 					.retrieve()
 					.bodyToMono(CONCEPT_VALIDATION_RESULT_TYPE_REF)
 					.block();
@@ -127,7 +127,7 @@ public class SnowstormClient {
 				.uri(uriBuilder -> uriBuilder
 						.path("/branches")
 						.build(branchPath))
-				.body(BodyInserters.fromObject(RestClientHelper.asMap("name", name, "parent", parent)))
+				.body(BodyInserters.fromValue(RestClientHelper.asMap("name", name, "parent", parent)))
 				.retrieve()
 				.bodyToMono(Map.class)
 				.block();

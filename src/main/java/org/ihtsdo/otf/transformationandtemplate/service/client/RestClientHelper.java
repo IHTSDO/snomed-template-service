@@ -3,6 +3,8 @@ package org.ihtsdo.otf.transformationandtemplate.service.client;
 import com.amazonaws.util.StringMapBuilder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.util.unit.DataSize;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Map;
@@ -11,17 +13,25 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 
 public class RestClientHelper {
 
-	public static WebClient getRestClient(String apiUrl, String authenticationCookie) {
-		WebClient webClient;
+	public static WebClient getRestClient(String apiUrl, String authenticationCookie, String codecMaxInMemorySize) {
 		WebClient.Builder builder = WebClient.builder()
 				.baseUrl(apiUrl)
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+		if (codecMaxInMemorySize != null) {
+			int codecMaxInMemorySizeBytes = (int) DataSize.parse(codecMaxInMemorySize).toBytes();
+			builder.exchangeStrategies(
+					ExchangeStrategies.builder()
+							.codecs(configurer -> configurer
+									.defaultCodecs()
+									.maxInMemorySize(codecMaxInMemorySizeBytes))
+							.build());
+
+		}
 		if (!isEmpty(authenticationCookie) && authenticationCookie.contains("=")) {
 			String[] split = authenticationCookie.split("=");
 			builder.defaultCookie(split[0], split[1]);
 		}
-		webClient = builder.build();
-		return webClient;
+		return builder.build();
 	}
 
 	public static Map<String, String> asMap(String... keyThenValueThenRepeat) {

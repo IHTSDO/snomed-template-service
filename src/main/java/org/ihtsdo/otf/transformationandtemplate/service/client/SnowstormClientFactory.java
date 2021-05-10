@@ -12,10 +12,12 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 public class SnowstormClientFactory {
 
 	private final String snowstormApiUrl;
+	private final String codecMaxInMemorySize;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public SnowstormClientFactory(@Value("${terminologyserver.url}") String snowstormApiUrl) {
+	public SnowstormClientFactory(@Value("${terminologyserver.url}") String snowstormApiUrl, @Value("${spring.codec.max-in-memory-size}") String codecMaxInMemorySize) {
 		this.snowstormApiUrl = snowstormApiUrl;
+		this.codecMaxInMemorySize = codecMaxInMemorySize;
 	}
 
 	public SnowstormClient getClientForCurrentUser() {
@@ -23,6 +25,6 @@ public class SnowstormClientFactory {
 		if (isEmpty(authenticationToken)) {
 			logger.warn("Authentication token is not set.");
 		}
-		return SnowstormClient.createClientForUser(snowstormApiUrl, authenticationToken);
+		return SnowstormClient.createClientForUser(snowstormApiUrl, authenticationToken, codecMaxInMemorySize);
 	}
 }

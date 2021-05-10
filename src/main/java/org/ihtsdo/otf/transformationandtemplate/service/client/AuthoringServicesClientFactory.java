@@ -12,10 +12,12 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 public class AuthoringServicesClientFactory {
 
 	private final String authoringServicesApiUrl;
+	private final String codecMaxInMemorySize;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public AuthoringServicesClientFactory(@Value("${authoring-services.url}") String authoringServicesApiUrl) {
+	public AuthoringServicesClientFactory(@Value("${authoring-services.url}") String authoringServicesApiUrl, @Value("${spring.codec.max-in-memory-size}") String codecMaxInMemorySize) {
 		this.authoringServicesApiUrl = authoringServicesApiUrl;
+		this.codecMaxInMemorySize = codecMaxInMemorySize;
 	}
 
 	public AuthoringServicesClient getClientForCurrentUser() {
@@ -23,6 +25,6 @@ public class AuthoringServicesClientFactory {
 		if (isEmpty(authenticationToken)) {
 			logger.warn("Authentication token is not set.");
 		}
-		return AuthoringServicesClient.createClientForUser(authoringServicesApiUrl, authenticationToken);
+		return AuthoringServicesClient.createClientForUser(authoringServicesApiUrl, authenticationToken, codecMaxInMemorySize);
 	}
 }
