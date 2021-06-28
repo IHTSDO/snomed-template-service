@@ -169,11 +169,11 @@ public class TemplateStore {
 		if (attribute.getCardinalityMax() != null) {
 			relationship.setCardinalityMax(attribute.getCardinalityMax());
 		}
-		if (attribute.getAllowableRangeECL() != null) {
-			relationship.setTargetSlot(new SimpleSlot(attribute.getSlotName(), attribute.getAllowableRangeECL()));
+		if (attribute.getValueAllowableRangeECL() != null) {
+			relationship.setTargetSlot(new SimpleSlot(attribute.getValueSlotName(), attribute.getValueAllowableRangeECL()));
 		}
-		if (attribute.getSlotReference() != null) {
-			relationship.setTargetSlot(new SimpleSlot(attribute.getSlotReference()));
+		if (attribute.getValueSlotReference() != null) {
+			relationship.setTargetSlot(new SimpleSlot(attribute.getValueSlotReference()));
 		}
 		return relationship;
 	}

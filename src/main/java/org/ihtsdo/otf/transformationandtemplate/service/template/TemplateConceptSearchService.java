@@ -320,14 +320,14 @@ public class TemplateConceptSearchService {
 	private Map<String,String> mapSlots(List<Attribute> attributes) {
 		Map<String, String> slotMap = new HashMap<>();
 		for (Attribute attribute : attributes) {
-			if (attribute.getSlotName() != null) {
+			if (attribute.getValueSlotName() != null) {
 				String slotValue = null;
 				if (attribute.getValue() != null) {
 					slotValue = attribute.getValue();
-				} else if (attribute.getAllowableRangeECL() != null) {
-					slotValue = attribute.getAllowableRangeECL();
+				} else if (attribute.getValueAllowableRangeECL() != null) {
+					slotValue = attribute.getValueAllowableRangeECL();
 				}
-				slotMap.put(attribute.getSlotName(), slotValue);
+				slotMap.put(attribute.getValueSlotName(), slotValue);
 			}
 		}
 		return slotMap;
@@ -360,18 +360,18 @@ public class TemplateConceptSearchService {
 			if (attribute.getValue() != null) {
 				queryBuilder.append(attribute.getValue());
 			}
-			else if (attribute.getAllowableRangeECL() != null) {
+			else if (attribute.getValueAllowableRangeECL() != null) {
 				boolean isCompound = false;
-				if (attribute.getAllowableRangeECL().contains(OR) || attribute.getAllowableRangeECL().contains(AND)) {
+				if (attribute.getValueAllowableRangeECL().contains(OR) || attribute.getValueAllowableRangeECL().contains(AND)) {
 					isCompound = true;
 					queryBuilder.append("(");
 				}
-				queryBuilder.append(attribute.getAllowableRangeECL());
+				queryBuilder.append(attribute.getValueAllowableRangeECL());
 				if (isCompound) {
 					queryBuilder.append(")");
 				}
-			} else if (attribute.getSlotReference() != null) {
-				queryBuilder.append(attribute.getSlotReference());
+			} else if (attribute.getValueSlotReference() != null) {
+				queryBuilder.append(attribute.getValueSlotReference());
 			}
 		}
 		return queryBuilder.toString();

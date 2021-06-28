@@ -126,8 +126,8 @@ public class TemplateUtil {
 			if (!includeOptionalAttribute && ("0".equals(attribute.getCardinalityMin()))) {
 				continue;
 			}
-			if (attribute.getSlotName() != null) {
-				slotToAttributeMap.put(attribute.getSlotName(), attribute);
+			if (attribute.getValueSlotName() != null) {
+				slotToAttributeMap.put(attribute.getValueSlotName(), attribute);
 			}
 		}
 
@@ -136,8 +136,8 @@ public class TemplateUtil {
 				if (!includeOptionalAttribute && ("0".equals(attribute.getCardinalityMin()))) {
 					continue;
 				}
-				if (attribute.getSlotName() != null) {
-					slotToAttributeMap.put(attribute.getSlotName(), attribute);
+				if (attribute.getValueSlotName() != null) {
+					slotToAttributeMap.put(attribute.getValueSlotName(), attribute);
 				}
 			}
 		}

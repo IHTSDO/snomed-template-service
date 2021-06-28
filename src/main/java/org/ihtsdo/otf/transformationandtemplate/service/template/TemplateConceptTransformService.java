@@ -227,7 +227,7 @@ public class TemplateConceptTransformService {
 			if (conceptMiniPojos != null) {
 				List<String> conceptIds = conceptMiniPojos.stream().map(ConceptMiniPojo :: getConceptId).collect(Collectors.toList());
 				if (conceptIds.size() > 1) {
-					Set<SimpleConceptPojo> concepts = restClient.getConcepts(branchPath, destinationSlotToAttributeMap.get(slot).getAllowableRangeECL(), null, conceptIds, 100);
+					Set<SimpleConceptPojo> concepts = restClient.getConcepts(branchPath, destinationSlotToAttributeMap.get(slot).getValueAllowableRangeECL(), null, conceptIds, 100);
 					Set<String> conceptsWithinRange = concepts.stream().map(SimpleConceptPojo::getId).collect(Collectors.toSet());
 					for (ConceptMiniPojo pojo : conceptMiniPojos) {
 						if (conceptsWithinRange.contains(pojo.getConceptId())) {
