@@ -3,6 +3,8 @@ package org.ihtsdo.otf.transformationandtemplate.service.client;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Branch;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptChangeBatchStatus;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
+import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
@@ -10,13 +12,18 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class SnowstormClient {
+	
+	public static final long DEFAULT_TIMEOUT = 60; //seconds
+	public static final long DEFAULT_PAGESIZE = 500;
 
 	private static final String DEFAULT_MODULE_ID_METADATA_KEY = "defaultModuleId";
 	private static final ParameterizedTypeReference<List<ConceptPojo>> CONCEPT_LIST_TYPE_REF = new ParameterizedTypeReference<>() {};
@@ -45,7 +52,7 @@ public class SnowstormClient {
 		logger.info("Loaded {} concepts.", concepts != null ? concepts.size() : 0);
 		return concepts;
 	}
-
+	
 	public ConceptChangeBatchStatus saveUpdateConceptsNoValidation(Collection<ConceptPojo> conceptPojos, String branchPath) throws TimeoutException {
 		logger.info("Saving {} concepts.", conceptPojos.size());
 		ClientResponse bulkUpdateResponse = webClient.post()
@@ -130,7 +137,220 @@ public class SnowstormClient {
 				.body(BodyInserters.fromValue(RestClientHelper.asMap("name", name, "parent", parent)))
 				.retrieve()
 				.bodyToMono(Map.class)
-				.block();
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+	
+
+	public List<Concept> getParents(String branchPath, String conceptId) {
+		return Arrays.asList(webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("/browser/{branch}/concepts/{sctId}/parents")
+						.queryParam("form", "inferred")
+						.build(branchPath, conceptId))
+				.retrieve()
+				.bodyToMono(Concept[].class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+	}
+	
+
+	public RefsetMemberPojo createRefsetMember(String branchPath, RefsetMemberPojo rm) {
+		return webClient.post()
+			.uri(uriBuilder -> uriBuilder
+					.path("{branch}/members")
+					.build(branchPath))
+			.body(Mono.just(rm), RefsetMemberPojo.class)
+			.retrieve()
+			.bodyToMono(RefsetMemberPojo.class)
+			.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+	
+
+	public void updateRefsetMember(String branchPath, RefsetMemberPojo rm) {
+		webClient.put()
+		.uri(uriBuilder -> uriBuilder
+				.path("{branch}/members")
+				.build(branchPath))
+		.body(Mono.just(rm), RefsetMemberPojo.class)
+		.retrieve()
+		.bodyToMono(RefsetMemberPojo.class)
+		.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+	
+
+	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, String refsetId, List<ConceptPojo> ref) {
+		long currentOffset = 0;
+		return fetchRefsetMemberPage(branchPath, refsetId, currentOffset)
+				.expand(response -> {
+					long expected = response.getTotal();
+					long totalReceived = response.getOffset() + response.getItems().size();
+					if (totalReceived >= expected) {
+						return Mono.empty();
+					}
+					return fetchRefsetMemberPage(branchPath, refsetId, totalReceived);
+				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+
+	private Mono<RefsetMemberPage> fetchRefsetMemberPage(String branchPath, String refsetId, long currentOffset) {
+		logger.info("Requesting members of " + refsetId + " from " + branchPath + " with offset " + currentOffset);
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("{branch}/members")
+						.queryParam("referenceSet", refsetId)
+						.queryParam("offset", currentOffset)
+						.queryParam("limit", DEFAULT_PAGESIZE)
+						.build(branchPath))
+				.retrieve()
+				.bodyToMono(RefsetMemberPage.class);
+	}
+	
+
+	public List<RefsetMemberPojo> findRefsetMemberByReferencedComponentId(String branchPath, String refsetId, String referencedComponentId) {
+		return Arrays.asList(webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("{branch}/members")
+						.queryParam("referenceSet", refsetId)
+						.queryParam("referencedComponentId", referencedComponentId)
+						.build(branchPath))
+				.retrieve()
+				.bodyToMono(RefsetMemberPojo[].class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+	}
+
+	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentId(String branchPath, String refsetId, String targetComponentId) {
+		return Arrays.asList(webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("{branch}/members")
+						.queryParam("referenceSet", refsetId)
+						.queryParam("targetComponentId", targetComponentId)
+						.build(branchPath))
+				.retrieve()
+				.bodyToMono(RefsetMemberPojo[].class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+	}
+	
+	public static final class RefsetMemberPage {
+		List<RefsetMemberPojo> items;
+		Long total;
+		Long limit;
+		Long offset;
+		
+		public List<RefsetMemberPojo> getItems() {
+			return items;
+		}
+		public void setItems(List<RefsetMemberPojo> items) {
+			this.items = items;
+		}
+		public Long getTotal() {
+			return total;
+		}
+		public void setTotal(Long total) {
+			this.total = total;
+		}
+		public Long getLimit() {
+			return limit;
+		}
+		public void setLimit(Long limit) {
+			this.limit = limit;
+		}
+		public Long getOffset() {
+			return offset;
+		}
+		public void setOffset(Long offset) {
+			this.offset = offset;
+		}
+	}
+	
+	public List<Concept> findNewConcepts(String branchPath, String ecl, String termFilter) {
+		long currentOffset = 0;
+		return fetchNewConceptPage(branchPath, ecl, termFilter, currentOffset)
+				.expand(response -> {
+					long expected = response.getTotal();
+					long totalReceived = response.getOffset() + response.getItems().size();
+					if (totalReceived >= expected) {
+						return Mono.empty();
+					}
+					return fetchNewConceptPage(branchPath, ecl, termFilter, totalReceived);
+				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+
+	private Mono<ConceptPage> fetchNewConceptPage(String branchPath, String ecl, String termFilter, long currentOffset) {
+		logger.info("Requesting new " + termFilter + " concepts from " + branchPath + " with offset " + currentOffset);
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+					.path("/{branch}/concepts")
+					.queryParam("isPublished", false)
+					.queryParam("activeFilter", true)
+					.queryParam("ecl", ecl)
+					.queryParam("term", termFilter)
+					.queryParam("offset", currentOffset)
+					.queryParam("limit", DEFAULT_PAGESIZE)
+					.build(branchPath))
+				.retrieve()
+				.bodyToMono(ConceptPage.class);
+	}
+	
+	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, String termFilter) {
+		long currentOffset = 0;
+		return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, currentOffset)
+				.expand(response -> {
+					long expected = response.getTotal();
+					long totalReceived = response.getOffset() + response.getItems().size();
+					if (totalReceived >= expected) {
+						return Mono.empty();
+					}
+					return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, totalReceived);
+				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+
+	private Mono<ConceptPage> fetchUpdatedConceptPage(String branchPath, boolean activeFilter, String termFilter, long currentOffset) {
+		logger.info("Requesting " + (activeFilter?"active " : "inactive ") + termFilter + " concepts from " + branchPath + " with offset " + currentOffset);
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+					.path("/{branch}/concepts")
+					.queryParam("isNullEffectiveTime", true)
+					.queryParam("activeFilter", activeFilter)
+					.queryParam("term", termFilter)
+					.queryParam("offset", currentOffset)
+					.queryParam("limit", DEFAULT_PAGESIZE)
+					.build(branchPath))
+				.retrieve()
+				.bodyToMono(ConceptPage.class);
+	}
+	
+	//I tried doing this with generics, but couldn't then say DataPage<ConceptPojo>.class
+	public static final class ConceptPage {
+		List<Concept> items;
+		Long total;
+		Long limit;
+		Long offset;
+		
+		public List<Concept> getItems() {
+			return items;
+		}
+		public void setItems(List<Concept> items) {
+			this.items = items;
+		}
+		public Long getTotal() {
+			return total;
+		}
+		public void setTotal(Long total) {
+			this.total = total;
+		}
+		public Long getLimit() {
+			return limit;
+		}
+		public void setLimit(Long limit) {
+			this.limit = limit;
+		}
+		public Long getOffset() {
+			return offset;
+		}
+		public void setOffset(Long offset) {
+			this.offset = offset;
+		}
 	}
 
 	public static final class ConceptBulkLoadRequest {
@@ -159,4 +379,5 @@ public class SnowstormClient {
 			return descriptionIds;
 		}
 	}
+
 }

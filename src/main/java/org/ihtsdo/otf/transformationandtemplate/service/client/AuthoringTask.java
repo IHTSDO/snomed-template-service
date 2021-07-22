@@ -9,6 +9,7 @@ public class AuthoringTask {
 	private String projectKey;
 	private String summary;
 	private String status;
+	private String description;
 	private TaskUser assignee;
 	private Collection<TaskUser> reviewers;
 
@@ -19,13 +20,17 @@ public class AuthoringTask {
 	private Date updated;
 
 	private String branchPath;
-
+	
 	private AuthoringTask() {
 	}
 
 	public AuthoringTask(String key, String projectKey) {
 		this.key = key;
 		this.projectKey = projectKey;
+	}
+	
+	public AuthoringTask clone() {
+		return new AuthoringTask(this.getKey(), this.getProjectKey());
 	}
 
 	public String getKey() {
@@ -107,5 +112,13 @@ public class AuthoringTask {
 	public AuthoringTask setBranchPath(String branchPath) {
 		this.branchPath = branchPath;
 		return this;
+	}
+	
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 }
