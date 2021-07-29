@@ -1,23 +1,30 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
+import org.apache.commons.lang3.StringUtils;
+import org.ihtsdo.otf.RF2Constants.ReportActionType;
+import org.ihtsdo.otf.RF2Constants.Severity;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Project;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
+import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClient;
 import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringTask;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
+import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
 import org.ihtsdo.otf.utils.ExceptionUtils;
+import org.ihtsdo.otf.utils.SnomedUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.JobRun;
 import org.snomed.otf.scheduler.domain.JobStatus;
 import org.snomed.otf.script.Script;
+import org.snomed.otf.script.dao.DataUploader;
+import org.snomed.otf.script.dao.ReportManager;
+import org.snomed.otf.script.dao.ReportSheetManager;
 
 public abstract class AuthoringPlatformScript extends Script implements JobClass {
 	
-	private final Logger logger = LoggerFactory.getLogger(getClass());
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	protected JobRun jobRun;
 	protected Project project;
@@ -43,18 +50,19 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	}
 
 	@Override
-	public Project getProject() {
-		return project;
-	}
-
-	@Override
 	public String detectReleaseBranch() {
-		throw new UnsupportedOperationException();
+		return null;  //AP Scripts don't run against release branch
 	}
 
 	@Override
 	public String getEnv() {
-		throw new UnsupportedOperationException();
+		String apiURL = SnowstormClientFactory.instance().getApiUrl();
+		if (apiURL.contains("dev-")) {
+			return "DEV";
+		} else if (apiURL.contains("uat-")) {
+			return "UAT";
+		}
+		return "PROD";
 	}
 	
 	@Override
@@ -68,6 +76,8 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		//Clients are user specific so we have to create new ones for each job
 		asClient = mgr.getASClient();
 		tsClient = mgr.getTSClient();
+		initialiseReportConfiguration(jobRun);
+		ReportSheetManager.targetFolderId = "1fMHFzq5rP1WGmq3AXA2C2RwYXADzGLxR";
 		try {
 			task = asClient.createTask(jobRun.getProject(), taskTitle, "Processing Report TBC");
 			jobRun.setStatus(JobStatus.Scheduled);
@@ -83,18 +93,39 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		updateTaskTitleState("Running");
 		tsClient.createBranch(task.getBranchPath());
 		try {
+			String url = createGoogleSheet();
+			updateTaskDescription(getLink(url), false);
+			info ("Updated task with result sheet url");
 			runJob();
+			info (this.getClass().getName() + " processing complete.  Updating task " + task.getKey());
 			updateTaskTitleState("Complete");
-			info (task.getKey() + " batch job completed successfully");
+			info (task.getKey() + " " + this.getClass().getSimpleName() + " batch job completed successfully");
 		} catch (Exception e) {
 			String msg = ExceptionUtils.getExceptionCause("Batch job " + task.getKey() + " failed", e);
 			info (msg);
-			updateTaskTitleState("Failed");
-			updateTaskDescription(msg);
+			try {
+				updateTaskTitleState("Failed");
+				updateTaskDescription(msg, true);
+			} catch (Exception e2) {
+				error ("Failure during processing (see above) coupled with failure to update task to indicate failure", e2);
+			}
 		}
 	}
 
-	abstract public void runJob();
+	private String getLink(String url) {
+		return "See <a href=\"" + url + "\">processing report.</a>";
+	}
+
+	private String createGoogleSheet() throws TermServerScriptException {
+		reportManager = ReportManager.create(this, reportConfiguration);
+		reportManager.setTabNames(new String[] {"Process", "Summary"});
+		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Details,Details",
+												"Issue, Count"};
+		reportManager.initialiseReportFiles(columnHeadings);
+		return reportManager.getUrl();
+	}
+
+	abstract public void runJob() throws TermServerScriptException;
 	
 	public void updateTaskTitleState(String newState) {
 		String taskTitle = jobRun.getJobName() + " - " + newState;
@@ -103,16 +134,42 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		asClient.updateAuthoringTaskNotNullFieldsAreSet(taskChanges);
 	}
 	
-	public void updateTaskDescription(String desc) {
+	public void updateTaskDescription(String desc, boolean append) {
 		AuthoringTask taskChanges = task.clone();
-		taskChanges.setDescription(desc);
+		String newText = desc;
+		if (append) {
+			newText = task.getDescription() + "<br/>" + desc;
+		}
+		taskChanges.setDescription(newText);
+		taskChanges.setStatus("IN_PROGRESS");
 		asClient.updateAuthoringTaskNotNullFieldsAreSet(taskChanges);
 	}
-
-	public void report(Object... details) {
-		//TODO Output to report
-		logger.info(Arrays.stream(details)
-				.map(obj -> obj.toString())
-				.collect(Collectors.joining(" ")));
+	
+	@Override
+	public DataUploader getReportDataUploader() {
+		//Currently no requirement for AP scripts to upload to S3
+		return null;
 	}
+	
+	protected void removeRefsetMember(Concept c, RefsetMemberPojo rm) throws TermServerScriptException {
+		//Has this rm been published?
+		if (StringUtils.isEmpty(rm.getreleasedEffectiveTime())) {
+			info("Deleting " + rm);
+			tsClient.deleteRefsetMember(task.getBranchPath(), rm);
+			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_DELETED, "", rm);
+		} else {
+			info("Inactivating " + rm);
+			rm.setActive(false);
+			tsClient.updateRefsetMember(task.getBranchPath(), rm);
+			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "", rm);
+		}
+	}
+	
+
+	protected void report(Concept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
+		String semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
+		report (TAB_0, task, c.getId(), c.getFsnTerm(), semTag, severity, action, details);
+	}
+
+
 }

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SnowstormClientFactory {
 
+	private static SnowstormClientFactory singleton;
 	private final String snowstormApiUrl;
 	private final String codecMaxInMemorySize;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -17,6 +18,7 @@ public class SnowstormClientFactory {
 	public SnowstormClientFactory(@Value("${terminologyserver.url}") String snowstormApiUrl, @Value("${spring.codec.max-in-memory-size}") String codecMaxInMemorySize) {
 		this.snowstormApiUrl = snowstormApiUrl;
 		this.codecMaxInMemorySize = codecMaxInMemorySize;
+		singleton = this;
 	}
 
 	public SnowstormClient getClientForCurrentUser() {
@@ -25,5 +27,13 @@ public class SnowstormClientFactory {
 			logger.warn("Authentication token is not set.");
 		}
 		return SnowstormClient.createClientForUser(snowstormApiUrl, authenticationToken, codecMaxInMemorySize);
+	}
+	
+	public String getApiUrl() {
+		return this.snowstormApiUrl;
+	}
+	
+	public static SnowstormClientFactory instance() {
+		return singleton;
 	}
 }

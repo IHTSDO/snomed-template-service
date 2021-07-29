@@ -1,9 +1,14 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import reactor.core.publisher.Mono;
+
 import static org.ihtsdo.otf.transformationandtemplate.service.client.RestClientHelper.asMap;
+
+import org.ihtsdo.otf.exception.TermServerScriptException;
 
 public class AuthoringServicesClient {
 
@@ -23,6 +28,9 @@ public class AuthoringServicesClient {
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks").build(projectKey))
 				.body(BodyInserters.fromValue(asMap("summary", title, "description", description)))
 				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+				)
 				.bodyToMono(AuthoringTask.class)
 				.block();
 	}
@@ -37,6 +45,9 @@ public class AuthoringServicesClient {
 		return restClient.get()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}").build(projectKey))
 				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+				)
 				.bodyToMono(AuthoringProject.class)
 				.block();
 	}
@@ -46,6 +57,9 @@ public class AuthoringServicesClient {
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(task.getProjectKey(), task.getKey()))
 				.body(BodyInserters.fromValue(task))
 				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+				)
 				.bodyToMono(AuthoringTask.class)
 				.block();
 	}

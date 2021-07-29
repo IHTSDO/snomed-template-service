@@ -1,7 +1,12 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
+import org.apache.commons.lang3.StringUtils;
+import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
+import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringTask;
+import org.ihtsdo.otf.utils.ExceptionUtils;
+import org.ihtsdo.otf.utils.SnomedUtils;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
 
@@ -45,11 +50,12 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	@Override
-	public void runJob() {
+	public void runJob() throws TermServerScriptException {
 		//Can't directly populate a map because SE refset > 10K rows and we don't yet have searchAfter
 		//populateRefsetMap(seRefsetContent, SCTID_SE_REFSETID);
 		//populateRefsetMap(spRefsetContent, SCTID_SP_REFSETID);
 		
+		//TODO for 'All' concepts, check if there's an existing Entire sibling which has priority
 		updateRefset(SCTID_SE_REFSETID, "Entire");
 		updateRefset(SCTID_SE_REFSETID, "All");
 		updateRefset(SCTID_SP_REFSETID, "Part");
@@ -57,18 +63,20 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//Now see if any inactivated concepts need to be removed
 		info("Checking for body structure concepts recently inactivated");
 		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, "(body structure)");
+		
+		info("Checking " + inactivatedConcepts.size() + " inactive body structure concepts");
 		removeInvalidEntries(SCTID_SE_REFSETID, inactivatedConcepts);
 		removeInvalidEntries(SCTID_SP_REFSETID, inactivatedConcepts);
 	}
 
-	private void updateRefset(String refsetId, String termFilter) {
+	private void updateRefset(String refsetId, String termFilter) throws TermServerScriptException {
 		String eclFilter = "< 123037004 |Body structure (body structure)|";
 		List<Concept> newConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, termFilter);
 		info("Recovered " + newConcepts.size() + " new " + termFilter + " concepts");
 		for (Concept c : newConcepts) {
 			//Ensure the FSN starts with the term filter
 			if (!c.getFsnTerm().startsWith(termFilter + " ")) {
-				report (c, Severity.HIGH, ReportActionType.VALIDATION_CHECK, "FSN did not start with expected '" + termFilter + "'");
+				report(c, Severity.HIGH, ReportActionType.VALIDATION_CHECK, "FSN did not start with expected '" + termFilter + "'");
 				continue;
 			}
 			List<Concept> parents = tsClient.getParents(task.getBranchPath(), c.getId());
@@ -78,13 +86,13 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 					.filter(p -> p.getFsnTerm().toLowerCase().contains("structure"))
 					.collect(Collectors.toList());
 			if (structureParents.size() != 1) {
-				report (c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, termFilter + " concept has " + structureParents.size() + " structure parents.");
+				report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, termFilter + " concept has " + structureParents.size() + " structure parents.");
 				continue;
 			}
 			
 			//We have our new refset candidate
 			RefsetMemberPojo newRM = createMember(refsetId, structureParents.get(0), c);
-			report (c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, newRM);
+			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, "", newRM);
 			tsClient.createRefsetMember(task.getBranchPath(), newRM);
 		}
 	}
@@ -100,7 +108,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 
-	private void removeInvalidEntries(String refsetId, List<Concept> inactivatedConcepts) {
+	private void removeInvalidEntries(String refsetId, List<Concept> inactivatedConcepts) throws TermServerScriptException {
 		//Find all inactive concepts that are in this list
 		//Can't call these in chunks because we'd need targetComponentId to also filter
 		//Easier just to recover the whole refset once we have searchAfter available
@@ -124,28 +132,33 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}*/
 		
 		for (Concept c : inactivatedConcepts) {
+			try {
 			List<RefsetMemberPojo> rmToInactivate = null;
-			if (isStructure(c)) {
-				rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
-			} else if (isPart(c) || isEntire(c)) {
-				rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
-			}
-			
-			if (rmToInactivate != null) {
-				for (RefsetMemberPojo rm : rmToInactivate) {
-					//Did we already inactivate this refset member relating to another concept
-					if (rm.isActive()) {
-						rm.setActive(false);
-						tsClient.updateRefsetMember(project.getBranchPath(), rm);
-						report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_REMOVED, rm);
-					} else {
-						report(c, Severity.LOW, ReportActionType.NO_CHANGE, "RefsetMember previously inactivated", rm);
+				debug ("Checking for existing SEP refset entries for " + c);
+				if (isStructure(c)) {
+					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
+				} else if (isPart(c) || isEntire(c)) {
+					rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
+				}
+				
+				if (rmToInactivate != null) {
+					for (RefsetMemberPojo rm : rmToInactivate) {
+						//Did we already inactivate this refset member relating to another concept
+						if (rm.isActive()) {
+							removeRefsetMember(c, rm);
+						} else {
+							report(c, Severity.LOW, ReportActionType.NO_CHANGE, "RefsetMember previously inactivated", rm);
+						}
 					}
 				}
+			} catch (Exception e) {
+				String msg = ExceptionUtils.getExceptionCause("Failed to inactivate any refset entries relating to " + c, e);
+				error(msg, e);
+				report(c, Severity.HIGH, ReportActionType.API_ERROR, msg);
 			}
 		}
 	}
-	
+
 	private boolean isEntire(Concept c) {
 		return c.getFsnTerm().startsWith("Entire ");
 	}

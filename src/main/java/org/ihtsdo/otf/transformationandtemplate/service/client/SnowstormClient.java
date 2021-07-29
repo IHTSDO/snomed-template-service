@@ -1,5 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
+import org.apache.commons.lang3.StringUtils;
+import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Branch;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptChangeBatchStatus;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
@@ -8,6 +10,9 @@ import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -165,68 +170,84 @@ public class SnowstormClient {
 	}
 	
 
-	public void updateRefsetMember(String branchPath, RefsetMemberPojo rm) {
+	public void updateRefsetMember(String branchPath, RefsetMemberPojo rm) throws TermServerScriptException {
+		if (StringUtils.isEmpty(rm.getId())) {
+			throw new TermServerScriptException("Request to update Refset Member without a uuid! " + rm);
+		}
 		webClient.put()
 		.uri(uriBuilder -> uriBuilder
-				.path("{branch}/members")
-				.build(branchPath))
+				.path("{branch}/members/{uuid}")
+				.build(branchPath, rm.getId()))
 		.body(Mono.just(rm), RefsetMemberPojo.class)
 		.retrieve()
+		.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.flatMap(error -> Mono.error(new TermServerScriptException("Failed to updated member: " + error)))
+		)
 		.bodyToMono(RefsetMemberPojo.class)
 		.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 	
+	public void deleteRefsetMember(String branchPath, RefsetMemberPojo rm) throws TermServerScriptException {
+		if (StringUtils.isEmpty(rm.getId())) {
+			throw new TermServerScriptException("Request to update Refset Member without a uuid! " + rm);
+		}
+		webClient.delete()
+		.uri(uriBuilder -> uriBuilder
+				.path("{branch}/members/{uuid}")
+				.build(branchPath, rm.getId()))
+		.retrieve()
+		.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+		)
+		.bodyToMono(Void.class)
+		.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
 
 	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, String refsetId, List<ConceptPojo> ref) {
+		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
+		queryParamMap.add("refsetId", refsetId);
+		return getRefsetMembers(branchPath, queryParamMap);
+	}
+
+	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, MultiValueMap<String, String> queryParamMap) {
 		long currentOffset = 0;
-		return fetchRefsetMemberPage(branchPath, refsetId, currentOffset)
+		return fetchRefsetMemberPage(branchPath, queryParamMap, currentOffset)
 				.expand(response -> {
 					long expected = response.getTotal();
 					long totalReceived = response.getOffset() + response.getItems().size();
 					if (totalReceived >= expected) {
 						return Mono.empty();
 					}
-					return fetchRefsetMemberPage(branchPath, refsetId, totalReceived);
+					return fetchRefsetMemberPage(branchPath, queryParamMap, totalReceived);
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	private Mono<RefsetMemberPage> fetchRefsetMemberPage(String branchPath, String refsetId, long currentOffset) {
-		logger.info("Requesting members of " + refsetId + " from " + branchPath + " with offset " + currentOffset);
+	private Mono<RefsetMemberPage> fetchRefsetMemberPage(String branchPath, MultiValueMap<String, String> queryParams, long currentOffset) {
+		logger.info("Requesting members from " + branchPath + " with parameters " + queryParams + " and offset " + currentOffset);
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
 						.path("{branch}/members")
-						.queryParam("referenceSet", refsetId)
+						.queryParams(queryParams)
 						.queryParam("offset", currentOffset)
 						.queryParam("limit", DEFAULT_PAGESIZE)
 						.build(branchPath))
 				.retrieve()
 				.bodyToMono(RefsetMemberPage.class);
 	}
-	
 
 	public List<RefsetMemberPojo> findRefsetMemberByReferencedComponentId(String branchPath, String refsetId, String referencedComponentId) {
-		return Arrays.asList(webClient.get()
-				.uri(uriBuilder -> uriBuilder
-						.path("{branch}/members")
-						.queryParam("referenceSet", refsetId)
-						.queryParam("referencedComponentId", referencedComponentId)
-						.build(branchPath))
-				.retrieve()
-				.bodyToMono(RefsetMemberPojo[].class)
-				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
+		queryParamMap.add("referenceSet", refsetId);
+		queryParamMap.add("referencedComponentId", referencedComponentId);
+		return getRefsetMembers(branchPath, queryParamMap);
 	}
 
 	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentId(String branchPath, String refsetId, String targetComponentId) {
-		return Arrays.asList(webClient.get()
-				.uri(uriBuilder -> uriBuilder
-						.path("{branch}/members")
-						.queryParam("referenceSet", refsetId)
-						.queryParam("targetComponentId", targetComponentId)
-						.build(branchPath))
-				.retrieve()
-				.bodyToMono(RefsetMemberPojo[].class)
-				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
+		queryParamMap.add("referenceSet", refsetId);
+		queryParamMap.add("targetComponent", targetComponentId);
+		return getRefsetMembers(branchPath, queryParamMap);
 	}
 	
 	public static final class RefsetMemberPage {
@@ -288,6 +309,9 @@ public class SnowstormClient {
 					.queryParam("limit", DEFAULT_PAGESIZE)
 					.build(branchPath))
 				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+				)
 				.bodyToMono(ConceptPage.class);
 	}
 	
@@ -317,6 +341,9 @@ public class SnowstormClient {
 					.queryParam("limit", DEFAULT_PAGESIZE)
 					.build(branchPath))
 				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+				)
 				.bodyToMono(ConceptPage.class);
 	}
 	

@@ -22,6 +22,7 @@ public class AuthoringTask {
 	private String branchPath;
 	
 	private AuthoringTask() {
+		//Prevent task from being created without project and key
 	}
 
 	public AuthoringTask(String key, String projectKey) {
@@ -120,5 +121,10 @@ public class AuthoringTask {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+	
+	@Override
+	public String toString() {
+		return key;
 	}
 }
