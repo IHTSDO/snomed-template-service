@@ -5,3 +5,4 @@ snomed-templates
 application-*.properties
 *.sh
 store
+secure/
