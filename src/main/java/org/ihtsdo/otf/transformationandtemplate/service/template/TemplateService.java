@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
+import org.ihtsdo.otf.utils.StringUtils;
 import org.ihtsdo.otf.rest.client.RestClientException;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
@@ -13,7 +13,6 @@ import org.snomed.authoringtemplate.domain.Relationship;
 import org.snomed.authoringtemplate.domain.SimpleSlot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -85,7 +84,7 @@ public class TemplateService {
 	public Set<ConceptTemplate> listAll(String branchPath, String[] descendantOf, String[] ancestorOf) throws IOException {
 		Set<ConceptTemplate> templates = listAll();
 		SnowstormRestClient terminologyClient = terminologyClientFactory.getClient();
-		if (!ArrayUtils.isEmpty(descendantOf) || !ArrayUtils.isEmpty(ancestorOf)) {
+		if (!StringUtils.isEmpty(descendantOf) || !StringUtils.isEmpty(ancestorOf)) {
 			// Group templates by focus concept to reduce the number of ECL queries
 			Map<String, List<ConceptTemplate>> templatesByFocusConcept = templates.stream().collect(Collectors.groupingBy(ConceptTemplate::getFocusConcept));
 			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -98,7 +97,7 @@ public class TemplateService {
 					ecl += "(" + focusConcept + " AND <<" + descendantOf[i] + ")";
 				}
 				for (int i = 0; ancestorOf != null && i < ancestorOf.length; i++) {
-					if (!ArrayUtils.isEmpty(descendantOf) || i > 0) ecl += " OR ";
+					if (!StringUtils.isEmpty(descendantOf) || i > 0) ecl += " OR ";
 					ecl += "(" + focusConcept + " AND >>" + ancestorOf[i] + ")";
 				}
 				try {

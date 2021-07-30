@@ -1,6 +1,8 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
 import com.amazonaws.util.StringMapBuilder;
+
+import org.ihtsdo.otf.utils.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.unit.DataSize;
@@ -8,8 +10,6 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Map;
-
-import static org.apache.commons.lang.StringUtils.isEmpty;
 
 public class RestClientHelper {
 
@@ -27,7 +27,7 @@ public class RestClientHelper {
 							.build());
 
 		}
-		if (!isEmpty(authenticationCookie) && authenticationCookie.contains("=")) {
+		if (!StringUtils.isEmpty(authenticationCookie) && authenticationCookie.contains("=")) {
 			String[] split = authenticationCookie.split("=");
 			builder.defaultCookie(split[0], split[1]);
 		}

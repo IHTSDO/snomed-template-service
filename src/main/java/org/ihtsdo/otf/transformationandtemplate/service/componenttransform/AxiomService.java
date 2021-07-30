@@ -1,7 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import com.google.common.base.Strings;
-import org.apache.commons.lang.StringUtils;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
@@ -12,6 +11,7 @@ import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRe
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.ihtsdo.otf.transformationandtemplate.service.Concepts;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
+import org.ihtsdo.otf.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.otf.owltoolkit.conversion.AxiomRelationshipConversionService;

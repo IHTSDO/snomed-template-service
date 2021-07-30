@@ -60,7 +60,7 @@ public class TemplateTransformationResultService {
 	public void writeResultsToFile(TemplateTransformation transformation, TransformationResult result) throws ServiceException {
 		if (result != null) {
 			String resourcePath = ResourcePathHelper.getResultPath(transformation.getTransformationId());
-			try ( OutputStream output = transformationResourceManager.writeResourceStream(resourcePath);Writer writer = new OutputStreamWriter(output)) {
+			try ( OutputStream output = transformationResourceManager.openWritableResourceStream(resourcePath);Writer writer = new OutputStreamWriter(output)) {
 				prettyJson.toJson(result, writer);
 			} catch (Exception e) {
 				throw new ServiceException("Failed to write results to disk for transformation id " + transformation.getTransformationId(), e);
@@ -73,7 +73,7 @@ public class TemplateTransformationResultService {
 		transformation.setLastUpdatedDate(Calendar.getInstance().getTime());
 		logger.info("Template transformation id {} for branch {} is {}", transformation.getTransformationId(), transformation.getBranchPath(),
 				transformation.getStatus().toString());
-		try (OutputStream output = transformationResourceManager.writeResourceStream(statusPath);
+		try (OutputStream output = transformationResourceManager.openWritableResourceStream(statusPath);
 			Writer writer = new OutputStreamWriter(output)) {
 			writer.write(prettyJson.toJson(transformation));
 		} catch (IOException e) {

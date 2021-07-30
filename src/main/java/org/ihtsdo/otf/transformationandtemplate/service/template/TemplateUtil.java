@@ -1,6 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.apache.commons.lang.StringUtils;
+import org.ihtsdo.otf.utils.StringUtils;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.slf4j.Logger;
@@ -216,7 +216,7 @@ public class TemplateUtil {
 	public static String getDescriptionFromPT(DescriptionPojo ptPojo) {
 		String term = ptPojo.getTerm();
 		if (ptPojo.getCaseSignificance() != DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE) {
-			return StringUtils.uncapitalize(term);
+			return StringUtils.deCapitalize(term);
 		} 
 		return term;
 	}
@@ -224,7 +224,7 @@ public class TemplateUtil {
 	public static String getDescriptionFromFSN(DescriptionPojo fsnPojo) {
 		String term = getDescriptionFromFSN(fsnPojo.getTerm());
 		if (fsnPojo.getCaseSignificance() != DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE) {
-			return StringUtils.uncapitalize(term);
+			return StringUtils.deCapitalize(term);
 		} 
 		return term;
 	}

@@ -1,6 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.apache.commons.lang.StringUtils;
+import org.ihtsdo.otf.utils.StringUtils;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
@@ -188,7 +188,7 @@ public class LexicalTemplateTransformService {
 						slotValue = slotValue.replaceAll(partToRemove, "");
 					}
 					if (CaseSignificance.CASE_INSENSITIVE.name().equals(ptPojo.getCaseSignificance().name())) {
-						slotValue = StringUtils.uncapitalize(slotValue);
+						slotValue = StringUtils.deCapitalize(slotValue);
 					}
 				}
 				termAndCaseSignificanceMap.put(slotValue, ptPojo.getCaseSignificance());
@@ -234,7 +234,7 @@ public class LexicalTemplateTransformService {
 						slotValue = slotValue.replaceAll(partToRemove, "");
 					}
 					if (CaseSignificance.CASE_INSENSITIVE.name().equals(fsnPojo.getCaseSignificance().name())) {
-						slotValue = StringUtils.uncapitalize(slotValue);
+						slotValue = StringUtils.deCapitalize(slotValue);
 					}
 				}
 				termAndCaseSignificanceMap.put(slotValue, fsnPojo.getCaseSignificance());

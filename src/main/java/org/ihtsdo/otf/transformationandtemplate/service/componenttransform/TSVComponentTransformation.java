@@ -5,7 +5,7 @@ import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.value
 
 import java.util.*;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.ihtsdo.otf.utils.StringUtils.isEmpty;
 
 public class TSVComponentTransformation implements ComponentTransformation {
 

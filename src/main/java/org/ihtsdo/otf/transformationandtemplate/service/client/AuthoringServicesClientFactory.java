@@ -1,12 +1,11 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
+import org.ihtsdo.otf.utils.StringUtils;
 import org.ihtsdo.sso.integration.SecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import static org.apache.commons.lang.StringUtils.isEmpty;
 
 @Service
 public class AuthoringServicesClientFactory {
@@ -22,7 +21,7 @@ public class AuthoringServicesClientFactory {
 
 	public AuthoringServicesClient getClientForCurrentUser() {
 		String authenticationToken = SecurityUtil.getAuthenticationToken();
-		if (isEmpty(authenticationToken)) {
+		if (StringUtils.isEmpty(authenticationToken)) {
 			logger.warn("Authentication token is not set.");
 		}
 		return AuthoringServicesClient.createClientForUser(authoringServicesApiUrl, authenticationToken, codecMaxInMemorySize);
