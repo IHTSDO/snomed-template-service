@@ -81,7 +81,7 @@ public class TemplateStore {
 	}
 
 	public ConceptTemplate load(String name) {
-		return templateCache.get(name);
+		return templateCache.get(encodeSlash(name));
 	}
 
 	public Set<ConceptTemplate> loadAll() {
