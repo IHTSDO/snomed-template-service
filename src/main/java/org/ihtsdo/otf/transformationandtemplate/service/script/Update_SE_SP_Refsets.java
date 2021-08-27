@@ -1,12 +1,9 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
-import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringTask;
 import org.ihtsdo.otf.utils.ExceptionUtils;
-import org.ihtsdo.otf.utils.SnomedUtils;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
 
@@ -93,7 +90,6 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			//We have our new refset candidate
 			RefsetMemberPojo newRM = createMember(refsetId, structureParents.get(0), c);
 			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, "", newRM);
-			tsClient.createRefsetMember(task.getBranchPath(), newRM);
 		}
 	}
 
@@ -139,6 +135,8 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
 				} else if (isPart(c) || isEntire(c)) {
 					rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
+				} else {
+					debug ("Ignoring non SEP concept: " + c);
 				}
 				
 				if (rmToInactivate != null) {
