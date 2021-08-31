@@ -52,18 +52,21 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//populateRefsetMap(seRefsetContent, SCTID_SE_REFSETID);
 		//populateRefsetMap(spRefsetContent, SCTID_SP_REFSETID);
 		
-		//TODO for 'All' concepts, check if there's an existing Entire sibling which has priority
-		updateRefset(SCTID_SE_REFSETID, "Entire");
-		updateRefset(SCTID_SE_REFSETID, "All");
-		updateRefset(SCTID_SP_REFSETID, "Part");
-		
-		//Now see if any inactivated concepts need to be removed
+		//Firstly see if any inactivated concepts need to be removed,
+		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
 		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, "(body structure)");
 		
 		info("Checking " + inactivatedConcepts.size() + " inactive body structure concepts");
 		removeInvalidEntries(SCTID_SE_REFSETID, inactivatedConcepts);
 		removeInvalidEntries(SCTID_SP_REFSETID, inactivatedConcepts);
+		
+		//TODO for 'All' concepts, check if there's an existing Entire sibling which has priority
+		updateRefset(SCTID_SE_REFSETID, "Entire");
+		updateRefset(SCTID_SE_REFSETID, "All");
+		updateRefset(SCTID_SP_REFSETID, "Part");
+		
+
 	}
 
 	private void updateRefset(String refsetId, String termFilter) throws TermServerScriptException {
@@ -71,6 +74,12 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		List<Concept> newConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, termFilter);
 		info("Recovered " + newConcepts.size() + " new " + termFilter + " concepts");
 		for (Concept c : newConcepts) {
+			//If it's not a body structure, don't even mention it
+			//And I'm not sure why we're seeing these with that eclFilter above!
+			if (!c.getFsnTerm().contains("(body structure)")) {
+				debug("ECL filter for Body Structure is not doing it's job: " + c);
+				continue;
+			}
 			//Ensure the FSN starts with the term filter
 			if (!c.getFsnTerm().startsWith(termFilter + " ")) {
 				report(c, Severity.HIGH, ReportActionType.VALIDATION_CHECK, "FSN did not start with expected '" + termFilter + "'");
@@ -127,16 +136,23 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				}
 		}*/
 		
+		//TODO We should find the replacements for these concepts and ensure that they've had
+		//rows created for them by the time the job completes.
 		for (Concept c : inactivatedConcepts) {
 			try {
 			List<RefsetMemberPojo> rmToInactivate = null;
 				debug ("Checking for existing SEP refset entries for " + c);
+				
 				if (isStructure(c)) {
 					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
 				} else if (isPart(c) || isEntire(c)) {
 					rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
 				} else {
-					debug ("Ignoring non SEP concept: " + c);
+					//Need to check all concepts for inactivation, as they might not be clearly S, E or P
+					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
+					if (rmToInactivate == null || rmToInactivate.size() == 0) {
+						rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
+					}
 				}
 				
 				if (rmToInactivate != null) {
