@@ -49,7 +49,7 @@
 		<dependency>
 			<groupId>org.ihtsdo.otf.common</groupId>
 			<artifactId>otf-common</artifactId>
-			<version>5.0.0-SNAPSHOT</version>
+			<version>5.0.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.mortbay.jetty</groupId>
