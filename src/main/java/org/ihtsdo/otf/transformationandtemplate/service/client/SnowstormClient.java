@@ -236,10 +236,13 @@ public class SnowstormClient {
 				.bodyToMono(RefsetMemberPage.class);
 	}
 
-	public List<RefsetMemberPojo> findRefsetMemberByReferencedComponentId(String branchPath, String refsetId, String referencedComponentId) {
+	public List<RefsetMemberPojo> findRefsetMemberByReferencedComponentId(String branchPath, String refsetId, String referencedComponentId, Boolean activeFlag) {
 		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
 		queryParamMap.add("referenceSet", refsetId);
 		queryParamMap.add("referencedComponentId", referencedComponentId);
+		if (activeFlag != null) {
+			queryParamMap.add("active", activeFlag.toString());
+		}
 		return getRefsetMembers(branchPath, queryParamMap);
 	}
 

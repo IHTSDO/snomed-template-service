@@ -96,8 +96,18 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				continue;
 			}
 			
+			Concept sConcept = structureParents.get(0);
+			//From FRI-186 If this is an 'All' concept and we already have an 'Entire' then the 'All' is redundant
+			if (termFilter.equals("All")) {
+				List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
+				if (rmExisting.size() > 0) {
+					report(c, Severity.MEDIUM, ReportActionType.VALIDATION_CHECK, "'All' concept considered redundant", rmExisting.get(0));
+					continue;
+				}
+			}
+			
 			//We have our new refset candidate
-			RefsetMemberPojo newRM = createMember(refsetId, structureParents.get(0), c);
+			RefsetMemberPojo newRM = createMember(refsetId, sConcept, c);
 			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, "", newRM);
 		}
 	}
@@ -144,12 +154,12 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				debug ("Checking for existing SEP refset entries for " + c);
 				
 				if (isStructure(c)) {
-					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
+					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId(), true);
 				} else if (isPart(c) || isEntire(c)) {
 					rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
 				} else {
 					//Need to check all concepts for inactivation, as they might not be clearly S, E or P
-					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId());
+					rmToInactivate = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, c.getId(), true);
 					if (rmToInactivate == null || rmToInactivate.size() == 0) {
 						rmToInactivate = tsClient.findRefsetMemberByTargetComponentId(task.getBranchPath(), refsetId, c.getId());
 					}

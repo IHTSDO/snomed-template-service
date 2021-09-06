@@ -1,16 +1,11 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
 import org.apache.commons.lang3.StringUtils;
-import org.ihtsdo.otf.RF2Constants.ReportActionType;
-import org.ihtsdo.otf.RF2Constants.Severity;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Project;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringTask;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
+import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.ihtsdo.otf.utils.SnomedUtils;
 import org.slf4j.Logger;
@@ -18,9 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.JobRun;
 import org.snomed.otf.scheduler.domain.JobStatus;
 import org.snomed.otf.script.Script;
-import org.snomed.otf.script.dao.DataUploader;
-import org.snomed.otf.script.dao.ReportManager;
-import org.snomed.otf.script.dao.ReportSheetManager;
+import org.snomed.otf.script.dao.*;
 
 public abstract class AuthoringPlatformScript extends Script implements JobClass {
 	
