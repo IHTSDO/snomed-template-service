@@ -165,9 +165,9 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	}
 	
 
-	protected void report(Concept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
+	protected boolean report(Concept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
 		String semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
-		report (TAB_0, task, c.getId(), c.getFsnTerm(), semTag, severity, action, details);
+		return report (TAB_0, task, c.getId(), c.getFsnTerm(), semTag, severity, action, details);
 	}
 
 

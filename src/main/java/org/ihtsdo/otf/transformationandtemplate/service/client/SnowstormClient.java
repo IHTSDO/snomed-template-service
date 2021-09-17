@@ -16,7 +16,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -151,6 +150,17 @@ public class SnowstormClient {
 				.uri(uriBuilder -> uriBuilder
 						.path("/browser/{branch}/concepts/{sctId}/parents")
 						.queryParam("form", "inferred")
+						.build(branchPath, conceptId))
+				.retrieve()
+				.bodyToMono(Concept[].class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+	}
+
+	public List<Concept> getAncestors(String branchPath, String conceptId) {
+		return Arrays.asList(webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("/browser/{branch}/concepts/{sctId}/ancestors")
+						.queryParam("inferred", "inferred")
 						.build(branchPath, conceptId))
 				.retrieve()
 				.bodyToMono(Concept[].class)
@@ -300,7 +310,12 @@ public class SnowstormClient {
 	}
 
 	private Mono<ConceptPage> fetchNewConceptPage(String branchPath, String ecl, String termFilter, long currentOffset) {
-		logger.info("Requesting new " + termFilter + " concepts from " + branchPath + " with offset " + currentOffset);
+		if (termFilter == null) {
+			logger.info("Requesting new concepts from {} with offset {}.", branchPath, currentOffset);
+		} else {
+			logger.info("Requesting new {} concepts from {} with offset {}.", termFilter, branchPath, currentOffset);
+		}
+
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
 					.path("/{branch}/concepts")
@@ -333,7 +348,12 @@ public class SnowstormClient {
 	}
 
 	private Mono<ConceptPage> fetchUpdatedConceptPage(String branchPath, boolean activeFilter, String termFilter, long currentOffset) {
-		logger.info("Requesting " + (activeFilter?"active " : "inactive ") + termFilter + " concepts from " + branchPath + " with offset " + currentOffset);
+		if (termFilter == null) {
+			logger.info("Requesting {} concepts from {} with offset {}.", activeFilter ? "active" : "inactive", branchPath, currentOffset);
+		} else {
+			logger.info("Requesting {} {} concepts from {} with offset {}.", activeFilter ? "active " : "inactive ", termFilter, branchPath, currentOffset);
+		}
+
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
 					.path("/{branch}/concepts")
