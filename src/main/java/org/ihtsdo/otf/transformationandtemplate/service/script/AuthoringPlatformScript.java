@@ -100,7 +100,13 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 				updateTaskTitleState("Failed");
 				updateTaskDescription(msg, true);
 			} catch (Exception e2) {
-				error ("Failure during processing (see above) coupled with failure to update task to indicate failure", e2);
+				error("Failure during processing (see above) coupled with failure to update task to indicate failure", e2);
+			} finally {
+				try {
+					reportManager.flushFiles(true, false);
+				} catch (Exception e3) {
+					error("Failure during cleanup", e3);
+				}
 			}
 		}
 	}
