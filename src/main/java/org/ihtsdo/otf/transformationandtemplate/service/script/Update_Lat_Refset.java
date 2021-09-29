@@ -8,10 +8,7 @@ import org.snomed.otf.scheduler.domain.JobCategory;
 import org.snomed.otf.scheduler.domain.JobRun;
 import org.snomed.otf.scheduler.domain.JobType;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -24,17 +21,6 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	public static final String LAT_REFSETID = "723264001";
 	public static final String LAT_REFSETID_AND_PT = "723264001 |Lateralizable body structure reference set|";
 
-	/**
-	 * Debug property. Toggle to skip the function of removing inactive Concepts from RefSet.
-	 */
-	private final boolean removeInactivateConcepts = true;
-
-	/**
-	 * Debug property. Toggle to skip the function of adding new Concepts to RefSet.
-	 */
-	private final boolean addNewConcepts = true;
-
-
 	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
 	}
@@ -44,7 +30,9 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		return new Job()
 				.withCategory(new JobCategory(JobType.BATCH_JOB, JobCategory.REFSET_UPDATE))
 				.withName("Update Lateralizable Refset")
-				.withDescription("This job adds and removes relevant Concepts to/from the Lateralizable RefSet.")
+				.withDescription("This job adds and removes relevant Concepts to/from the Lateralizable RefSet. Please note this RefSet is only for Lateralizable " +
+						"Concepts, and not Lateralized Concepts. Lateralizable is when a Concept can have a side, i.e. an arm " +
+						"can be a left arm or a right arm. Lateralized, however, is when a Concept has a side, i.e. a left arm is on the left side.")
 				.withProductionStatus(Job.ProductionStatus.TESTING)
 				.build();
 	}
@@ -53,39 +41,41 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	public void runJob() throws TermServerScriptException {
 		String branchPath = task.getBranchPath();
 
-		if (removeInactivateConcepts) {
-			info(String.format("Finding Concepts recently inactivated on Branch %s.", branchPath));
-			List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(branchPath, false, null);
-			info(String.format("Found %d recently inactivated Concepts on Branch %s.", inactivatedConcepts.size(), branchPath));
-			info(String.format("Removing recently inactivated Concepts on Branch %s from %s.", branchPath, LAT_REFSETID_AND_PT));
-			removeInactiveConceptsFromRefset(branchPath, LAT_REFSETID, inactivatedConcepts);
-		} else {
-			info(String.format("Function to remove inactive Concepts from %s on Branch %s has been disabled.", LAT_REFSETID_AND_PT, branchPath));
-		}
+		/*
+		 * Remove Concepts from RefSet if:-
+		 *  - Concept has been inactivated
+		 *  - Concept has been lateralised
+		 *  - Concept is no longer subsumed by 423857001 |Structure of half of body lateral to midsagittal plane (body structure)|
+		 * */
+		removeConceptsFromRefSet(branchPath);
 
-		if (addNewConcepts) {
-			String ecl = "< 123037004 |Body structure (body structure)|";
-			info(String.format("Finding Concepts recently created on Branch %s with ECL %s.", branchPath, ecl));
-			List<Concept> newConcepts = tsClient.findNewConcepts(branchPath, ecl, null);
-			info(String.format("Found %d recently created Concepts on Branch %s with ECL %s.", newConcepts.size(), branchPath, ecl));
-			info(String.format("Adding recently created Concepts on Branch %s to %s.", branchPath, LAT_REFSETID_AND_PT));
-			addRecentlyCreatedConceptsToRefset(branchPath, LAT_REFSETID, newConcepts);
-		} else {
-			info(String.format("Function to add new Concepts to %s on Branch %s has been disabled.", LAT_REFSETID_AND_PT, branchPath));
-		}
+		/*
+		 * Add Concepts to RefSet if:-
+		 *  - Concept has ancestor in RefSet
+		 *  - Concept is lateralizable but not lateralised (i.e. 272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)|)
+		 * */
+		addConceptsToRefSet(branchPath);
 	}
 
-	private void removeInactiveConceptsFromRefset(String branchPath, String refsetId, List<Concept> inactivatedConcepts) throws TermServerScriptException {
+	private void removeConceptsFromRefSet(String branchPath) throws TermServerScriptException {
 		List<RefsetMemberPojo> rmToInactivate = new ArrayList<>();
 		Map<String, Concept> cache = new HashMap<>();
-		chunk(inactivatedConcepts, 20)
+
+		// Collect relevant Concepts to remove
+		List<Concept> relevantConceptsToRemove = getRelevantConceptsToRemove(branchPath);
+		chunk(relevantConceptsToRemove, 20)
 				.forEach(chunk -> {
 					cache.putAll(mapByConceptId(chunk));
-					List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, refsetId, joinByConceptId(chunk), true);
+					List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, joinByConceptId(chunk), true);
 					rmToInactivate.addAll(tscResponse);
 				});
 
-		info(String.format("Out of %s inactivated Concepts on Branch %s, %s are present in %s", inactivatedConcepts.size(), branchPath, rmToInactivate.size(), LAT_REFSETID_AND_PT));
+		if (rmToInactivate.isEmpty()) {
+			info(String.format("No Concepts to be removed from %s for Branch %s.", LAT_REFSETID_AND_PT, branchPath));
+			return;
+		}
+
+		// Remove RefSet members
 		for (RefsetMemberPojo rm : rmToInactivate) {
 			String conceptId = rm.getConceptId();
 			Concept concept = cache.get(conceptId);
@@ -96,43 +86,32 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 			if (rm.isActive()) {
 				removeRefsetMember(concept, rm);
-				doReportOrLog(concept, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "RefsetMember inactivated", rm);
+				doReportOrLog(concept, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "RefSet Member inactivated", rm);
 			} else {
-				doReportOrLog(concept, Severity.LOW, ReportActionType.NO_CHANGE, "RefsetMember previously inactivated", rm);
+				doReportOrLog(concept, Severity.LOW, ReportActionType.NO_CHANGE, "RefSet Member previously inactivated", rm);
 			}
 		}
 	}
 
-	private void addRecentlyCreatedConceptsToRefset(String branchPath, String refsetId, List<Concept> newConcepts) throws TermServerScriptException {
-		for (Concept newConcept : newConcepts) {
-			String conceptIdentifier = newConcept.toString();
-			info(String.format("Checking whether %s is already in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
-			boolean alreadyInRefset = conceptAlreadyInRefSet(branchPath, refsetId, newConcept);
-			if (alreadyInRefset) {
-				info(String.format("%s is already in %s on Branch %s. Moving onto next new Concept.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
-				doReportOrLog(newConcept, Severity.LOW, ReportActionType.NO_CHANGE, "Concept already in RefSet");
-				continue;
-			} else {
-				info(String.format("%s is not currently in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
-			}
+	private List<Concept> getRelevantConceptsToRemove(String branchPath) {
+		// Concepts that have been lateralised, i.e. marked left/right/both
+		String lateralised = "<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
 
-			info(String.format("Finding %s's ancestors on Branch %s.", conceptIdentifier, branchPath));
-			List<Concept> ancestors = tsClient.getAncestors(branchPath, newConcept.getConceptId());
-			if (ancestors.isEmpty()) {
-				info(String.format("%s has no ancestors. Cannot determine whether Concept should be added to %s.", conceptIdentifier, LAT_REFSETID_AND_PT));
-				doReportOrLog(newConcept, Severity.LOW, ReportActionType.NO_CHANGE, "Concept has no ancestors. Cannot determine whether Concept should be added to RefSet.");
-				continue;
-			}
+		// Concepts that are in RefSet but no longer have correct prerequisite ancestor
+		String ancestor = "^ 723264001 MINUS ^ 723264001 << 423857001 |Structure of half of body lateral to midsagittal plane (body structure)|";
 
-			List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, refsetId, joinByConceptId(ancestors), true);
-			boolean conceptHasAncestorInRefSet = !tscResponse.isEmpty();
-			if (conceptHasAncestorInRefSet) {
-				info(String.format("%s has an ancestor in %s. Concept will be added to the RefSet.", conceptIdentifier, LAT_REFSETID_AND_PT));
-				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, refsetId, newConcept);
-				info(String.format("Created RefSet %s for Branch %s.", newRefSetMember.toString(), branchPath));
-				doReportOrLog(newConcept, Severity.LOW,  ReportActionType.REFSET_MEMBER_ADDED, newRefSetMember);
-			}
-		}
+		List<Concept> inactivated = tsClient.findUpdatedConcepts(branchPath, false, null, null);
+		List<Concept> lateralisedNew = tsClient.findNewConcepts(branchPath, lateralised, null);
+		List<Concept> lateralisedUpdated = tsClient.findUpdatedConcepts(branchPath, true, null, lateralised);
+		List<Concept> noPrerequisiteAncestor = tsClient.findUpdatedConcepts(branchPath, true, null, ancestor);
+
+		List<Concept> conceptsToRemove = new ArrayList<>();
+		conceptsToRemove.addAll(inactivated);
+		conceptsToRemove.addAll(lateralisedNew);
+		conceptsToRemove.addAll(lateralisedUpdated);
+		conceptsToRemove.addAll(noPrerequisiteAncestor);
+
+		return conceptsToRemove;
 	}
 
 	// Split collection into X smaller collections (for batch processing)
@@ -150,10 +129,6 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		return IntStream.range(0, fullChunks + 1).mapToObj(n -> list.subList(n * chunkSize, n == fullChunks ? size : (n + 1) * chunkSize));
 	}
 
-	private boolean conceptAlreadyInRefSet(String branchPath, String refsetId, Concept concept) {
-		return !tsClient.findRefsetMemberByReferencedComponentId(branchPath, refsetId, concept.getId(), true).isEmpty();
-	}
-
 	private Map<String, Concept> mapByConceptId(List<Concept> chunk) {
 		Map<String, Concept> map = new HashMap<>();
 		for (Concept concept : chunk) {
@@ -167,6 +142,113 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		return concepts.stream().map(Concept::getId).collect(Collectors.joining(","));
 	}
 
+	private void doReportOrLog(Concept concept, Severity severity, ReportActionType reportActionType, Object... details) throws TermServerScriptException {
+		boolean success = report(concept, severity, reportActionType, details);
+		if (!success) {
+			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, severity, reportActionType, details));
+		}
+	}
+
+	private void addConceptsToRefSet(String branchPath) throws TermServerScriptException {
+		// Find new & updated Concepts which may be added to RefSet (depending on various conditions)
+		Set<Concept> potentials = getRelevantConceptsToPotentiallyAdd(branchPath);
+
+		if (potentials.isEmpty()) {
+			info(String.format("No potential Concepts to be added to %s for Branch %s.", LAT_REFSETID_AND_PT, branchPath));
+		} else {
+			for (Concept potential : potentials) {
+				String conceptIdentifier = potential.toString();
+
+				// Check whether Concept is already in RefSet
+				info(String.format("Checking whether %s is already in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
+				boolean conceptInRefSet = conceptInRefSet(branchPath, LAT_REFSETID, potential);
+				if (conceptInRefSet) {
+					info(String.format("%s is already in %s on Branch %s. Moving onto next Concept.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
+					doReportOrLog(potential, Severity.LOW, ReportActionType.NO_CHANGE, "Concept already in RefSet");
+					continue;
+				} else {
+					info(String.format("%s is not currently in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
+				}
+
+				// Check whether Concept has any ancestors
+				info(String.format("Finding %s's ancestors on Branch %s.", conceptIdentifier, branchPath));
+				List<Concept> ancestors = tsClient.getAncestors(branchPath, potential.getConceptId());
+				if (ancestors.isEmpty()) {
+					info(String.format("%s has no ancestors. Cannot determine whether Concept should be added to %s.", conceptIdentifier, LAT_REFSETID_AND_PT));
+					doReportOrLog(potential, Severity.LOW, ReportActionType.NO_CHANGE, "Concept has no ancestors. Cannot determine whether Concept should be added to RefSet.");
+					continue;
+				}
+
+				// Check whether Concept's ancestor is in RefSet
+				List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, joinByConceptId(ancestors), true);
+				boolean conceptAncestorInRefSet = !tscResponse.isEmpty();
+				if (conceptAncestorInRefSet) {
+					info(String.format("%s has an ancestor in %s. Concept will be added to the RefSet.", conceptIdentifier, LAT_REFSETID_AND_PT));
+					RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, potential);
+					info(String.format("Created RefSet %s for Branch %s.", newRefSetMember.toString(), branchPath));
+					doReportOrLog(potential, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, newRefSetMember);
+				}
+			}
+		}
+
+		// Find new & updated Concepts that should be in RefSet
+		Set<Concept> definites = getRelevantConceptsToDefinitelyAdd(branchPath);
+		if (definites.isEmpty()) {
+			info(String.format("No definite Concepts to be added to %s for Branch %s.", LAT_REFSETID_AND_PT, branchPath));
+		} else {
+			for (Concept definite : definites) {
+				String conceptIdentifier = definite.toString();
+
+				// Check whether Concept is already in RefSet
+				info(String.format("Checking whether %s is already in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
+				boolean conceptInRefSet = conceptInRefSet(branchPath, LAT_REFSETID, definite);
+				if (conceptInRefSet) {
+					info(String.format("%s is already in %s on Branch %s. Moving onto next Concept.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
+					doReportOrLog(definite, Severity.LOW, ReportActionType.NO_CHANGE, "Concept already in RefSet");
+					continue;
+				} else {
+					info(String.format("%s is not currently in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
+				}
+
+				// Add to RefSet
+				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, definite);
+				doReportOrLog(definite, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, newRefSetMember);
+			}
+		}
+	}
+
+	private Set<Concept> getRelevantConceptsToDefinitelyAdd(String branchPath) {
+		// Concepts that have a Laterality of side, but also do not have a Laterality of left/right/both
+		String lateralizable = "<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)| MINUS (* : " +
+				"272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
+
+		List<Concept> newConcepts = tsClient.findNewConcepts(branchPath, lateralizable, null);
+		List<Concept> updatedConcepts = tsClient.findUpdatedConcepts(branchPath, true, null, lateralizable);
+		Set<Concept> conceptsToAdd = new HashSet<>();
+		conceptsToAdd.addAll(newConcepts);
+		conceptsToAdd.addAll(updatedConcepts);
+
+		return conceptsToAdd;
+	}
+
+	private Set<Concept> getRelevantConceptsToPotentiallyAdd(String branchPath) {
+		// Concepts that do not have a Laterality of left/right/both
+		String notLateralised = "<< 91723000 |Anatomical structure (body structure)| MINUS (* : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR " +
+				"24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
+
+		List<Concept> newConcepts = tsClient.findNewConcepts(branchPath, notLateralised, null);
+		List<Concept> updatedConcepts = tsClient.findUpdatedConcepts(branchPath, true, null, notLateralised);
+		Set<Concept> conceptsToAdd = new HashSet<>();
+		conceptsToAdd.addAll(newConcepts);
+		conceptsToAdd.addAll(updatedConcepts);
+
+		return conceptsToAdd;
+	}
+
+	private boolean conceptInRefSet(String branchPath, String refsetId, Concept concept) {
+		return !tsClient.findRefsetMemberByReferencedComponentId(branchPath, refsetId, concept.getId(), true).isEmpty();
+	}
+
 	private RefsetMemberPojo createRefSetMember(String branchPath, String refsetId, Concept concept) {
 		RefsetMemberPojo rm = new RefsetMemberPojo()
 				.withRefsetId(refsetId)
@@ -174,12 +256,5 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 				.withModuleId(SCTID_MODEL_MODULE)
 				.withReferencedComponentId(concept.getId());
 		return tsClient.createRefsetMember(branchPath, rm);
-	}
-
-	private void doReportOrLog(Concept concept, Severity severity, ReportActionType reportActionType, Object... details) throws TermServerScriptException {
-		boolean success = report(concept, severity, reportActionType, details);
-		if (!success) {
-			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, severity, reportActionType, details));
-		}
 	}
 }
