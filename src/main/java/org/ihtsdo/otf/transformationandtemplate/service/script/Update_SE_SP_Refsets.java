@@ -55,7 +55,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//Firstly see if any inactivated concepts need to be removed,
 		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
-		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, "(body structure)");
+		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, "(body structure)", null);
 		
 		info("Checking " + inactivatedConcepts.size() + " inactive body structure concepts");
 		removeInvalidEntries(SCTID_SE_REFSETID, inactivatedConcepts);

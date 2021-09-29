@@ -333,25 +333,42 @@ public class SnowstormClient {
 				.bodyToMono(ConceptPage.class);
 	}
 	
-	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, String termFilter) {
+	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, String termFilter, String ecl) {
 		long currentOffset = 0;
-		return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, currentOffset)
+		return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, ecl, currentOffset)
 				.expand(response -> {
 					long expected = response.getTotal();
 					long totalReceived = response.getOffset() + response.getItems().size();
 					if (totalReceived >= expected) {
 						return Mono.empty();
 					}
-					return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, totalReceived);
+					return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, ecl, totalReceived);
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	private Mono<ConceptPage> fetchUpdatedConceptPage(String branchPath, boolean activeFilter, String termFilter, long currentOffset) {
+	private Mono<ConceptPage> fetchUpdatedConceptPage(String branchPath, boolean activeFilter, String termFilter, String ecl, long currentOffset) {
 		if (termFilter == null) {
 			logger.info("Requesting {} concepts from {} with offset {}.", activeFilter ? "active" : "inactive", branchPath, currentOffset);
 		} else {
 			logger.info("Requesting {} {} concepts from {} with offset {}.", activeFilter ? "active " : "inactive ", termFilter, branchPath, currentOffset);
+		}
+
+		if (ecl == null) {
+			return webClient.get()
+					.uri(uriBuilder -> uriBuilder
+							.path("/{branch}/concepts")
+							.queryParam("isNullEffectiveTime", true)
+							.queryParam("activeFilter", activeFilter)
+							.queryParam("term", termFilter)
+							.queryParam("offset", currentOffset)
+							.queryParam("limit", DEFAULT_PAGESIZE)
+							.build(branchPath))
+					.retrieve()
+					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
+							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+					)
+					.bodyToMono(ConceptPage.class);
 		}
 
 		return webClient.get()
@@ -360,6 +377,7 @@ public class SnowstormClient {
 					.queryParam("isNullEffectiveTime", true)
 					.queryParam("activeFilter", activeFilter)
 					.queryParam("term", termFilter)
+					.queryParam("ecl", ecl)
 					.queryParam("offset", currentOffset)
 					.queryParam("limit", DEFAULT_PAGESIZE)
 					.build(branchPath))
