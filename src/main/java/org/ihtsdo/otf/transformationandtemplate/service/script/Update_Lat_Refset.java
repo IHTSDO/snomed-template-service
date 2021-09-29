@@ -21,6 +21,8 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	public static final String LAT_REFSETID = "723264001";
 	public static final String LAT_REFSETID_AND_PT = "723264001 |Lateralizable body structure reference set|";
 
+	private int writes = 0;
+
 	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
 	}
@@ -55,6 +57,12 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		 *  - Concept is lateralizable but not lateralised (i.e. 272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)|)
 		 * */
 		addConceptsToRefSet(branchPath);
+
+		if (this.writes == 0) {
+			String message = String.format("Script has not found any data to action for Branch %s.", branchPath);
+			info(message);
+			report(0, message);
+		}
 	}
 
 	private void removeConceptsFromRefSet(String branchPath) throws TermServerScriptException {
@@ -146,7 +154,10 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		boolean success = report(concept, severity, reportActionType, details);
 		if (!success) {
 			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, severity, reportActionType, details));
+			return;
 		}
+
+		this.writes = this.writes + 1;
 	}
 
 	private void addConceptsToRefSet(String branchPath) throws TermServerScriptException {
