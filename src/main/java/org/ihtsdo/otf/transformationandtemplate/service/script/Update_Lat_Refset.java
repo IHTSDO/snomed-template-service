@@ -21,6 +21,8 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	public static final String LAT_REFSETID = "723264001";
 	public static final String LAT_REFSETID_AND_PT = "723264001 |Lateralizable body structure reference set|";
 
+	private final Set<Concept> conceptsActioned = new HashSet<>();
+
 	private int writes = 0;
 
 	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
@@ -92,7 +94,12 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 				continue;
 			}
 
+			if (conceptsActioned.contains(concept)) {
+				continue;
+			}
+
 			if (rm.isActive()) {
+				this.conceptsActioned.add(concept);
 				removeRefsetMember(concept, rm);
 				doReportOrLog(concept, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "RefSet Member inactivated", rm);
 			} else {
@@ -168,6 +175,10 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			info(String.format("No potential Concepts to be added to %s for Branch %s.", LAT_REFSETID_AND_PT, branchPath));
 		} else {
 			for (Concept potential : potentials) {
+				if (conceptsActioned.contains(potential)) {
+					continue;
+				}
+
 				String conceptIdentifier = potential.toString();
 
 				// Check whether Concept is already in RefSet
@@ -194,6 +205,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 				List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, joinByConceptId(ancestors), true);
 				boolean conceptAncestorInRefSet = !tscResponse.isEmpty();
 				if (conceptAncestorInRefSet) {
+					conceptsActioned.add(potential);
 					info(String.format("%s has an ancestor in %s. Concept will be added to the RefSet.", conceptIdentifier, LAT_REFSETID_AND_PT));
 					RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, potential);
 					info(String.format("Created RefSet %s for Branch %s.", newRefSetMember.toString(), branchPath));
@@ -208,6 +220,10 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			info(String.format("No definite Concepts to be added to %s for Branch %s.", LAT_REFSETID_AND_PT, branchPath));
 		} else {
 			for (Concept definite : definites) {
+				if (conceptsActioned.contains(definite)) {
+					continue;
+				}
+
 				String conceptIdentifier = definite.toString();
 
 				// Check whether Concept is already in RefSet
@@ -222,6 +238,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 				}
 
 				// Add to RefSet
+				conceptsActioned.add(definite);
 				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, definite);
 				doReportOrLog(definite, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, newRefSetMember);
 			}
