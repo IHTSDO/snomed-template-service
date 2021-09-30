@@ -262,7 +262,20 @@ public class SnowstormClient {
 		queryParamMap.add("targetComponent", targetComponentId);
 		return getRefsetMembers(branchPath, queryParamMap);
 	}
-	
+
+	public List<Concept> conceptsByECL(String branchPath, String ecl) {
+		return fetchNewConceptPage(branchPath, null, ecl, null, 0)
+				.expand(response -> {
+					long expected = response.getTotal();
+					long totalReceived = response.getOffset() + response.getItems().size();
+					if (totalReceived >= expected) {
+						return Mono.empty();
+					}
+					return fetchNewConceptPage(branchPath, null, ecl, null, 0);
+				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+
 	public static final class RefsetMemberPage {
 		List<RefsetMemberPojo> items;
 		Long total;
@@ -297,29 +310,47 @@ public class SnowstormClient {
 	
 	public List<Concept> findNewConcepts(String branchPath, String ecl, String termFilter) {
 		long currentOffset = 0;
-		return fetchNewConceptPage(branchPath, ecl, termFilter, currentOffset)
+		return fetchNewConceptPage(branchPath, false, ecl, termFilter, currentOffset)
 				.expand(response -> {
 					long expected = response.getTotal();
 					long totalReceived = response.getOffset() + response.getItems().size();
 					if (totalReceived >= expected) {
 						return Mono.empty();
 					}
-					return fetchNewConceptPage(branchPath, ecl, termFilter, totalReceived);
+					return fetchNewConceptPage(branchPath, false, ecl, termFilter, totalReceived);
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	private Mono<ConceptPage> fetchNewConceptPage(String branchPath, String ecl, String termFilter, long currentOffset) {
+	private Mono<ConceptPage> fetchNewConceptPage(String branchPath, Boolean isPublished, String ecl, String termFilter, long currentOffset) {
 		if (termFilter == null) {
 			logger.info("Requesting new concepts from {} with offset {}.", branchPath, currentOffset);
 		} else {
 			logger.info("Requesting new {} concepts from {} with offset {}.", termFilter, branchPath, currentOffset);
 		}
 
+		if (isPublished == null) {
+			return webClient.get()
+					.uri(uriBuilder -> uriBuilder
+							.path("/{branch}/concepts")
+							.queryParam("isPublished", isPublished)
+							.queryParam("activeFilter", true)
+							.queryParam("ecl", ecl)
+							.queryParam("term", termFilter)
+							.queryParam("offset", currentOffset)
+							.queryParam("limit", DEFAULT_PAGESIZE)
+							.build(branchPath))
+					.retrieve()
+					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
+							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+					)
+					.bodyToMono(ConceptPage.class);
+		}
+
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
 					.path("/{branch}/concepts")
-					.queryParam("isPublished", false)
+					.queryParam("isPublished", isPublished)
 					.queryParam("activeFilter", true)
 					.queryParam("ecl", ecl)
 					.queryParam("term", termFilter)
