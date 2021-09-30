@@ -193,10 +193,12 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 				// Check whether Concept has any ancestors
 				info(String.format("Finding %s's ancestors on Branch %s.", conceptIdentifier, branchPath));
-				List<Concept> ancestors = tsClient.getAncestors(branchPath, potential.getConceptId());
+				String lateralizableAncestors = "> " + potential.getConceptId() + " :  272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)| MINUS (* : | = (7771000 |Left (qualifier value)| OR | = (24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
+				List<Concept> ancestors = tsClient.conceptsByECL(branchPath, lateralizableAncestors);
 				if (ancestors.isEmpty()) {
-					info(String.format("%s has no ancestors. Cannot determine whether Concept should be added to %s.", conceptIdentifier, LAT_REFSETID_AND_PT));
-					doReportOrLog(potential, Severity.LOW, ReportActionType.NO_CHANGE, "Concept has no ancestors. Cannot determine whether Concept should be added to RefSet.");
+					info(String.format("%s has no lateralizable ancestors. Cannot determine whether Concept should be added to %s.", conceptIdentifier, LAT_REFSETID_AND_PT));
+					doReportOrLog(potential, Severity.LOW, ReportActionType.NO_CHANGE, "Concept has no lateralizable ancestors. Cannot determine whether Concept should be added " +
+							"to RefSet.");
 					continue;
 				}
 
