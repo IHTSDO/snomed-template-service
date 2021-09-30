@@ -101,7 +101,6 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			if (rm.isActive()) {
 				this.conceptsActioned.add(concept);
 				removeRefsetMember(concept, rm);
-				doReportOrLog(concept, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "RefSet Member inactivated", rm);
 			} else {
 				doReportOrLog(concept, Severity.LOW, ReportActionType.NO_CHANGE, "RefSet Member previously inactivated", rm);
 			}
