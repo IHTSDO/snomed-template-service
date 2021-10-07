@@ -15,6 +15,7 @@ import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJo
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.domain.StatusAndMessage;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.DescriptionReplacementPojo;
@@ -61,6 +62,9 @@ public class ComponentTransformService {
 
 	@Autowired
 	private ObjectMapper objectMapper;
+
+	@Autowired
+	private BranchService branchService;
 
 	private final ResourceManager transformationJobResourceManager;
 
@@ -120,6 +124,7 @@ public class ComponentTransformService {
 				logger.info("Running {} transformation for user {} on branch {} with id {}.", recipeKey, job.getUser(), job.getRequest().getBranchPath(), job.getId());
 				job.updateStatus(TransformationStatus.RUNNING, null);
 				persistJobResource(job, STATUS_FILE, job.getStatus());
+				branchService.setAuthorFlag(request.getBranchPath(), ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 
 				// Read input from storage
 				InputStream tsvInputStream = readJobResource(job, INPUT_TSV, InputStream.class);

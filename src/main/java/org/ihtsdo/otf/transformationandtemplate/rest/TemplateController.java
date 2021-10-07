@@ -7,6 +7,8 @@ import java.util.Set;
 import javax.servlet.http.HttpServletResponse;
 
 import org.ihtsdo.otf.transformationandtemplate.rest.util.ControllerHelper;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
+import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.BranchService;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptCreateService;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateConceptSearchService;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
@@ -57,6 +59,9 @@ public class TemplateController {
 	
 	@Autowired
 	private TemplateTransformationResultService resultService;
+
+	@Autowired
+	private BranchService branchService;
 	
 	@RequestMapping(value = "/templates", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
@@ -110,6 +115,7 @@ public class TemplateController {
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
 												 @PathVariable String templateName,
 												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
+		setBatchChangeFlagOnBranch(branchPath);
 		return createService.generateConcepts(BranchPathUriUtil.decodePath(branchPath), templateName, tsvFile.getInputStream());
 	}
 
@@ -141,6 +147,7 @@ public class TemplateController {
 		transformService.transformAsynchronously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
 		resultService.update(transformation);
+		setBatchChangeFlagOnBranch(branchPath);
 		return ResponseEntity.created(uriComponentsBuilder.path("/templates/transform/{transformationId}")
 				.buildAndExpand(transformation.getTransformationId()).toUri()).build();
 	}
@@ -164,6 +171,7 @@ public class TemplateController {
 		SnowstormRestClient restClient = terminologyClientFactory.getClient();
 		TemplateTransformRequest request = new TemplateTransformRequest();
 		request.setDestinationTemplate(destinationTemplate);
+		setBatchChangeFlagOnBranch(branchPath);
 		return transformService.transformConcept(BranchPathUriUtil.decodePath(branchPath), request, conceptToTransform, restClient);
 	}
 	
@@ -177,5 +185,9 @@ public class TemplateController {
 	@ResponseBody
 	public TransformationResult getTransformationResults(@PathVariable String transformationId) throws ServiceException {
 		return resultService.getResult(transformationId);
+	}
+
+	private void setBatchChangeFlagOnBranch(String branchPath) throws ServiceException {
+		branchService.setAuthorFlag(branchPath, ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 	}
 }

@@ -47,6 +47,9 @@ public class TransformationIntegrationTest {
 	@MockBean
 	private AuthoringServicesClientFactory authoringServicesClientFactory;
 
+	@MockBean
+	private BranchService branchService;
+
 
 	@Before
 	public void before() {
