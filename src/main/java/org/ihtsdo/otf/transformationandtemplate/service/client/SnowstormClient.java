@@ -479,4 +479,17 @@ public class SnowstormClient {
 		}
 	}
 
+	public void setAuthorFlag(String branchPath, String key, String value) {
+		logger.info("Setting author flag {} = {} on Branch {}.", key, value, branchPath);
+
+		webClient.post()
+				.uri(uriBuilder -> uriBuilder
+						.path("/branches/{branch}/actions/set-author-flag")
+						.build(branchPath))
+				.body(BodyInserters.fromValue(Map.of("name", key, "value", value)))
+				.retrieve()
+				.bodyToMono(String.class)
+				.block();
+	}
+
 }
