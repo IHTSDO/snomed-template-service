@@ -5,6 +5,7 @@ import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Project;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.ihtsdo.otf.utils.SnomedUtils;
@@ -75,6 +76,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 			task = asClient.createTask(jobRun.getProject(), taskTitle, "Processing Report TBC");
 			jobRun.setStatus(JobStatus.Scheduled);
 			jobRun.setResultUrl(task.getKey());
+			tsClient.setAuthorFlag(task.getBranchPath(), ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 			logger.info("Created task " + task.getKey());
 		} catch (Exception e) {
 			throw new TermServerScriptException("Unable to create task in " + jobRun.getProject(), e);
