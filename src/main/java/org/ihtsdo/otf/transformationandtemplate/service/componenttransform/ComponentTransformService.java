@@ -124,7 +124,6 @@ public class ComponentTransformService {
 				logger.info("Running {} transformation for user {} on branch {} with id {}.", recipeKey, job.getUser(), job.getRequest().getBranchPath(), job.getId());
 				job.updateStatus(TransformationStatus.RUNNING, null);
 				persistJobResource(job, STATUS_FILE, job.getStatus());
-				branchService.setAuthorFlag(request.getBranchPath(), ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 
 				// Read input from storage
 				InputStream tsvInputStream = readJobResource(job, INPUT_TSV, InputStream.class);

@@ -4,6 +4,7 @@ import com.google.common.collect.Iterables;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -659,6 +660,7 @@ public class HighLevelAuthoringService {
 					format("%s - Batch #%s", request.getTaskTitle(), batchNumber), "Created automatically by the batch processing function.");
 			branchPath = task.getBranchPath();
 			snowstormClient.createBranch(branchPath);
+			snowstormClient.setAuthorFlag(branchPath, ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 			task.setStatus("IN_PROGRESS");
 			if (request.getTaskAssignee() != null) {
 				task.setAssignee(new TaskUser(request.getTaskAssignee()));
