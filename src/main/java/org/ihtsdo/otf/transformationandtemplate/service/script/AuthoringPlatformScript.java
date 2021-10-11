@@ -76,7 +76,6 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 			task = asClient.createTask(jobRun.getProject(), taskTitle, "Processing Report TBC");
 			jobRun.setStatus(JobStatus.Scheduled);
 			jobRun.setResultUrl(task.getKey());
-			tsClient.setAuthorFlag(task.getBranchPath(), ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 			logger.info("Created task " + task.getKey());
 		} catch (Exception e) {
 			throw new TermServerScriptException("Unable to create task in " + jobRun.getProject(), e);
@@ -86,7 +85,9 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	public void run() {
 		info ("Running " + this.getClass().getSimpleName());
 		updateTaskTitleState("Running");
-		tsClient.createBranch(task.getBranchPath());
+		String branchPath = task.getBranchPath();
+		tsClient.createBranch(branchPath);
+		tsClient.setAuthorFlag(branchPath, ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 		try {
 			String url = createGoogleSheet();
 			updateTaskDescription(getLink(url), false);
