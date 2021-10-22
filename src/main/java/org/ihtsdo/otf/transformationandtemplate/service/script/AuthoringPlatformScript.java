@@ -115,7 +115,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	}
 
 	private String getLink(String url) {
-		return "See <a href=\"" + url + "\">processing report.</a>";
+		return "See <a href=\"" + url + "\">processing report</a>";
 	}
 
 	private String createGoogleSheet() throws TermServerScriptException {
