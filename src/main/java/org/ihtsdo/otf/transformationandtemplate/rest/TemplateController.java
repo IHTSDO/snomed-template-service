@@ -115,8 +115,9 @@ public class TemplateController {
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
 												 @PathVariable String templateName,
 												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
+		branchPath = BranchPathUriUtil.decodePath(branchPath);
 		setBatchChangeFlagOnBranch(branchPath);
-		return createService.generateConcepts(BranchPathUriUtil.decodePath(branchPath), templateName, tsvFile.getInputStream());
+		return createService.generateConcepts(branchPath, templateName, tsvFile.getInputStream());
 	}
 
 	@RequestMapping(value = "/templates/reload", method = RequestMethod.POST)
@@ -142,7 +143,8 @@ public class TemplateController {
 									@RequestBody TemplateTransformRequest transformRequest,
 									UriComponentsBuilder uriComponentsBuilder
 									) throws ServiceException {
-		TemplateTransformation transformation = transformService.createTemplateTransformation(BranchPathUriUtil.decodePath(branchPath), transformRequest);
+		branchPath = BranchPathUriUtil.decodePath(branchPath);
+		TemplateTransformation transformation = transformService.createTemplateTransformation(branchPath, transformRequest);
 		SnowstormRestClient restClient = terminologyClientFactory.getClient();
 		transformService.transformAsynchronously(transformation, restClient);
 		transformation.setStatus(TransformationStatus.QUEUED);
@@ -171,8 +173,9 @@ public class TemplateController {
 		SnowstormRestClient restClient = terminologyClientFactory.getClient();
 		TemplateTransformRequest request = new TemplateTransformRequest();
 		request.setDestinationTemplate(destinationTemplate);
+		branchPath = BranchPathUriUtil.decodePath(branchPath);
 		setBatchChangeFlagOnBranch(branchPath);
-		return transformService.transformConcept(BranchPathUriUtil.decodePath(branchPath), request, conceptToTransform, restClient);
+		return transformService.transformConcept(branchPath, request, conceptToTransform, restClient);
 	}
 	
 	@RequestMapping(value = "/templates/transform/{transformationId}", method = RequestMethod.GET)
