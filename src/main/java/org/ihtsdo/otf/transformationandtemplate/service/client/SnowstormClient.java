@@ -417,7 +417,7 @@ public class SnowstormClient {
 		if (termFilter == null) {
 			logger.info("Requesting {} concepts from {} with offset {}.", activeFilter ? "active" : "inactive", branchPath, currentOffset);
 		} else {
-			logger.info("Requesting {} {} concepts from {} with offset {}.", activeFilter ? "active " : "inactive ", termFilter, branchPath, currentOffset);
+			logger.info("Requesting {} '{}' concepts from {} with offset {}.", activeFilter ? "active " : "inactive ", termFilter, branchPath, currentOffset);
 		}
 
 		if (ecl == null) {

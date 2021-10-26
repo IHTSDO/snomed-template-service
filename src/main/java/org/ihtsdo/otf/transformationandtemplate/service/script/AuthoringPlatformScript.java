@@ -164,7 +164,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	
 	protected void removeRefsetMember(Concept c, RefsetMemberPojo rm) throws TermServerScriptException {
 		//Has this rm been published?
-		if (StringUtils.isEmpty(rm.getreleasedEffectiveTime())) {
+		if (StringUtils.isEmpty(rm.getReleasedEffectiveTime())) {
 			info("Deleting " + rm);
 			tsClient.deleteRefsetMember(task.getBranchPath(), rm);
 			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_DELETED, "", rm);
@@ -179,7 +179,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 
 	protected boolean report(Concept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
 		String semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
-		return report (TAB_0, task, c.getId(), c.getFsnTerm(), semTag, severity, action, details);
+		return report(TAB_0, task, c.getId(), c.getFsnTerm(), semTag, severity, action, details);
 	}
 
 

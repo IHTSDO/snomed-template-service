@@ -5,6 +5,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient.ConceptPage;
 import org.ihtsdo.otf.utils.ExceptionUtils;
+import org.ihtsdo.otf.utils.SnomedUtils;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
 import org.snomed.otf.scheduler.domain.JobParameter.Type;
@@ -56,16 +57,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			"body structure concepts have been created, and removes them when concepts have been inactivated.")
 			.withProductionStatus(ProductionStatus.PROD_READY)
 			.withParameters(params)
-			//.withTag(INT)
 			.build();
 	}
 
 	@Override
 	public void runJob() throws TermServerScriptException {
-		//Can't directly populate a map because SE refset > 10K rows and we don't yet have searchAfter
-		//populateRefsetMap(seRefsetContent, SCTID_SE_REFSETID);
-		//populateRefsetMap(spRefsetContent, SCTID_SP_REFSETID);
-		
 		//Firstly see if any inactivated concepts need to be removed,
 		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
@@ -79,13 +75,20 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		
 		updateRefset(SCTID_SE_REFSETID, "Entire");
 		percentageComplete(legacy?6:60);
+		flushFiles(false, true);
+		
 		updateRefset(SCTID_SE_REFSETID, "All");
 		percentageComplete(legacy?7:70);
+		flushFiles(false, true);
+		
 		updateRefset(SCTID_SP_REFSETID, "Part");
 		percentageComplete(legacy?8:80);
+		flushFiles(false, true);
+		
 		
 		if (legacy) {
 			checkAllConcepts(10, SCTID_SE_REFSETID, "Entire");
+			flushFiles(false, true);
 			checkAllConcepts(40, SCTID_SE_REFSETID, "All");
 			checkAllConcepts(70, SCTID_SP_REFSETID, "Part");
 		}
@@ -99,28 +102,29 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	private void updateRefset(String refsetId, String termFilter, Collection<Concept> concepts) throws TermServerScriptException {
+		nextNewConcept:
 		for (Concept c : concepts) {
 			examined.add(c.getId());
 			//If it's not a body structure, don't even mention it
 			//And I'm not sure why we're seeing these with that eclFilter above!
 			if (!c.getFsnTerm().contains("(body structure)")) {
 				debug("ECL filter for Body Structure is not doing it's job: " + c);
-				continue;
+				continue nextNewConcept;
 			}
 			//Ensure the FSN starts with the term filter
 			if (!c.getFsnTerm().startsWith(termFilter + " ")) {
 				report(c, Severity.HIGH, ReportActionType.VALIDATION_CHECK, "FSN did not start with expected '" + termFilter + "'");
-				continue;
+				continue nextNewConcept;
 			}
 			List<Concept> parents = tsClient.getParents(task.getBranchPath(), c.getId());
 			
-			//Find the parent which is the structure
+			//Find the parent which is the structure. Use the FSN with the semtag stripped
 			List<Concept> structureParents = parents.stream()
-					.filter(p -> p.getFsnTerm().toLowerCase().contains("structure"))
+					.filter(p -> SnomedUtils.deconstructFSN(p.getFsnTerm())[0].toLowerCase().contains("structure"))
 					.collect(Collectors.toList());
 			if (structureParents.size() != 1) {
-				report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, termFilter + " concept has " + structureParents.size() + " structure parents.");
-				continue;
+				report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "'" + termFilter + "' concept has " + structureParents.size() + " structure parents.");
+				continue nextNewConcept;
 			}
 			
 			Concept sConcept = structureParents.get(0);
@@ -129,7 +133,33 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
 				if (rmExisting.size() > 0) {
 					report(c, Severity.MEDIUM, ReportActionType.VALIDATION_CHECK, "'All' concept considered redundant", rmExisting.get(0));
-					continue;
+					continue nextNewConcept;
+				}
+			}
+			
+			//Check if we already have a refset for this 'S' parent which we may wish to inactivate if not
+			//appropriate, or refrain from adding more if existing entry is valid
+			List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
+			for (RefsetMemberPojo rm : rmExisting) {
+				String otherChildId = rm.getAdditionalFields().getTargetComponentId();
+				//If we're in danger of adding a duplicate, we can skip
+				if (c.getId().equals(otherChildId)) {
+					report(c, Severity.MEDIUM, ReportActionType.NO_CHANGE, "Skipping attempt to create duplicate", rm);
+					continue nextNewConcept;
+				}
+				
+				//Now does this child REALLY have that structure as an immediate parent?  
+				//Inactivate if not, or if so, don't try to add another one for the same 'S'!
+				List<Concept> otherParents = tsClient.getParents(task.getBranchPath(), otherChildId);
+				boolean isValid = otherParents.stream()
+						.anyMatch(op -> op.getId().equals(sConcept.getConceptId()));
+				
+				if (isValid) {
+					report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "Unable to add refset memember due to existing conflicting member", rm);
+					continue nextNewConcept;
+				} else {
+					removeRefsetMember(c, rm);
+					report(c, Severity.HIGH, ReportActionType.REFSET_MEMBER_INACTIVATED, "Removed invalid conflicting member", rm);
 				}
 			}
 			
@@ -156,6 +186,9 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//Easier just to recover the whole refset once we have searchAfter available
 		//for now we'll work out if we're searching Structure or Part and check 
 		//on a per-inactivation basis
+		
+		//TODO This functionality is now available, but the numbers involved don't yet necessitate the
+		//peformance improvement
 		
 		/* Map<String, RefsetMemberPojo> refsetContentMap = new HashMap<>();
 			for (List<Concept> chunk : Lists.partition(inactivatedConcepts, 100)) {
