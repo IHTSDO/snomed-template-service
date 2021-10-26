@@ -67,6 +67,10 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	public void initialise() throws TermServerScriptException {
 		String taskTitle = jobRun.getJobName() + " - Initialising";
 		logger.info(taskTitle);
+		
+		if (StringUtils.isEmpty(jobRun.getProject())) {
+			throw new TermServerScriptException("'project' parameter missing from jobRun request");
+		}
 		//Clients are user specific so we have to create new ones for each job
 		asClient = mgr.getASClient();
 		tsClient = mgr.getTSClient();
@@ -112,6 +116,11 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 				}
 			}
 		}
+	}
+	
+	protected void percentageComplete(int i) {
+		info (i + "% complete");
+		updateTaskTitleState("Running - " + i + "%");
 	}
 
 	private String getLink(String url) {

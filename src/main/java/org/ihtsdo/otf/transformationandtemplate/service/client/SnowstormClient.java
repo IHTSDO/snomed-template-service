@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class SnowstormClient {
 	
@@ -213,13 +214,13 @@ public class SnowstormClient {
 		.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, String refsetId, List<ConceptPojo> ref) {
+	/*public List<RefsetMemberPojo> getRefsetMembers(String branchPath, String refsetId, List<ConceptPojo> ref) {
 		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
 		queryParamMap.add("refsetId", refsetId);
 		return getRefsetMembers(branchPath, queryParamMap);
-	}
+	}*/
 
-	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, MultiValueMap<String, String> queryParamMap) {
+	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, MultiValueMap<String, String> queryParamMap, boolean isPOST) {
 		long currentOffset = 0;
 		return fetchRefsetMemberPage(branchPath, queryParamMap, currentOffset)
 				.expand(response -> {
@@ -229,6 +230,20 @@ public class SnowstormClient {
 						return Mono.empty();
 					}
 					return fetchRefsetMemberPage(branchPath, queryParamMap, totalReceived);
+				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+	
+	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, MemberSearchRequest memberSearchRequest, boolean isPOST) {
+		long currentOffset = 0;
+		return fetchRefsetMemberPage(branchPath, memberSearchRequest, currentOffset)
+				.expand(response -> {
+					long expected = response.getTotal();
+					long totalReceived = response.getOffset() + response.getItems().size();
+					if (totalReceived >= expected) {
+						return Mono.empty();
+					}
+					return fetchRefsetMemberPage(branchPath, memberSearchRequest, totalReceived);
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
@@ -245,6 +260,19 @@ public class SnowstormClient {
 				.retrieve()
 				.bodyToMono(RefsetMemberPage.class);
 	}
+	
+	private Mono<RefsetMemberPage> fetchRefsetMemberPage(String branchPath, MemberSearchRequest memberSearchRequest, long currentOffset) {
+		logger.info("Requesting members from " + branchPath + " with memberSearchRequest " + memberSearchRequest + " and offset " + currentOffset);
+		return webClient.post()
+				.uri(uriBuilder -> uriBuilder
+						.path("{branch}/members/search")
+						.queryParam("offset", currentOffset)
+						.queryParam("limit", DEFAULT_PAGESIZE)
+						.build(branchPath))
+				.bodyValue(memberSearchRequest)
+				.retrieve()
+				.bodyToMono(RefsetMemberPage.class);
+	}
 
 	public List<RefsetMemberPojo> findRefsetMemberByReferencedComponentId(String branchPath, String refsetId, String referencedComponentId, Boolean activeFlag) {
 		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
@@ -253,14 +281,21 @@ public class SnowstormClient {
 		if (activeFlag != null) {
 			queryParamMap.add("active", activeFlag.toString());
 		}
-		return getRefsetMembers(branchPath, queryParamMap);
+		return getRefsetMembers(branchPath, queryParamMap, false);
 	}
 
 	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentId(String branchPath, String refsetId, String targetComponentId) {
 		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
 		queryParamMap.add("referenceSet", refsetId);
 		queryParamMap.add("targetComponent", targetComponentId);
-		return getRefsetMembers(branchPath, queryParamMap);
+		return getRefsetMembers(branchPath, queryParamMap, false);
+	}
+	
+	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentIds(String branchPath, String refsetId, Set<String> targetComponentIds) {
+		MemberSearchRequest memberSearchRequest = new MemberSearchRequest()
+				.withRefsetId(refsetId)
+				.withAdditionalFieldSet("targetComponentId", targetComponentIds);
+		return getRefsetMembers(branchPath, memberSearchRequest, true);
 	}
 
 	public List<Concept> conceptsByECL(String branchPath, String ecl) {
@@ -346,7 +381,7 @@ public class SnowstormClient {
 					)
 					.bodyToMono(ConceptPage.class);
 		}
-
+		
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
 					.path("/{branch}/concepts")
@@ -419,12 +454,37 @@ public class SnowstormClient {
 				.bodyToMono(ConceptPage.class);
 	}
 	
+	public ConceptPage fetchConceptPage(String branchPath, Boolean isPublished, String ecl, String termFilter, String searchAfter) {
+		if (termFilter == null) {
+			logger.info("Requesting concepts matching {} from {} with searchAfter {}.", ecl, branchPath, searchAfter);
+		} else {
+			logger.info("Requesting '{}' concepts matching {} from {} with searchAfter {}.", termFilter, ecl, branchPath, searchAfter);
+		}
+
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("/{branch}/concepts")
+						.queryParam("isPublished", isPublished)
+						.queryParam("activeFilter", true)
+						.queryParam("ecl", ecl)
+						.queryParam("term", termFilter)
+						.queryParam("searchAfter", searchAfter)
+						.queryParam("limit", DEFAULT_PAGESIZE)
+						.build(branchPath))
+				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+				)
+				.bodyToMono(ConceptPage.class).block();
+	}
+	
 	//I tried doing this with generics, but couldn't then say DataPage<ConceptPojo>.class
 	public static final class ConceptPage {
 		List<Concept> items;
 		Long total;
 		Long limit;
 		Long offset;
+		String searchAfter;
 		
 		public List<Concept> getItems() {
 			return items;
@@ -449,6 +509,51 @@ public class SnowstormClient {
 		}
 		public void setOffset(Long offset) {
 			this.offset = offset;
+		}
+		public String getSearchAfter() {
+			return searchAfter;
+		}
+		public void setSearchAfter(String searchAfter) {
+			this.searchAfter = searchAfter;
+		}
+	}
+	
+	public static final class MemberSearchRequest {
+		String referenceSet;
+		Map<String, Set<String>> additionalFieldSets;
+		
+		public String getReferenceSet() {
+			return referenceSet;
+		}
+		public void setReferenceSet(String referenceSet) {
+			this.referenceSet = referenceSet;
+		}
+		public Map<String, Set<String>> getAdditionalFieldSets() {
+			return additionalFieldSets;
+		}
+		public void setAdditionalFieldSets(Map<String, Set<String>> additionalFieldSets) {
+			this.additionalFieldSets = additionalFieldSets;
+		}
+		
+		public void addAdditionalFieldSet(String key, Set<String> values) {
+			if (additionalFieldSets == null) {
+				additionalFieldSets = new HashMap<>();
+			}
+			additionalFieldSets.put(key, values);
+		}
+		public MemberSearchRequest withAdditionalFieldSet(String key, Set<String> values) {
+			addAdditionalFieldSet(key, values);
+			return this;
+		}
+		public MemberSearchRequest withRefsetId(String refsetId) {
+			referenceSet = refsetId;
+			return this;
+		}
+		public String toString() {
+			return "[ referenceSet = " + referenceSet + ", "
+					+ additionalFieldSets.entrySet().stream()
+					.map(entry -> entry.getKey() + ": " + entry.getValue().size() + " items")
+					.collect(Collectors.joining(", ")) + "]";
 		}
 	}
 

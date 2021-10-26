@@ -3,9 +3,11 @@ package org.ihtsdo.otf.transformationandtemplate.service.script;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
+import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient.ConceptPage;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
+import org.snomed.otf.scheduler.domain.JobParameter.Type;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,14 +23,22 @@ import java.util.stream.Collectors;
  * 4. Identify the existing row in the S/E association refset if a structure or entire concept is inactive in the latest release
  * 5. Replace the inactive concepts with active concepts
  * 6. The combination of outcomes from 3 and 5 is the delta file for review
+ * 
+ * FRI-299 Adding the option to pick up legacy content as well with a 'legacy' parameter
+ * which will check every 'Entire', 'Part' and 'All' BodyStructure to see if they're in the refset.
  */
 public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements JobClass {
 	
 	public static final String SCTID_SE_REFSETID = "734138000";
 	public static final String SCTID_SP_REFSETID = "734139008";
+	public static final String BODY_STRUCTURE_ECL = "<< 123037004";
+	public static final String LEGACY = "Check existing concepts";
+	boolean legacy = false;
 	
 	Map<String, RefsetMemberPojo> seRefsetContent = new HashMap<>();
 	Map<String, RefsetMemberPojo> spRefsetContent= new HashMap<>();
+	
+	Set<String> examined = new HashSet<>();
 
 	public Update_SE_SP_Refsets(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
@@ -36,12 +46,16 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 
 	@Override
 	public Job getJob() {
+		JobParameters params = new JobParameters()
+				.add(LEGACY).withType(Type.BOOLEAN).withDefaultValue(false).withDescription("Check all existing 'Entire', 'Part' and 'All' BodyStructures and attempt to add to the refset if required")
+				.build();
 		return new Job()
 			.withCategory(new JobCategory(JobType.BATCH_JOB, JobCategory.REFSET_UPDATE))
 			.withName("Update SE SP Refsets")
 			.withDescription("This job adds entries to the SE and SP refset where new Entire and Part " + 
 			"body structure concepts have been created, and removes them when concepts have been inactivated.")
 			.withProductionStatus(ProductionStatus.PROD_READY)
+			.withParameters(params)
 			//.withTag(INT)
 			.build();
 	}
@@ -56,24 +70,37 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
 		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, "(body structure)", null);
-		
+		legacy = jobRun.getParamBoolean(LEGACY);
+				
 		info("Checking " + inactivatedConcepts.size() + " inactive body structure concepts");
 		removeInvalidEntries(SCTID_SE_REFSETID, inactivatedConcepts);
 		removeInvalidEntries(SCTID_SP_REFSETID, inactivatedConcepts);
+		percentageComplete(legacy?5:50);
 		
-		//TODO for 'All' concepts, check if there's an existing Entire sibling which has priority
 		updateRefset(SCTID_SE_REFSETID, "Entire");
+		percentageComplete(legacy?6:60);
 		updateRefset(SCTID_SE_REFSETID, "All");
+		percentageComplete(legacy?7:70);
 		updateRefset(SCTID_SP_REFSETID, "Part");
+		percentageComplete(legacy?8:80);
 		
-
+		if (legacy) {
+			checkAllConcepts(10, SCTID_SE_REFSETID, "Entire");
+			checkAllConcepts(40, SCTID_SE_REFSETID, "All");
+			checkAllConcepts(70, SCTID_SP_REFSETID, "Part");
+		}
 	}
-
+	
 	private void updateRefset(String refsetId, String termFilter) throws TermServerScriptException {
 		String eclFilter = "< 123037004 |Body structure (body structure)|";
 		List<Concept> newConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, termFilter);
 		info("Recovered " + newConcepts.size() + " new " + termFilter + " concepts");
-		for (Concept c : newConcepts) {
+		updateRefset(refsetId, termFilter, newConcepts);
+	}
+
+	private void updateRefset(String refsetId, String termFilter, Collection<Concept> concepts) throws TermServerScriptException {
+		for (Concept c : concepts) {
+			examined.add(c.getId());
 			//If it's not a body structure, don't even mention it
 			//And I'm not sure why we're seeing these with that eclFilter above!
 			if (!c.getFsnTerm().contains("(body structure)")) {
@@ -180,6 +207,40 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				error(msg, e);
 				report(c, Severity.HIGH, ReportActionType.API_ERROR, msg);
 			}
+		}
+	}
+	
+
+	private void checkAllConcepts(int startingPercentage, String refsetId, String termFilter) throws TermServerScriptException {
+		info ("Checking all legacy '" + termFilter + "' concepts for potential inclusion");
+		//Loop through all Body Structures containing 'termFilter' text
+		//Get published concepts because new ones will already have been examined
+		ConceptPage page = tsClient.fetchConceptPage(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, null);
+		long totalExpected = page.getTotal();
+		long totalReceived = page.getItems().size();
+		
+		while (totalReceived < totalExpected) {
+			//The term filter isn't "starts with", so we can filter those out.
+			//Also filter any concept we've already examined
+			Map<String, Concept> conceptMap = page.getItems().stream()
+					.filter(c -> c.getFsnTerm().startsWith(termFilter))
+					.filter(c -> !examined.contains(c.getConceptId()))
+					.collect(Collectors.toMap(Concept::getConceptId, c -> c));
+			
+			//Do we already have refset members for these concepts?
+			List<RefsetMemberPojo> existing = tsClient.findRefsetMemberByTargetComponentIds(task.getBranchPath(), refsetId, conceptMap.keySet());
+			debug ( existing.size() + " / " + conceptMap.size() + " '" + termFilter + "' already have refset entries");
+			existing.forEach(rm -> conceptMap.remove(rm.getAdditionalFields().getTargetComponentId()));
+			
+			//Attempt to add these 
+			updateRefset(refsetId, termFilter, conceptMap.values());
+			
+			//How many have we examined?  Can be up to 30% above starting percentage
+			percentageComplete(startingPercentage + (int)((totalReceived / (double)totalExpected) * 30d));
+			
+			//Now get our next page
+			page = tsClient.fetchConceptPage(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, page.getSearchAfter());
+			totalReceived += page.getItems().size();
 		}
 	}
 
