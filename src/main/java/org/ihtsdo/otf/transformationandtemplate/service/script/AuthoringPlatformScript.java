@@ -77,7 +77,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		initialiseReportConfiguration(jobRun);
 		ReportSheetManager.targetFolderId = "1fMHFzq5rP1WGmq3AXA2C2RwYXADzGLxR";
 		try {
-			task = asClient.createTask(jobRun.getProject(), taskTitle, "Processing Report TBC");
+			task = asClient.createTask(jobRun.getProject(), taskTitle, "Report in progress");
 			jobRun.setStatus(JobStatus.Scheduled);
 			jobRun.setResultUrl(task.getKey());
 			logger.info("Created task " + task.getKey());
@@ -124,7 +124,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	}
 
 	private String getLink(String url) {
-		return "See <a href=\"" + url + "\">processing report</a>";
+		return "View <a target=\"_blank\" href=\"" + url + "\">report</a>";
 	}
 
 	private String createGoogleSheet() throws TermServerScriptException {
