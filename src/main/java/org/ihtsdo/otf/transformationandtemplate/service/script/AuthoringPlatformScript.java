@@ -130,7 +130,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	private String createGoogleSheet() throws TermServerScriptException {
 		reportManager = ReportManager.create(this, reportConfiguration);
 		reportManager.setTabNames(new String[] {"Process", "Summary"});
-		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Details,Details",
+		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Info,Detail1, Detail2, ",
 												"Issue, Count"};
 		reportManager.initialiseReportFiles(columnHeadings);
 		return reportManager.getUrl();

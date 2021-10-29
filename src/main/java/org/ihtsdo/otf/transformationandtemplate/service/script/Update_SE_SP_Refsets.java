@@ -165,7 +165,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			
 			//We have our new refset candidate
 			RefsetMemberPojo newRM = createMember(refsetId, sConcept, c);
-			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, "", newRM);
+			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, sConcept + " -> " + c, newRM);
 		}
 	}
 
