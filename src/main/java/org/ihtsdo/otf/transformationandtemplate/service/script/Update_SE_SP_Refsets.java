@@ -1,6 +1,9 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
 import org.ihtsdo.otf.exception.TermServerScriptException;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo.HistoricalAssociation;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.IConcept;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient.ConceptPage;
@@ -38,8 +41,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	
 	Map<String, RefsetMemberPojo> seRefsetContent = new HashMap<>();
 	Map<String, RefsetMemberPojo> spRefsetContent= new HashMap<>();
+	Map<String, String> historicalReplacementMap = new HashMap<>();
 	
 	Set<String> examined = new HashSet<>();
+	
+	HistoricalAssociation[] associationTypes = new HistoricalAssociation[] { HistoricalAssociation.SAME_AS, HistoricalAssociation.REPLACED_BY, HistoricalAssociation.ALTERNATIVE, HistoricalAssociation.POSSIBLY_EQUIVALENT_TO };
 
 	public Update_SE_SP_Refsets(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
@@ -85,6 +91,14 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		percentageComplete(legacy?8:80);
 		flushFiles(false, true);
 		
+		//Now see if any of those historical replacements can be used
+		//Load them concepts
+
+		for (Map.Entry<String,String> entry : historicalReplacementMap.entrySet()) {
+			String refsetId = entry.getValue();
+			ConceptPojo replacement = tsClient.getFullConcept(task.getBranchPath(), entry.getKey()); 
+			attemptAddition(refsetId, replacement, false);
+		}
 		
 		if (legacy) {
 			checkAllConcepts(10, SCTID_SE_REFSETID, "Entire");
@@ -116,66 +130,74 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				report(c, Severity.HIGH, ReportActionType.VALIDATION_CHECK, "FSN did not start with expected '" + termFilter + "'");
 				continue nextNewConcept;
 			}
-			List<Concept> parents = tsClient.getParents(task.getBranchPath(), c.getId());
 			
-			//Find the parent which is the structure. Use the FSN with the semtag stripped
-			List<Concept> structureParents = parents.stream()
-					.filter(p -> SnomedUtils.deconstructFSN(p.getFsnTerm())[0].toLowerCase().contains("structure"))
-					.collect(Collectors.toList());
-			if (structureParents.size() != 1) {
-				report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "'" + termFilter + "' concept has " + structureParents.size() + " structure parents.");
-				continue nextNewConcept;
-			}
-			
-			Concept sConcept = structureParents.get(0);
-			//From FRI-186 If this is an 'All' concept and we already have an 'Entire' then the 'All' is redundant
-			if (termFilter.equals("All")) {
-				List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
-				if (rmExisting.size() > 0) {
-					report(c, Severity.MEDIUM, ReportActionType.VALIDATION_CHECK, "'All' concept considered redundant", rmExisting.get(0));
-					continue nextNewConcept;
-				}
-			}
-			
-			//Check if we already have a refset for this 'S' parent which we may wish to inactivate if not
-			//appropriate, or refrain from adding more if existing entry is valid
-			List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
-			for (RefsetMemberPojo rm : rmExisting) {
-				String otherChildId = rm.getAdditionalFields().getTargetComponentId();
-				//If we're in danger of adding a duplicate, we can skip
-				if (c.getId().equals(otherChildId)) {
-					report(c, Severity.MEDIUM, ReportActionType.NO_CHANGE, "Skipping attempt to create duplicate", rm);
-					continue nextNewConcept;
-				}
-				
-				//Now does this child REALLY have that structure as an immediate parent?  
-				//Inactivate if not, or if so, don't try to add another one for the same 'S'!
-				List<Concept> otherParents = tsClient.getParents(task.getBranchPath(), otherChildId);
-				boolean isValid = otherParents.stream()
-						.anyMatch(op -> op.getId().equals(sConcept.getConceptId()));
-				
-				if (isValid) {
-					report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "Unable to add refset memember due to existing conflicting member", rm);
-					continue nextNewConcept;
-				} else {
-					removeRefsetMember(c, rm);
-					report(c, Severity.HIGH, ReportActionType.REFSET_MEMBER_INACTIVATED, "Removed invalid conflicting member", rm);
-				}
-			}
-			
-			//We have our new refset candidate
-			RefsetMemberPojo newRM = createMember(refsetId, sConcept, c);
-			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, sConcept + " -> " + c, newRM);
+			boolean isAllConcept = termFilter.equals("All");
+			attemptAddition(refsetId, c, isAllConcept);
 		}
 	}
 
-	private RefsetMemberPojo createMember(String refsetId, Concept structure, Concept child) {
+	private void attemptAddition(String refsetId, IConcept c, boolean isAllConcept) throws TermServerScriptException {
+		List<Concept> parents = tsClient.getParents(task.getBranchPath(), c.getConceptId());
+		
+		//Find the parent which is the structure. Use the FSN with the semtag stripped
+		List<Concept> structureParents = parents.stream()
+				.filter(p -> SnomedUtils.deconstructFSN(p.getFsnTerm())[0].toLowerCase().contains("structure"))
+				.collect(Collectors.toList());
+		if (structureParents.size() != 1) {
+			report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "Concept has " + structureParents.size() + " structure parents.");
+			return;
+		}
+		
+		Concept sConcept = structureParents.get(0);
+
+		//From FRI-186 If this is an 'All' concept and we already have an 'Entire' then the 'All' is redundant
+		if (isAllConcept) {
+			List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
+			if (rmExisting.size() > 0) {
+				report(c, Severity.MEDIUM, ReportActionType.VALIDATION_CHECK, "'All' concept considered redundant", rmExisting.get(0));
+				return;
+			}
+		}
+		
+		//Check if we already have a refset for this 'S' parent which we may wish to inactivate if not
+		//appropriate, or refrain from adding more if existing entry is valid
+		List<RefsetMemberPojo> rmExisting = tsClient.findRefsetMemberByReferencedComponentId(task.getBranchPath(), refsetId, sConcept.getConceptId(), true);
+		for (RefsetMemberPojo rm : rmExisting) {
+			String otherChildId = rm.getAdditionalFields().getTargetComponentId();
+			//If we're in danger of adding a duplicate, we can skip
+			if (c.getConceptId().equals(otherChildId)) {
+				report(c, Severity.MEDIUM, ReportActionType.NO_CHANGE, "Skipping attempt to create duplicate", rm);
+				return;
+			}
+			
+			//Now does this child REALLY have that structure as an immediate parent?  
+			//Inactivate if not, or if so, don't try to add another one for the same 'S'!
+			List<Concept> otherParents = tsClient.getParents(task.getBranchPath(), otherChildId);
+			boolean isValid = otherParents.stream()
+					.anyMatch(op -> op.getId().equals(sConcept.getConceptId()));
+			
+			if (isValid) {
+				report(c, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "Unable to add refset memember due to existing conflicting member", rm);
+				return;
+			} else {
+				removeRefsetMember(c, rm);
+				report(c, Severity.HIGH, ReportActionType.REFSET_MEMBER_INACTIVATED, "Removed invalid conflicting member", rm);
+			}
+		}
+		
+		//We have our new refset candidate
+		RefsetMemberPojo newRM = createMember(refsetId, sConcept, c);
+		report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, sConcept + " -> " + c, newRM);
+		
+	}
+
+	private RefsetMemberPojo createMember(String refsetId, IConcept structure, IConcept child) {
 		RefsetMemberPojo rm = new RefsetMemberPojo()
 				.withRefsetId(refsetId)
 				.withActive(true)
 				.withModuleId(SCTID_CORE_MODULE)
-				.withReferencedComponentId(structure.getId());
-		rm.getAdditionalFields().setTargetComponentId(child.getId());
+				.withReferencedComponentId(structure.getConceptId());
+		rm.getAdditionalFields().setTargetComponentId(child.getConceptId());
 		return tsClient.createRefsetMember(task.getBranchPath(), rm);
 	}
 
@@ -230,6 +252,9 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 						//Did we already inactivate this refset member relating to another concept
 						if (rm.isActive()) {
 							removeRefsetMember(c, rm);
+							//Is there a historical replacement that we should consider adding?
+							ConceptPojo fullConcept = tsClient.getFullConcept(task.getBranchPath(), c.getConceptId());
+							populateReplacementOrReport(c, fullConcept, rm.getRefsetId());
 						} else {
 							report(c, Severity.LOW, ReportActionType.NO_CHANGE, "RefsetMember previously inactivated", rm);
 						}
@@ -243,6 +268,20 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}
 	}
 	
+
+	private void populateReplacementOrReport(Concept orig, ConceptPojo fullConcept, String refsetId) throws TermServerScriptException {
+		//Do we have any replacement targets?
+		for (HistoricalAssociation associationType : associationTypes) {
+			Set<String> targets = fullConcept.getAssociationTargets().get(associationType);
+			if (targets.size() == 1) {
+				historicalReplacementMap.put(targets.iterator().next(), refsetId);
+			} else if (targets.size() > 1) {
+				String msg = "Concept indicated multiple historical associations";
+				report(orig, Severity.HIGH, ReportActionType.VALIDATION_ERROR, msg);
+			}
+		}
+		//If we don't find a replacement, don't worry about it
+	}
 
 	private void checkAllConcepts(int startingPercentage, String refsetId, String termFilter) throws TermServerScriptException {
 		info ("Checking all legacy '" + termFilter + "' concepts for potential inclusion");

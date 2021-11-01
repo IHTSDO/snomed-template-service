@@ -2,6 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.script;
 
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.IConcept;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Project;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
@@ -162,7 +163,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		return null;
 	}
 	
-	protected void removeRefsetMember(Concept c, RefsetMemberPojo rm) throws TermServerScriptException {
+	protected void removeRefsetMember(IConcept c, RefsetMemberPojo rm) throws TermServerScriptException {
 		//Has this rm been published?
 		if (StringUtils.isEmpty(rm.getReleasedEffectiveTime())) {
 			info("Deleting " + rm);
@@ -177,9 +178,9 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	}
 	
 
-	protected boolean report(Concept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
+	protected boolean report(IConcept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
 		String semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
-		return report(TAB_0, task, c.getId(), c.getFsnTerm(), semTag, severity, action, details);
+		return report(TAB_0, task, c.getConceptId(), c.getFsnTerm(), semTag, severity, action, details);
 	}
 
 

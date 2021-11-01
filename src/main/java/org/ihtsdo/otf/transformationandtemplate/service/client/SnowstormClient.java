@@ -58,6 +58,16 @@ public class SnowstormClient {
 		return concepts;
 	}
 	
+	public ConceptPojo getFullConcept(String branchPath, String conceptId) {
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("{branch}/concepts/{conceptId}")
+						.build(branchPath, conceptId))
+				.retrieve()
+				.bodyToMono(ConceptPojo.class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+	
 	public ConceptChangeBatchStatus saveUpdateConceptsNoValidation(Collection<ConceptPojo> conceptPojos, String branchPath) throws TimeoutException {
 		logger.info("Saving {} concepts.", conceptPojos.size());
 		ClientResponse bulkUpdateResponse = webClient.post()

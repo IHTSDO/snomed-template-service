@@ -1,8 +1,9 @@
 package org.ihtsdo.otf.transformationandtemplate.domain;
 
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.IConcept;
 
-public class Concept extends ConceptMiniPojo {
+public class Concept extends ConceptMiniPojo implements IConcept {
 	private boolean active;
 	private String definitionStatus;
 	private String moduleId;
