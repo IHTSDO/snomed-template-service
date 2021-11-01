@@ -58,7 +58,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				.build();
 		return new Job()
 			.withCategory(new JobCategory(JobType.BATCH_JOB, JobCategory.REFSET_UPDATE))
-			.withName("Update SE SP Refsets")
+			.withName("Update SEP Refsets")
 			.withDescription("This job adds entries to the SE and SP refset where new Entire and Part " + 
 			"body structure concepts have been created, and removes them when concepts have been inactivated.")
 			.withProductionStatus(ProductionStatus.PROD_READY)
