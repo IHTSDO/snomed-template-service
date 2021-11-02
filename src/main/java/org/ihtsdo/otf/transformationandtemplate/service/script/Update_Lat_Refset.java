@@ -193,21 +193,13 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 				// Check whether Concept has any ancestors
 				info(String.format("Finding %s's ancestors on Branch %s.", conceptIdentifier, branchPath));
-				String lateralizableAncestors = "> " + potential.getConceptId() + " :  272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)| MINUS (* : | = (7771000 |Left (qualifier value)| OR | = (24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
-				List<Concept> ancestors = tsClient.conceptsByECL(branchPath, lateralizableAncestors);
+				String ancestorsInRefSet = "> " + potential.getConceptId() + " AND ^ " + LAT_REFSETID;
+				List<Concept> ancestors = tsClient.conceptsByECL(branchPath, ancestorsInRefSet);
 				if (ancestors.isEmpty()) {
-					info(String.format("%s has no lateralizable ancestors. Cannot determine whether Concept should be added to %s.", conceptIdentifier, LAT_REFSETID_AND_PT));
-					doReportOrLog(potential, Severity.LOW, ReportActionType.NO_CHANGE, "Concept has no lateralizable ancestors. Cannot determine whether Concept should be added " +
-							"to RefSet.");
-					continue;
-				}
-
-				// Check whether Concept's ancestor is in RefSet
-				List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, joinByConceptId(ancestors), true);
-				boolean conceptAncestorInRefSet = !tscResponse.isEmpty();
-				if (conceptAncestorInRefSet) {
-					conceptsActioned.add(potential);
-					info(String.format("%s has an ancestor in %s. Concept will be added to the RefSet.", conceptIdentifier, LAT_REFSETID_AND_PT));
+					info(String.format("%s has no ancestor in %s. Concept will not be added to the RefSet.", conceptIdentifier, LAT_REFSETID_AND_PT));
+					doReportOrLog(potential, Severity.LOW, ReportActionType.NO_CHANGE, "Concept has no ancestors in the Reference Set. Concept has, therefore, not been automatically added to the Reference Set.");
+				} else {
+					info(String.format("%s has ancestor in %s. Concept will be added to the RefSet.", conceptIdentifier, LAT_REFSETID_AND_PT));
 					RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, potential);
 					info(String.format("Created RefSet %s for Branch %s.", newRefSetMember.toString(), branchPath));
 					doReportOrLog(potential, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, newRefSetMember);
@@ -234,13 +226,13 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 					info(String.format("%s is already in %s on Branch %s. Moving onto next Concept.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
 					doReportOrLog(definite, Severity.LOW, ReportActionType.NO_CHANGE, "Concept already in RefSet");
 					continue;
-				} else {
-					info(String.format("%s is not currently in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
 				}
 
 				// Add to RefSet
+				info(String.format("%s is not currently in %s on Branch %s.", conceptIdentifier, LAT_REFSETID_AND_PT, branchPath));
 				conceptsActioned.add(definite);
 				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, definite);
+				info(String.format("Created RefSet %s for Branch %s.", newRefSetMember.toString(), branchPath));
 				doReportOrLog(definite, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, newRefSetMember);
 			}
 		}
