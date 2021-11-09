@@ -61,7 +61,7 @@ public class SnowstormClient {
 	public ConceptPojo getFullConcept(String branchPath, String conceptId) {
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
-						.path("{branch}/concepts/{conceptId}")
+						.path("browser/{branch}/concepts/{conceptId}")
 						.build(branchPath, conceptId))
 				.retrieve()
 				.bodyToMono(ConceptPojo.class)
@@ -166,6 +166,17 @@ public class SnowstormClient {
 				.bodyToMono(Concept[].class)
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
 	}
+	
+	public List<Concept> getChildren(String branchPath, String conceptId) {
+		return Arrays.asList(webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("/browser/{branch}/concepts/{sctId}/children")
+						.queryParam("form", "inferred")
+						.build(branchPath, conceptId))
+				.retrieve()
+				.bodyToMono(Concept[].class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS)));
+	}
 
 	public List<Concept> getAncestors(String branchPath, String conceptId) {
 		return Arrays.asList(webClient.get()
@@ -186,23 +197,26 @@ public class SnowstormClient {
 					.build(branchPath))
 			.body(Mono.just(rm), RefsetMemberPojo.class)
 			.retrieve()
+			.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+					.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create member: " + rm + " due to "+ error)))
+			)
 			.bodyToMono(RefsetMemberPojo.class)
 			.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 	
 
-	public void updateRefsetMember(String branchPath, RefsetMemberPojo rm) throws TermServerScriptException {
+	public RefsetMemberPojo updateRefsetMember(String branchPath, RefsetMemberPojo rm) throws TermServerScriptException {
 		if (StringUtils.isEmpty(rm.getId())) {
 			throw new TermServerScriptException("Request to update Refset Member without a uuid! " + rm);
 		}
-		webClient.put()
+		return webClient.put()
 		.uri(uriBuilder -> uriBuilder
 				.path("{branch}/members/{uuid}")
 				.build(branchPath, rm.getId()))
 		.body(Mono.just(rm), RefsetMemberPojo.class)
 		.retrieve()
 		.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-				.flatMap(error -> Mono.error(new TermServerScriptException("Failed to updated member: " + error)))
+				.flatMap(error -> Mono.error(new TermServerScriptException("Failed to updated member: " + rm + " due to "+ error)))
 		)
 		.bodyToMono(RefsetMemberPojo.class)
 		.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
@@ -294,17 +308,29 @@ public class SnowstormClient {
 		return getRefsetMembers(branchPath, queryParamMap, false);
 	}
 
-	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentId(String branchPath, String refsetId, String targetComponentId) {
+	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentId(String branchPath, String refsetId, String targetComponentId, Boolean active) {
 		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
 		queryParamMap.add("referenceSet", refsetId);
 		queryParamMap.add("targetComponent", targetComponentId);
+		if (active != null) {
+			queryParamMap.add("active", active?"true":"false");
+		}
 		return getRefsetMembers(branchPath, queryParamMap, false);
 	}
 	
-	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentIds(String branchPath, String refsetId, Set<String> targetComponentIds) {
+	public List<RefsetMemberPojo> findRefsetMemberByTargetComponentIds(String branchPath, String refsetId, Set<String> targetComponentIds, Boolean active) {
 		MemberSearchRequest memberSearchRequest = new MemberSearchRequest()
 				.withRefsetId(refsetId)
+				.withActiveFlag(active)
 				.withAdditionalFieldSet("targetComponentId", targetComponentIds);
+		return getRefsetMembers(branchPath, memberSearchRequest, true);
+	}
+	
+	public List<RefsetMemberPojo> findRefsetMemberByReferencedComponentIds(String branchPath, String refsetId, Set<String> referencedComponentIds, Boolean active) {
+		MemberSearchRequest memberSearchRequest = new MemberSearchRequest()
+				.withRefsetId(refsetId)
+				.withActiveFlag(active)
+				.withReferencedComponentIds("referencedComponentId", referencedComponentIds);
 		return getRefsetMembers(branchPath, memberSearchRequest, true);
 	}
 
@@ -529,9 +555,21 @@ public class SnowstormClient {
 	}
 	
 	public static final class MemberSearchRequest {
+		Boolean active;
 		String referenceSet;
 		Map<String, Set<String>> additionalFieldSets;
+		Set<String> referencedComponentIds;
 		
+		public Boolean getActive() {
+			return active;
+		}
+		public void setActive(Boolean active) {
+			this.active = active;
+		}
+		public MemberSearchRequest withActiveFlag(Boolean active) {
+			this.active = active;
+			return this;
+		}
 		public String getReferenceSet() {
 			return referenceSet;
 		}
@@ -539,6 +577,9 @@ public class SnowstormClient {
 			this.referenceSet = referenceSet;
 		}
 		public Map<String, Set<String>> getAdditionalFieldSets() {
+			if (additionalFieldSets == null) {
+				additionalFieldSets = new HashMap<>();
+			}
 			return additionalFieldSets;
 		}
 		public void setAdditionalFieldSets(Map<String, Set<String>> additionalFieldSets) {
@@ -559,11 +600,23 @@ public class SnowstormClient {
 			referenceSet = refsetId;
 			return this;
 		}
+		public Set<String> getReferencedComponentIds() {
+			return referencedComponentIds;
+		}
+		public void setReferencedComponentIds(Set<String> referencedComponentIds) {
+			this.referencedComponentIds = referencedComponentIds;
+		}
+		public MemberSearchRequest withReferencedComponentIds(String string, Set<String> referencedComponentIds) {
+			this.referencedComponentIds = referencedComponentIds;
+			return this;
+		}
 		public String toString() {
 			return "[ referenceSet = " + referenceSet + ", "
-					+ additionalFieldSets.entrySet().stream()
+					+ (referencedComponentIds == null ? "" : ( "referencedComponentIds = " + String.join(", ", referencedComponentIds) + (getAdditionalFieldSets().isEmpty()?"":", "))) 
+					+ (getAdditionalFieldSets().isEmpty() ? "" : ( additionalFieldSets.entrySet().stream()
 					.map(entry -> entry.getKey() + ": " + entry.getValue().size() + " items")
-					.collect(Collectors.joining(", ")) + "]";
+					.collect(Collectors.joining(", ")))) 
+					+ "]";
 		}
 	}
 
@@ -605,6 +658,81 @@ public class SnowstormClient {
 				.retrieve()
 				.bodyToMono(String.class)
 				.block();
+	}
+
+	public List<Concept> getConcepts(String branchPath, List<String> sctIds) {
+		return webClient.get()
+				.uri(uriBuilder -> uriBuilder
+					.path("/{branch}/concepts")
+					.queryParam("conceptIds", sctIds)
+					.build(branchPath))
+				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error))))
+				.bodyToMono(ConceptPage.class)
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS))
+				.getItems();
+	}
+
+	public List<Concept> getParents(String branchPath, Collection<Concept> concepts) {
+		if (concepts == null || concepts.size() == 0) {
+			return new ArrayList<>();
+		}
+		
+		String ecl = ">!" + concepts.stream()
+						.map(c -> c.getId())
+						.collect(Collectors.joining(" OR >! "));
+		
+		ConceptSearchRequest request = new ConceptSearchRequest().withEclFilter(ecl);
+		long currentOffset = 0;
+		return fetchConceptPage(branchPath, request, currentOffset)
+				.expand(response -> {
+					long expected = response.getTotal();
+					long totalReceived = response.getOffset() + response.getItems().size();
+					if (totalReceived >= expected) {
+						return Mono.empty();
+					}
+					return fetchConceptPage(branchPath, request, totalReceived);
+				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
+				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+	}
+	
+	private Mono<ConceptPage> fetchConceptPage(String branchPath, ConceptSearchRequest request,
+			long currentOffset) {
+			logger.info("Requesting concepts from " + branchPath + " with ConceptSearchRequest " + request + " and offset " + currentOffset);
+			return webClient.post()
+					.uri(uriBuilder -> uriBuilder
+							.path("{branch}/concepts/search")
+							.queryParam("offset", currentOffset)
+							.queryParam("limit", DEFAULT_PAGESIZE)
+							.build(branchPath))
+					.bodyValue(request)
+					.retrieve()
+					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error))))
+					.bodyToMono(ConceptPage.class);
+		}
+
+	class ConceptSearchRequest {
+		String eclFilter;
+
+		public String getEclFilter() {
+			return eclFilter;
+		}
+
+		public void setEclFilter(String eclFilter) {
+			this.eclFilter = eclFilter;
+		}
+		
+		public ConceptSearchRequest withEclFilter(String eclFilter) {
+			this.eclFilter = eclFilter;
+			return this;
+		}
+		
+		@Override
+		public String toString() {
+			return "[ eclFilter='" + eclFilter + "']";
+		}
 	}
 
 }

@@ -23,6 +23,8 @@ public class AuthoringServicesClientFactory {
 		String authenticationToken = SecurityUtil.getAuthenticationToken();
 		if (StringUtils.isEmpty(authenticationToken)) {
 			logger.warn("Authentication token is not set.");
+		} else {
+			logger.debug("Authentication token starts: " + authenticationToken.substring(0, 5));
 		}
 		return AuthoringServicesClient.createClientForUser(authoringServicesApiUrl, authenticationToken, codecMaxInMemorySize);
 	}
