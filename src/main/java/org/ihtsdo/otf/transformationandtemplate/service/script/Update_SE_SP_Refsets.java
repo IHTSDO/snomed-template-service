@@ -13,6 +13,9 @@ import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
 import org.snomed.otf.scheduler.domain.JobParameter.Type;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,17 +44,18 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		refsetsOfInterest.add(SCTID_SP_REFSETID);
 	}
 	
+	public static final int MAX_ISSUES = 5;
+	
 	public static final String BODY_STRUCTURE_ECL = "<< 123037004";
 	public static final String LEGACY = "Check existing concepts";
 	boolean legacy = false;
-	private static Map<String, String> blockList = new HashMap<>();
+	private static Multimap<String, String> blockList = ArrayListMultimap.create();
 	static {
 		blockList.put("280432007","243950006"); // 280432007|Structure of region of mediastinum (body structure)| -> 243950006|Entire inferior mediastinum (body structure)|
 		blockList.put("64237003","245621003"); // 64237003|Structure of left half of head (body structure)| -> 245621003|Entire primary upper left molar tooth (body structure)|
 		blockList.put("29624005","245629001"); // 29624005|Structure of right half of head (body structure)| -> 245629001|Entire primary lower right molar tooth (body structure)|
 		blockList.put("279455006","263982003"); // 279455006|Structure of subdivision of penile urethra (body structure)| -> 263982003|Entire distal urethra (body structure)|
-		blockList.put("425220002","264481007"); // 425220002|Structure of tributary of popliteal vein (body structure)| -> 264481007|Entire gastrocnemius vein (body structure)|
-		blockList.put("279450001","279433003"); // 279450001|Structure of region of male urethra (body structure)| -> 279433003|Entire preprostatic urethra (body structure)|
+		blockList.put("425220002","264481007"); // 425220002|Structure of region of male urethra (body structure)| -> 279433003|Entire preprostatic urethra (body structure)|
 		blockList.put("310535003","310536002"); // 310535003|Intra-abdominal genital structure (body structure)| -> 310536002|Entire male internal genital organ (body structure)|
 		blockList.put("314779008","361077001"); // 314779008|Musculoskeletal structure of larynx (body structure)| -> 361077001|Entire laryngeal bursa (body structure)|
 		blockList.put("314260006","361287006"); // 314260006|Structure of bronchiole subdivision (body structure)| -> 361287006|Entire alveolar bronchiole (body structure)|
@@ -60,6 +64,35 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		blockList.put("118971007","373871007"); // 118971007|Structure of digestive system subdivision (body structure)| -> 373871007|Entire gastrointestinal system (body structure)|
 		blockList.put("362889002","38266002"); // 362889002|Entire anatomical structure (body structure)| -> 38266002|Entire body as a whole (body structure)|
 		blockList.put("123847000","417340007"); // 123847000|Structure of visual system subdivision (body structure)| -> 417340007|Entire pupillomotor system (body structure)|
+		blockList.put("123847000","417340007");  //123847000|Structure of visual system subdivision (body structure)| -> 417340007|Entire pupillomotor system (body structure)|
+		blockList.put("425220002","264481007");  //425220002|Structure of tributary of popliteal vein (body structure)| -> 264481007|Entire gastrocnemius vein (body structure)|
+		blockList.put("279455006","263982003");  //279455006|Structure of subdivision of penile urethra (body structure)| -> 263982003|Entire distal urethra (body structure)|
+		blockList.put("4583008","244851000");  //4583008|Structure of splenius muscle of trunk (body structure)| -> 244851000|Entire splenius cervicis muscle (body structure)|
+		blockList.put("29624005","245629001");  //29624005|Structure of right half of head (body structure)| -> 245629001|Entire primary lower right molar tooth (body structure)|
+		blockList.put("29624005","245614003");  //29624005|Structure of right half of head (body structure)| -> 245614003|Entire primary upper right molar tooth (body structure)|
+		blockList.put("29624005","245589006");  //29624005|Structure of right half of head (body structure)| -> 245589006|Entire permanent lower right molar tooth (body structure)|
+		blockList.put("29624005","245633008");  //29624005|Structure of right half of head (body structure)| -> 245633008|Entire primary lower right incisor tooth (body structure)|
+		blockList.put("29624005","245618000");  //29624005|Structure of right half of head (body structure)| -> 245618000|Entire primary upper right incisor tooth (body structure)|
+		blockList.put("29624005","245565004");  //29624005|Structure of right half of head (body structure)| -> 245565004|Entire permanent upper right molar tooth (body structure)|
+		blockList.put("29624005","245573008");  //29624005|Structure of right half of head (body structure)| -> 245573008|Entire permanent upper right incisor tooth (body structure)|
+		blockList.put("29624005","245598009");  //29624005|Structure of right half of head (body structure)| -> 245598009|Entire permanent lower right incisor tooth (body structure)|
+		blockList.put("118969007","361383007");  //118969007|Structure of respiratory system subdivision (body structure)| -> 361383007|Entire larynx, trachea, bronchi and lungs, combined site (body structure)|
+		blockList.put("280432007","243950006");  //280432007|Structure of region of mediastinum (body structure)| -> 243950006|Entire inferior mediastinum (body structure)|
+		blockList.put("279450001","279433003");  //279450001|Structure of region of male urethra (body structure)| -> 279433003|Entire preprostatic urethra (body structure)|
+		blockList.put("64237003","245621003");  //64237003|Structure of left half of head (body structure)| -> 245621003|Entire primary upper left molar tooth (body structure)|
+		blockList.put("64237003","245636000");  //64237003|Structure of left half of head (body structure)| -> 245636000|Entire primary lower left molar tooth (body structure)|
+		blockList.put("64237003","245640009");  //64237003|Structure of left half of head (body structure)| -> 245640009|Entire primary lower left incisor tooth (body structure)|
+		blockList.put("64237003","245625007");  //64237003|Structure of left half of head (body structure)| -> 245625007|Entire primary upper left incisor tooth (body structure)|
+		blockList.put("64237003","245576000");  //64237003|Structure of left half of head (body structure)| -> 245576000|Entire permanent upper left molar tooth (body structure)|
+		blockList.put("64237003","245601004");  //64237003|Structure of left half of head (body structure)| -> 245601004|Entire permanent lower left molar tooth (body structure)|
+		blockList.put("64237003","245609002");  //64237003|Structure of left half of head (body structure)| -> 245609002|Entire permanent lower left incisor tooth (body structure)|
+		blockList.put("64237003","245585000");  //64237003|Structure of left half of head (body structure)| -> 245585000|Entire permanent upper left incisor tooth (body structure)|
+		blockList.put("118971007","373871007");  //118971007|Structure of digestive system subdivision (body structure)| -> 373871007|Entire gastrointestinal system (body structure)|
+		blockList.put("314260006","361287006");  //314260006|Structure of bronchiole subdivision (body structure)| -> 361287006|Entire alveolar bronchiole (body structure)|
+		blockList.put("129140006","361796005");  //129140006|Structure of bony skeleton subdivision (body structure)| -> 361796005|Entire bones of ankle (body structure)|
+		blockList.put("129168005","244534003");  //129168005|Joint structure of sacrum (body structure)| -> 244534003|Entire sacral intervertebral symphysis (body structure)|
+		blockList.put("310535003","310536002");  //310535003|Intra-abdominal genital structure (body structure)| -> 310536002|Entire male internal genital organ (body structure)|
+		blockList.put("362889002","38266002");  //362889002|Entire anatomical structure (body structure)| -> 38266002|Entire body as a whole (body structure)|
 	}
 	
 	private enum CacheType { ReferencedComponent, TargetConcept };
@@ -147,30 +180,41 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	private RefsetMemberPojo createOrUpdateRefsetMember(RefsetMemberPojo rm) throws TermServerScriptException {
 		populateConceptCache(rm.getReferencedComponentId(), rm.getAdditionalFields().getTargetComponentId());
 		IConcept sConcept = getConcept(rm.getReferencedComponentId());
-		IConcept xConcept =  getConcept(rm.getAdditionalFields().getTargetComponentId()); 
+		IConcept xConcept = getConcept(rm.getAdditionalFields().getTargetComponentId()); 
 		
 		//Is this a black listed pair?
-		String blockListedChild = blockList.get(rm.getReferencedComponentId());
-		if (blockListedChild == rm.getAdditionalFields().getTargetComponentId()) {
+		Collection<String> blockListedChildren = blockList.get(rm.getReferencedComponentId());
+		if (blockListedChildren.contains(rm.getAdditionalFields().getTargetComponentId())) {
 			report(sConcept, Severity.LOW, ReportActionType.SKIPPING, sConcept + " -> " + xConcept, "Blocklisted");
 			return null;
 		}
 		
 		boolean create = true;
 		rm.setActive(true);
+		List<RefsetMemberPojo> rmExistingList = getRefsetMembers(CacheType.ReferencedComponent, rm.getRefsetId(), rm.getReferencedComponentId(), null);
+		//Or maybe we already have updated it?
+		if (rmExistingList.size() == 1) {
+			RefsetMemberPojo rmExisting = rmExistingList.get(0);
+			//Do we in fact need to make any changes at all?
+			if (rmExisting.isActive() && 
+					rmExisting.getAdditionalFields().getTargetComponentId().equals(xConcept.getConceptId())) {
+				report(sConcept, Severity.LOW, ReportActionType.SKIPPING, sConcept + " -> " + xConcept, "No further updates required");
+				return rmExisting;
+			}
+		}
+		
 		//If we already have a UUID then we can update
 		if (rm.getId() != null) {
 			create = false;
 		} else {
 			//Check if we have a refset member with this referenced component id
 			//Either active or inactive
-			List<RefsetMemberPojo> rmExisting = getRefsetMembers(CacheType.ReferencedComponent, rm.getRefsetId(), rm.getReferencedComponentId(), null);
-			if (rmExisting.size() > 1) {
+			if (rmExistingList.size() > 1) {
 				report(sConcept, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "Multiple refset entries detected for this 'S' concept");
 				return null;
-			}
-			if (rmExisting.size() == 1) {
-				rm.setId(rmExisting.get(0).getId());
+			} else if (rmExistingList.size() == 1) {
+				RefsetMemberPojo rmExisting = rmExistingList.get(0);
+				rm.setId(rmExisting.getId());
 				create = false;
 			}
 		}
@@ -255,6 +299,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//Let's also get all the parents for those concepts and pre-populate the ReferencedComponentId caches
 		List<Concept> allParents = tsClient.getParents(task.getBranchPath(), concepts);
 		populateMemberCache(CacheType.ReferencedComponent, allParents, false);
+		int issuesEncountered = 0;
 		
 		nextNewConcept:
 		for (Concept c : concepts) {
@@ -272,7 +317,16 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			}
 			
 			boolean isAllConcept = termFilter.equals("All");
-			attemptXAddition(refsetId, c, isAllConcept);
+			try {
+				attemptXAddition(refsetId, c, isAllConcept);
+			} catch (Exception e) {
+				issuesEncountered++;
+				String msg = ExceptionUtils.getExceptionCause("Unable to process " + c, e);
+				report(c, Severity.CRITICAL, ReportActionType.API_ERROR, msg);
+				if (issuesEncountered > MAX_ISSUES) {
+					throw (e);
+				}
+			}
 		}
 	}
 
@@ -294,6 +348,10 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}
 		
 		Concept sConcept = structureParents.get(0);
+		
+		if (c.getConceptId().equals("64237003")) {
+			debug("here");
+		}
 
 		//From FRI-186 If this is an 'All' concept and we already have an 'Entire' then the 'All' is redundant
 		if (isAllConcept) {
@@ -311,7 +369,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			String otherChildId = rm.getAdditionalFields().getTargetComponentId();
 			//If we're in danger of adding a duplicate, we can skip
 			if (c.getConceptId().equals(otherChildId)) {
-				report(c, Severity.MEDIUM, ReportActionType.NO_CHANGE, "Skipping attempt to create duplicate", rm);
+				report(c, Severity.MEDIUM, ReportActionType.NO_CHANGE, "Skipping attempt to create 2nd RM for 'S'", rm);
 				return;
 			}
 			
@@ -380,8 +438,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 								populateMemberCache(rm.getRefsetId(), refsetMemberByTargetConceptCache, rm.getAdditionalFields().getTargetComponentId(), rm);
 							}
 							//Is there a historical replacement that we should consider adding?
-							ConceptPojo fullConcept = tsClient.getFullConcept(task.getBranchPath(), c.getConceptId());
-							populateReplacementOrReport(fullConcept, rm);
+							//Of course just because we've inactivated one half of the pair, doesn't mean that the other 
+							//half might not also have been inactivated!
+							ConceptPojo sConceptFull = tsClient.getFullConcept(task.getBranchPath(), rm.getReferencedComponentId());
+							ConceptPojo xConceptFull = tsClient.getFullConcept(task.getBranchPath(), rm.getAdditionalFields().getTargetComponentId());
+							populateReplacementOrReport(sConceptFull, xConceptFull, rm);
 						} else {
 							report(c, Severity.LOW, ReportActionType.NO_CHANGE, "RefsetMember previously inactivated", rm);
 						}
@@ -439,35 +500,53 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		return members;
 	}
 	
-	private void populateReplacementOrReport(ConceptPojo fullConcept, RefsetMemberPojo rm) throws TermServerScriptException {
-		//Do we have any replacement targets?
+	private void populateReplacementOrReport(ConceptPojo sConceptFull, ConceptPojo xConceptFull, RefsetMemberPojo rm) throws TermServerScriptException {
+		RefsetMemberPojo proposed = rm.clone();
+		String sReplacementId = getReplacement(sConceptFull);
+		String xReplacementId = getReplacement(xConceptFull);
+		
+		//If we don't have a full set of replacements, don't worry, we tried.
+		if (sReplacementId == null || xReplacementId == null) {
+			return;
+		}
+		
+		//If the S concept is unchanged, we can keep the same id
+		if (sReplacementId.equals(sConceptFull.getConceptId())) {
+			proposed.setId(rm.getId());
+		}
+		
+		//We'll only store against the S concept to ensure we don't end up with 
+		//multiple replacents for the same S
+		historicalReplacementMap.put(sReplacementId, proposed);
+		proposed.setReferencedComponentId(sReplacementId);
+		proposed.getAdditionalFields().setTargetComponentId(xReplacementId);
+		proposed.setActive(true);
+	}
+
+	private String getReplacement(ConceptPojo fullConcept) throws TermServerScriptException {
+		//If this concept is still active, we don't need to replace it.
+		if (fullConcept.isActive()) {
+			return fullConcept.getConceptId();
+		}
+		
+		if (fullConcept.getAssociationTargets() == null) {
+			report(fullConcept, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "No associations available");
+			return null;
+		}
+		
 		for (HistoricalAssociation associationType : associationTypes) {
-			if (fullConcept.getAssociationTargets() == null) {
-				report(fullConcept, Severity.HIGH, ReportActionType.VALIDATION_ERROR, "No associations available");
-				return;
-			}
 			Set<String> targets = fullConcept.getAssociationTargets().get(associationType);
 			if (targets != null) {
 				if (targets.size() == 1) {
-					String replacement = targets.iterator().next();
-					RefsetMemberPojo proposed = rm.clone();
-					//Are we suggesting a replacement for the S or X concept?
-					if (isStructure(fullConcept)) {
-						//If we change the referenced component id then we need a new UUID, so leave blank
-						proposed.setReferencedComponentId(replacement);
-					} else {
-						//If we modify the target, then we can re-use the existing row
-						proposed.setId(rm.getId());
-						proposed.getAdditionalFields().setTargetComponentId(replacement);
-					}
-					historicalReplacementMap.put(replacement, proposed);
+					return targets.iterator().next();
 				} else if (targets.size() > 1) {
 					String msg = "Concept indicated multiple historical associations";
 					report(fullConcept, Severity.HIGH, ReportActionType.VALIDATION_ERROR, msg);
+					return null;
 				}
 			}
 		}
-		//If we don't find a replacement, don't worry about it
+		return null;
 	}
 
 	private void checkAllConcepts(int startingPercentage, CacheType cacheType, String refsetId, String termFilter) throws TermServerScriptException {
@@ -493,7 +572,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			//Do we already have refset members for these concepts?
 			//List<RefsetMemberPojo> existing = tsClient.findRefsetMemberByTargetComponentIds(task.getBranchPath(), refsetId, conceptMap.keySet(), true);
 			List<RefsetMemberPojo> existing =  getRefsetMembers(CacheType.TargetConcept, refsetId, conceptMap.keySet(), true);
-			debug (existing.size() + " / " + conceptMap.size() + " '" + termFilter + "' already have refset entries");
+			info (existing.size() + " / " + conceptMap.size() + " '" + termFilter + "' already have refset entries");
 			existing.forEach(rm -> conceptMap.remove(rm.getAdditionalFields().getTargetComponentId()));
 			
 			//Attempt to add these 
@@ -636,6 +715,5 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			miniConceptCache.put(c.getConceptId(), c);
 		}
 	}
-
 
 }

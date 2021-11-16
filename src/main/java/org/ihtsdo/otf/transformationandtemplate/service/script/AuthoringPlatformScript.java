@@ -164,16 +164,22 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	
 	protected RefsetMemberPojo removeRefsetMember(IConcept c, RefsetMemberPojo rm) throws TermServerScriptException {
 		//Has this rm been published?
-		if (StringUtils.isEmpty(rm.getReleasedEffectiveTime())) {
-			info("Deleting " + rm);
-			tsClient.deleteRefsetMember(task.getBranchPath(), rm);
-			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_DELETED, "", rm);
-			rm = null;
-		} else {
-			info("Inactivating " + rm);
-			rm.setActive(false);
-			tsClient.updateRefsetMember(task.getBranchPath(), rm);
-			report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "", rm);
+		try {
+			if (StringUtils.isEmpty(rm.getReleasedEffectiveTime())) {
+				info("Deleting " + rm);
+				tsClient.deleteRefsetMember(task.getBranchPath(), rm);
+				report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_DELETED, "", rm);
+				rm = null;
+			} else {
+				info("Inactivating " + rm);
+				rm.setActive(false);
+				tsClient.updateRefsetMember(task.getBranchPath(), rm);
+				report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "", rm);
+			}
+		} catch (Exception e) {
+			String msg = ExceptionUtils.getExceptionCause("Failed to remove rm", e);
+			report(c, Severity.CRITICAL, ReportActionType.API_ERROR, msg, rm);
+			throw (e);
 		}
 		return rm;
 	}

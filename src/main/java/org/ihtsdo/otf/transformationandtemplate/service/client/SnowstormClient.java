@@ -7,6 +7,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptChangeBatchStatu
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
+import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class SnowstormClient {
 	
-	public static final long DEFAULT_TIMEOUT = 60; //seconds
+	public static final long DEFAULT_TIMEOUT = 180; //seconds
 	public static final long DEFAULT_PAGESIZE = 500;
 
 	private static final String DEFAULT_MODULE_ID_METADATA_KEY = "defaultModuleId";
@@ -191,19 +192,35 @@ public class SnowstormClient {
 	
 
 	public RefsetMemberPojo createRefsetMember(String branchPath, RefsetMemberPojo rm) {
-		return webClient.post()
-			.uri(uriBuilder -> uriBuilder
-					.path("{branch}/members")
-					.build(branchPath))
-			.body(Mono.just(rm), RefsetMemberPojo.class)
-			.retrieve()
-			.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-					.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create member: " + rm + " due to "+ error)))
-			)
-			.bodyToMono(RefsetMemberPojo.class)
-			.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+		int attempts = 0;
+		while (true) {
+			try {
+				return webClient.post()
+					.uri(uriBuilder -> uriBuilder
+							.path("{branch}/members")
+							.build(branchPath))
+					.body(Mono.just(rm), RefsetMemberPojo.class)
+					.retrieve()
+					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create member: " + rm + " due to "+ error)))
+					)
+					.bodyToMono(RefsetMemberPojo.class)
+					.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
+			} catch (Exception e) {
+				//TODO differentiate handling for errors which should be retried (eg 429)
+				//vs those that won't work no matter how many times we try (eg 400)
+				attempts++;
+				if (attempts > 3) {
+					throw new IllegalStateException("Failed to create refset member", e);
+				}
+				logger.warn(ExceptionUtils.getExceptionCause("Failed to create " + rm, e));
+				logger.warn("Sleeping 30 seconds and trying again.");
+				try {
+					Thread.sleep(1000*30);
+				} catch (Exception e2) {}
+			}
+		}
 	}
-	
 
 	public RefsetMemberPojo updateRefsetMember(String branchPath, RefsetMemberPojo rm) throws TermServerScriptException {
 		if (StringUtils.isEmpty(rm.getId())) {

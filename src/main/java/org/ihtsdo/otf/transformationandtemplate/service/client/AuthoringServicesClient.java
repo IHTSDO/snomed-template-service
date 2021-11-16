@@ -29,7 +29,7 @@ public class AuthoringServicesClient {
 				.body(BodyInserters.fromValue(asMap("summary", title, "description", description)))
 				.retrieve()
 				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create task: " + error)))
 				)
 				.bodyToMono(AuthoringTask.class)
 				.block();
