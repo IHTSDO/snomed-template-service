@@ -7,6 +7,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.IConcept;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient.ConceptPage;
+import org.ihtsdo.otf.transformationandtemplate.service.script.ScriptManager.ConfigItem;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.ihtsdo.otf.utils.SnomedUtils;
 import org.snomed.otf.scheduler.domain.*;
@@ -48,7 +49,6 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	
 	public static final String BODY_STRUCTURE_ECL = "<< 123037004";
 	public static final String LEGACY = "Check existing concepts";
-	boolean legacy = false;
 	private static Multimap<String, String> blockList = ArrayListMultimap.create();
 	static {
 		blockList.put("280432007","243950006"); // 280432007|Structure of region of mediastinum (body structure)| -> 243950006|Entire inferior mediastinum (body structure)|
@@ -96,20 +96,18 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 	
 	private enum CacheType { ReferencedComponent, TargetConcept };
-	Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByReferencedConceptCache = new HashMap<>();
-	Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByTargetConceptCache = new HashMap<>();
-	Set<String> cachedMembers = new HashSet<>();
-			
-	Map<String, ConceptPojo> fullConceptCache = new HashMap<>();
-	Map<String, IConcept> miniConceptCache = new HashMap<>();
+	private Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByReferencedConceptCache = new HashMap<>();
+	private Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByTargetConceptCache = new HashMap<>();
+	private Set<String> cachedMembers = new HashSet<>();
+	private Map<String, IConcept> miniConceptCache = new HashMap<>();
 	
-	Map<String, RefsetMemberPojo> seRefsetContent = new HashMap<>();
-	Map<String, RefsetMemberPojo> spRefsetContent= new HashMap<>();
-	Map<String, RefsetMemberPojo> historicalReplacementMap = new HashMap<>();
-	Set<String> examined = new HashSet<>();
+	private Map<String, RefsetMemberPojo> historicalReplacementMap = new HashMap<>();
+	private Set<String> examined = new HashSet<>();
+	private Set<String> outOfScope = new HashSet<>();
 	
-	HistoricalAssociation[] associationTypes = new HistoricalAssociation[] { HistoricalAssociation.SAME_AS, HistoricalAssociation.REPLACED_BY, HistoricalAssociation.ALTERNATIVE, HistoricalAssociation.POSSIBLY_EQUIVALENT_TO };
-
+	private HistoricalAssociation[] associationTypes = new HistoricalAssociation[] { HistoricalAssociation.SAME_AS, HistoricalAssociation.REPLACED_BY, HistoricalAssociation.ALTERNATIVE, HistoricalAssociation.POSSIBLY_EQUIVALENT_TO };
+	private boolean legacy = false;
+	
 	public Update_SE_SP_Refsets(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
 	}
@@ -131,6 +129,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 
 	@Override
 	public void runJob() throws TermServerScriptException {
+		populateScopeExclusions();
 		//Firstly see if any inactivated concepts need to be removed,
 		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
@@ -177,17 +176,38 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}
 	}
 	
+	private void populateScopeExclusions() throws TermServerScriptException {
+		info("Populate scope exclusions");
+		try {
+			List<Concept> conceptOOS = tsClient.conceptsByECL(task.getBranchPath(), mgr.getConfig(ConfigItem.SEP_OUT_OF_SCOPE));
+			outOfScope = conceptOOS.stream()
+					.map(c -> c.getConceptId())
+					.collect(Collectors.toSet());
+			info ("Cached " + outOfScope.size() + " concepts as being out of scope");
+		} catch (Exception e) {
+			String msg = "ECL for scope exclusion failed.  Check template-service.script.SEP.out-of-scope in application.properties";
+			throw new TermServerScriptException(msg, e);
+		}
+	}
+
 	private RefsetMemberPojo createOrUpdateRefsetMember(RefsetMemberPojo rm) throws TermServerScriptException {
 		populateConceptCache(rm.getReferencedComponentId(), rm.getAdditionalFields().getTargetComponentId());
 		IConcept sConcept = getConcept(rm.getReferencedComponentId());
 		IConcept xConcept = getConcept(rm.getAdditionalFields().getTargetComponentId()); 
 		
-		//Is this a black listed pair?
+		//Is one of these concepts out of scope?
+		if (outOfScope.contains(sConcept.getConceptId()) || outOfScope.contains(xConcept.getConceptId())) {
+			report(sConcept, Severity.LOW, ReportActionType.SKIPPING, sConcept + " -> " + xConcept, "Out of Scope");
+			return null;
+		}
+		
+		//Or is this a black listed pair?
 		Collection<String> blockListedChildren = blockList.get(rm.getReferencedComponentId());
 		if (blockListedChildren.contains(rm.getAdditionalFields().getTargetComponentId())) {
 			report(sConcept, Severity.LOW, ReportActionType.SKIPPING, sConcept + " -> " + xConcept, "Blocklisted");
 			return null;
 		}
+		
 		
 		boolean create = true;
 		rm.setActive(true);
@@ -553,7 +573,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		info ("Checking all legacy '" + termFilter + "' concepts for potential inclusion");
 		//Loop through all Body Structures containing 'termFilter' text
 		//Get published concepts because new ones will already have been examined
-		ConceptPage page = tsClient.fetchConceptPage(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, null);
+		ConceptPage page = tsClient.fetchConceptPageBlocking(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, null);
 		long totalExpected = page.getTotal();
 		long totalReceived = page.getItems().size();
 		
@@ -582,7 +602,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			percentageComplete(startingPercentage + (int)((totalReceived / (double)totalExpected) * 30d));
 			
 			//Now get our next page
-			page = tsClient.fetchConceptPage(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, page.getSearchAfter());
+			page = tsClient.fetchConceptPageBlocking(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, page.getSearchAfter());
 			totalReceived += page.getItems().size();
 		}
 	}

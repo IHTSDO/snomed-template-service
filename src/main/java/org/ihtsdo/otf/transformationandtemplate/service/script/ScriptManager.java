@@ -13,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClient;
 import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClientFactory;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringTask;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
 import org.ihtsdo.otf.utils.ExceptionUtils;
@@ -25,6 +24,7 @@ import org.snomed.otf.scheduler.domain.JobRun;
 import org.snomed.otf.scheduler.domain.JobStatus;
 import org.snomed.otf.script.Script;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import static org.snomed.otf.script.Script.info;
@@ -39,6 +39,11 @@ public class ScriptManager {
 
 	@Autowired
 	private AuthoringServicesClientFactory authoringServicesClientFactory;
+	
+	@Value("${template-service.script.SEP.out-of-scope}")
+	private String SEPOutOfScope;
+	
+	public static enum ConfigItem{SEP_OUT_OF_SCOPE};
 	
 	Map<String, Class<? extends JobClass>> knownJobMap;
 	Set<Job> knownJobs;
@@ -86,7 +91,6 @@ public class ScriptManager {
 				}
 			}
 		}
-		
 	}
 
 	public JobRun runJob(JobRun jobRun) {
@@ -120,6 +124,13 @@ public class ScriptManager {
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new TermServerScriptException("Failed to instantiate " + jobClass.getName(), e);
+		}
+	}
+
+	public String getConfig(ConfigItem configItem) {
+		switch (configItem) {
+			case SEP_OUT_OF_SCOPE : return SEPOutOfScope;
+			default : throw new IllegalArgumentException("Unrecognised config item " + configItem);
 		}
 	}
 

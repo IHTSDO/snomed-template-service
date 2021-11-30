@@ -255,12 +255,6 @@ public class SnowstormClient {
 		.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	/*public List<RefsetMemberPojo> getRefsetMembers(String branchPath, String refsetId, List<ConceptPojo> ref) {
-		MultiValueMap<String, String> queryParamMap = new LinkedMultiValueMap<>();
-		queryParamMap.add("refsetId", refsetId);
-		return getRefsetMembers(branchPath, queryParamMap);
-	}*/
-
 	public List<RefsetMemberPojo> getRefsetMembers(String branchPath, MultiValueMap<String, String> queryParamMap, boolean isPOST) {
 		long currentOffset = 0;
 		return fetchRefsetMemberPage(branchPath, queryParamMap, currentOffset)
@@ -352,14 +346,16 @@ public class SnowstormClient {
 	}
 
 	public List<Concept> conceptsByECL(String branchPath, String ecl) {
-		return fetchNewConceptPage(branchPath, null, ecl, null, 0)
+		String searchAfter = null;
+		return fetchConceptPage(branchPath, null, null, null, ecl, null, searchAfter)
 				.expand(response -> {
-					long expected = response.getTotal();
-					long totalReceived = response.getOffset() + response.getItems().size();
-					if (totalReceived >= expected) {
+					//Once we see the same searchAfter twice, we've reached the end
+					//Or if we got enough in a single page
+					if (response.getTotal() == response.getItems().size() ||
+							response.searchAfter == searchAfter) {
 						return Mono.empty();
 					}
-					return fetchNewConceptPage(branchPath, null, ecl, null, 0);
+					return fetchConceptPage(branchPath, null, null, null, ecl, null, response.getSearchAfter());
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
@@ -397,138 +393,61 @@ public class SnowstormClient {
 	}
 	
 	public List<Concept> findNewConcepts(String branchPath, String ecl, String termFilter) {
-		long currentOffset = 0;
-		return fetchNewConceptPage(branchPath, false, ecl, termFilter, currentOffset)
+		String searchAfter = null;
+		return fetchConceptPage(branchPath, true, null, false, ecl, termFilter, searchAfter)
 				.expand(response -> {
 					long expected = response.getTotal();
 					long totalReceived = response.getOffset() + response.getItems().size();
 					if (totalReceived >= expected) {
 						return Mono.empty();
 					}
-					return fetchNewConceptPage(branchPath, false, ecl, termFilter, totalReceived);
+					return fetchConceptPage(branchPath, true, null, false, ecl, termFilter, null);
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	private Mono<ConceptPage> fetchNewConceptPage(String branchPath, Boolean isPublished, String ecl, String termFilter, long currentOffset) {
-		if (termFilter == null) {
-			logger.info("Requesting new concepts from {} with offset {}.", branchPath, currentOffset);
-		} else {
-			logger.info("Requesting new {} concepts from {} with offset {}.", termFilter, branchPath, currentOffset);
-		}
-
-		if (isPublished == null) {
-			return webClient.get()
-					.uri(uriBuilder -> uriBuilder
-							.path("/{branch}/concepts")
-							.queryParam("isPublished", isPublished)
-							.queryParam("activeFilter", true)
-							.queryParam("ecl", ecl)
-							.queryParam("term", termFilter)
-							.queryParam("offset", currentOffset)
-							.queryParam("limit", DEFAULT_PAGESIZE)
-							.build(branchPath))
-					.retrieve()
-					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
-							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
-					)
-					.bodyToMono(ConceptPage.class);
-		}
-		
-		return webClient.get()
-				.uri(uriBuilder -> uriBuilder
-					.path("/{branch}/concepts")
-					.queryParam("isPublished", isPublished)
-					.queryParam("activeFilter", true)
-					.queryParam("ecl", ecl)
-					.queryParam("term", termFilter)
-					.queryParam("offset", currentOffset)
-					.queryParam("limit", DEFAULT_PAGESIZE)
-					.build(branchPath))
-				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
-				)
-				.bodyToMono(ConceptPage.class);
-	}
-	
 	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, String termFilter, String ecl) {
-		long currentOffset = 0;
-		return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, ecl, currentOffset)
+		String searchAfter = null;
+		return fetchConceptPage(branchPath, activeFilter, true, null, ecl, termFilter, searchAfter)
 				.expand(response -> {
 					long expected = response.getTotal();
 					long totalReceived = response.getOffset() + response.getItems().size();
 					if (totalReceived >= expected) {
 						return Mono.empty();
 					}
-					return fetchUpdatedConceptPage(branchPath, activeFilter, termFilter, ecl, totalReceived);
+					return fetchConceptPage(branchPath, true, true, activeFilter, termFilter, ecl, response.getSearchAfter());
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	private Mono<ConceptPage> fetchUpdatedConceptPage(String branchPath, boolean activeFilter, String termFilter, String ecl, long currentOffset) {
-		if (termFilter == null) {
-			logger.info("Requesting {} concepts from {} with offset {}.", activeFilter ? "active" : "inactive", branchPath, currentOffset);
-		} else {
-			logger.info("Requesting {} '{}' concepts from {} with offset {}.", activeFilter ? "active " : "inactive ", termFilter, branchPath, currentOffset);
-		}
-
-		if (ecl == null) {
-			return webClient.get()
-					.uri(uriBuilder -> uriBuilder
-							.path("/{branch}/concepts")
-							.queryParam("isNullEffectiveTime", true)
-							.queryParam("activeFilter", activeFilter)
-							.queryParam("term", termFilter)
-							.queryParam("offset", currentOffset)
-							.queryParam("limit", DEFAULT_PAGESIZE)
-							.build(branchPath))
-					.retrieve()
-					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
-							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
-					)
-					.bodyToMono(ConceptPage.class);
-		}
-
-		return webClient.get()
-				.uri(uriBuilder -> uriBuilder
-					.path("/{branch}/concepts")
-					.queryParam("isNullEffectiveTime", true)
-					.queryParam("activeFilter", activeFilter)
-					.queryParam("term", termFilter)
-					.queryParam("ecl", ecl)
-					.queryParam("offset", currentOffset)
-					.queryParam("limit", DEFAULT_PAGESIZE)
-					.build(branchPath))
-				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
-				)
-				.bodyToMono(ConceptPage.class);
+	public ConceptPage fetchConceptPageBlocking(String branchPath, Boolean isPublished, String ecl, String termFilter, String searchAfter) {
+		return fetchConceptPage(branchPath, null, null, isPublished, ecl, termFilter, searchAfter).block();
 	}
 	
-	public ConceptPage fetchConceptPage(String branchPath, Boolean isPublished, String ecl, String termFilter, String searchAfter) {
-		if (termFilter == null) {
-			logger.info("Requesting concepts matching {} from {} with searchAfter {}.", ecl, branchPath, searchAfter);
-		} else {
-			logger.info("Requesting '{}' concepts matching {} from {} with searchAfter {}.", termFilter, ecl, branchPath, searchAfter);
-		}
+	public Mono<ConceptPage> fetchConceptPage(String branchPath, Boolean isActive, Boolean isUpdated, Boolean isPublished, String ecl, String termFilter, String searchAfter) {
+		String activeStr = isActive == null ? "" : (isActive?"active ":"inactive ");
+		String updatedStr = isUpdated == null ? "" : "updated ";
+		String publishedStr = isPublished == null ? "" : (isPublished ? "existing " : "new ");
+		String termFilterStr = termFilter == null ? "" : ("'" + termFilter + "'");
+		String eclStr = ecl == null ? "" : ("matching " + ecl + " ");
+		logger.info("Requesting {}{}{}{}concepts {}from {} with searchAfter {}.", activeStr, updatedStr , publishedStr, termFilterStr, eclStr, branchPath, searchAfter);
 
 		return webClient.get()
 				.uri(uriBuilder -> uriBuilder
 						.path("/{branch}/concepts")
+						.queryParam("isNullEffectiveTime", isUpdated)
 						.queryParam("isPublished", isPublished)
-						.queryParam("activeFilter", true)
-						.queryParam("ecl", ecl)
+						.queryParam("activeFilter", isActive)
+						.queryParam((ecl == null ? "void": "ecl"), ecl)
 						.queryParam("term", termFilter)
 						.queryParam("searchAfter", searchAfter)
 						.queryParam("limit", DEFAULT_PAGESIZE)
 						.build(branchPath))
 				.retrieve()
 				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
-						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error)))
 				)
-				.bodyToMono(ConceptPage.class).block();
+				.bodyToMono(ConceptPage.class);
 	}
 	
 	//I tried doing this with generics, but couldn't then say DataPage<ConceptPojo>.class

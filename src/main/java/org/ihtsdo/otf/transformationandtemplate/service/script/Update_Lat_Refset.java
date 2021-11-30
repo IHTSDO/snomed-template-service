@@ -109,14 +109,14 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 	private List<Concept> getRelevantConceptsToRemove(String branchPath) {
 		// Concepts that have been lateralised, i.e. marked left/right/both
-		String lateralised = "<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
+		String lateralisedEcl = "<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
 
 		// Concepts that are in RefSet but no longer have correct prerequisite ancestor
 		String ancestor = "^ 723264001 MINUS ^ 723264001 << 423857001 |Structure of half of body lateral to midsagittal plane (body structure)|";
 
 		List<Concept> inactivated = tsClient.findUpdatedConcepts(branchPath, false, null, null);
-		List<Concept> lateralisedNew = tsClient.findNewConcepts(branchPath, lateralised, null);
-		List<Concept> lateralisedUpdated = tsClient.findUpdatedConcepts(branchPath, true, null, lateralised);
+		List<Concept> lateralisedNew = tsClient.findNewConcepts(branchPath, lateralisedEcl, null);
+		List<Concept> lateralisedUpdated = tsClient.findUpdatedConcepts(branchPath, true, null, lateralisedEcl);
 		List<Concept> noPrerequisiteAncestor = tsClient.findUpdatedConcepts(branchPath, true, null, ancestor);
 
 		List<Concept> conceptsToRemove = new ArrayList<>();

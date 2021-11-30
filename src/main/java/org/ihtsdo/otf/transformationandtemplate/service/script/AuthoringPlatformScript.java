@@ -102,7 +102,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 			info (task.getKey() + " " + this.getClass().getSimpleName() + " batch job completed successfully");
 		} catch (Exception e) {
 			String msg = ExceptionUtils.getExceptionCause("Batch job " + task.getKey() + " failed", e);
-			info (msg);
+			error(msg,e);
 			try {
 				updateTaskTitleState("Failed");
 				updateTaskDescription(msg, true);
