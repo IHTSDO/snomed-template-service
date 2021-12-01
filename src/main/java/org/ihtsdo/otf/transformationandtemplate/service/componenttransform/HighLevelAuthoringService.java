@@ -586,6 +586,7 @@ public class HighLevelAuthoringService {
 						loadedDescription.setModuleId(descriptionUpdate.getModuleId());
 					}
 					if (descriptionUpdate.getAcceptabilityMap() != null) {
+						descriptionUpdate.getAcceptabilityMap().values().removeAll(Collections.singleton(null));
 						loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
 					}
 					if (!descriptionUpdate.isActive()) {

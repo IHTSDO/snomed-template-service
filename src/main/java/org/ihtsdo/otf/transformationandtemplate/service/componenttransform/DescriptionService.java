@@ -218,7 +218,7 @@ public class DescriptionService {
 					descriptionPojo -> descriptionPojo.getType() == null ? "Type is required" : null,
 					descriptionPojo -> descriptionPojo.getAcceptabilityMap().isEmpty() ||
 							descriptionPojo.getAcceptabilityMap().entrySet().stream()
-									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry is required" : null
+									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey())) ? "At least one valid acceptability entry is required" : null
 			));
 		}
 		if (changeType == ChangeType.UPDATE) {
@@ -281,7 +281,7 @@ public class DescriptionService {
 					descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription().getType() == null ? "Type is required" : null,
 					descriptionReplacementPojo -> descriptionReplacementPojo.getCreatedDescription().getAcceptabilityMap().isEmpty() ||
 							descriptionReplacementPojo.getCreatedDescription().getAcceptabilityMap().entrySet().stream()
-									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry is required" : null
+									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey())) ? "At least one valid acceptability entry is required" : null
 			));
 		}
 		if (descriptionReplacement.getUpdatedDescription() != null) {
