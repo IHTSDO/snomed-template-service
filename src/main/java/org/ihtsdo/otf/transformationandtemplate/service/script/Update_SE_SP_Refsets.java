@@ -580,8 +580,8 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		/*if (page.getItems().stream().anyMatch(c -> c.getId().equals("182028002"))) {
 			debug("here");
 		}*/
-		
-		while (totalReceived < totalExpected) {
+		//Even when we have as many items as expected we still want to run through this loop one last time
+		while (totalReceived <= totalExpected) {
 			//The term filter isn't "starts with", so we can filter those out.
 			//Also filter any concept we've already examined
 			Map<String, Concept> conceptMap = page.getItems().stream()
@@ -600,6 +600,10 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			
 			//How many have we examined?  Can be up to 30% above starting percentage
 			percentageComplete(startingPercentage + (int)((totalReceived / (double)totalExpected) * 30d));
+			
+			if (totalReceived == totalExpected) {
+				break;
+			}
 			
 			//Now get our next page
 			page = tsClient.fetchConceptPageBlocking(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, page.getSearchAfter());
