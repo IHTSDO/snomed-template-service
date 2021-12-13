@@ -20,6 +20,7 @@
 		<slf4j.version>1.7.5</slf4j.version>
 		<spring-cloud-version>2.2.6.RELEASE</spring-cloud-version>
 		<springfox-swagger.version>2.5.0</springfox-swagger.version>
+		<log4j.version>2.15.0</log4j.version>
 	</properties>
 
 	<parent>
@@ -138,6 +139,17 @@
 			<groupId>org.reflections</groupId>
 			<artifactId>reflections</artifactId>
 			<version>0.9.12</version>
+		</dependency>
+		<!-- Logging -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-to-slf4j</artifactId>
+			<version>${log4j.version}</version>
 		</dependency>
 	</dependencies>
 	
