@@ -5,7 +5,7 @@
 
 	<groupId>org.snomed.otf</groupId>
 	<artifactId>snomed-template-service</artifactId>
-	<version>3.5.0</version>
+	<version>3.5.1</version>
 	<name>SNOMED CT Transformation and Template Service</name>
 	<description>A service to support SNOMED CT authoring offering Transformation and Template functionality.</description>
 
