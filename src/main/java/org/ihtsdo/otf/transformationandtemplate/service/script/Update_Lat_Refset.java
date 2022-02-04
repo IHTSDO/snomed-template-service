@@ -274,7 +274,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		RefsetMemberPojo rm = new RefsetMemberPojo()
 				.withRefsetId(refsetId)
 				.withActive(true)
-				.withModuleId(SCTID_MODEL_MODULE)
+				.withModuleId(SCTID_CORE_MODULE)
 				.withReferencedComponentId(concept.getId());
 		return tsClient.createRefsetMember(branchPath, rm);
 	}
