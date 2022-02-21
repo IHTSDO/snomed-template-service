@@ -86,15 +86,6 @@ public class Config extends WebSecurityConfigurerAdapter {
 				"/(.*)/recipes/.*"
 		));
 	}
-	
-	@SuppressWarnings("rawtypes")
-	@Bean
-	public FilterRegistrationBean getSingleSignOnFilter() {
-		FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean<>(
-				new RequestHeaderAuthenticationDecorator());
-		filterRegistrationBean.setOrder(1);
-		return filterRegistrationBean;
-	}
 
 	// Swagger Config
 	@Bean
@@ -124,7 +115,6 @@ public class Config extends WebSecurityConfigurerAdapter {
 	public void configure(WebSecurity web) {
 		web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
 	}
-	
 	
 	@Bean
 	public HttpFirewall allowUrlEncodedSlashHttpFirewall() {
