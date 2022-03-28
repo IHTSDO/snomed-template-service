@@ -67,7 +67,7 @@
 		<dependency>
 			<groupId>org.snomed.otf</groupId>
 			<artifactId>snomed-owl-toolkit</artifactId>
-			<version>2.9.1</version>
+			<version>3.0.7-SNAPSHOT</version>
 		</dependency>
 		<!-- Spring Cloud -->
 		<dependency>
