@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 @Service
 public class TemplateConceptTransformService {
 
+	public static final String US_EN_LANG_REFSET = "900000000000509007";
+	public static final String GB_EN_LANG_REFSET = "900000000000508004";
+
 	@Autowired
 	private TemplateService templateService;
 	
@@ -315,7 +318,9 @@ public class TemplateConceptTransformService {
 		for (String slot : attributeSlotMap.keySet()) {
 			ConceptPojo pojo = conceptPojoMap.get(attributeSlotMap.get(slot).getConceptId());
 			if (pojo != null) {
-				slotDescriptionMap.put(slot, conceptPojoMap.get(attributeSlotMap.get(slot).getConceptId()).getDescriptions());
+				slotDescriptionMap.put(slot, conceptPojoMap.get(attributeSlotMap.get(slot).getConceptId()).getDescriptions()
+						.stream().filter(d -> d.getAcceptabilityMap().containsKey(US_EN_LANG_REFSET) || d.getAcceptabilityMap().containsKey(GB_EN_LANG_REFSET))
+						.collect(Collectors.toSet()));
 			}
 		}
 		return slotDescriptionMap;
