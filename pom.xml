@@ -22,6 +22,7 @@
 		<springfox-swagger.version>2.5.0</springfox-swagger.version>
 
 		<log4j.version>2.17.1</log4j.version>
+		<spring-cloud.version>2020.0.5</spring-cloud.version>
 	</properties>
 
 	<parent>
@@ -152,8 +153,32 @@
 			<artifactId>log4j-to-slf4j</artifactId>
 			<version>${log4j.version}</version>
 		</dependency>
+		<!-- consul and vault -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-consul-discovery</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-consul-config</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-vault-config</artifactId>
+		</dependency>
 	</dependencies>
-	
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<build>
 		<plugins>
 			<plugin>
