@@ -165,7 +165,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		String byLaterality = "(^ 723264001 AND << 91723000 |Anatomical structure (body structure)|) : (272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right(qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
 
 		// Concepts which no longer have an appropriate prerequisite ancestor
-		String byNoPrerequisiteAncestor = "^ 723264001 MINUS ^ 723264001 << 423857001 |Structure of half of body lateral to midsagittal plane (body structure)|";
+		String byNoPrerequisiteAncestor = "^ 723264001 MINUS (^ 723264001 AND << 423857001)";
 
 		Set<Concept> conceptsToRemove = new HashSet<>();
 		if (legacy) {
