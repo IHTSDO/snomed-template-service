@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class SnowstormClient {
@@ -408,11 +409,12 @@ public class SnowstormClient {
 
 	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, String termFilter, String ecl) {
 		String searchAfter = null;
+		AtomicInteger totalReceived = new AtomicInteger(0);
 		return fetchConceptPage(branchPath, activeFilter, true, null, ecl, termFilter, searchAfter)
 				.expand(response -> {
+					totalReceived.addAndGet(response.getItems().size());
 					long expected = response.getTotal();
-					long totalReceived = response.getOffset() + response.getItems().size();
-					if (totalReceived >= expected) {
+					if (totalReceived.get() >= expected) {
 						return Mono.empty();
 					}
 					return fetchConceptPage(branchPath, true, true, activeFilter, termFilter, ecl, response.getSearchAfter());
