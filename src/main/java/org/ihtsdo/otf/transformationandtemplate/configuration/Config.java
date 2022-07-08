@@ -104,6 +104,7 @@ public class Config extends WebSecurityConfigurerAdapter {
 				.antMatchers("/swagger-ui.html",
 						"/swagger-resources/**",
 						"/v2/api-docs",
+						"/version",
 						"/webjars/springfox-swagger-ui/**").permitAll()
 				.anyRequest().authenticated()
 				.and().httpBasic();
