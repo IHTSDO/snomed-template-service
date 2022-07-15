@@ -38,7 +38,7 @@ Netherlands Dutch	31000146106
 NL Patient Terms	15551000146102
 NL B1 Terms	160161000146108
 
-# Description Inactivation Reason
+# Concept Inactivation Reason
 Not semantically equivalent	723278000
 Outdated	900000000000483008
 Erroneous	900000000000485001
@@ -48,8 +48,8 @@ Ambiguous	900000000000484000
 Moved elsewhere	900000000000487009
 Limited	900000000000486000
 
-# Concept Inactivation Reason
+# Description Inactivation Reason
 Not semantically equivalent	723278000
 Outdated	900000000000483008
-Erroneous	900000000000485001
+Grammatical description error	1217318005
 Non-conformance to editorial policy	723277005
