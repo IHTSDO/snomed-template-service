@@ -1,5 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Branch;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -33,6 +36,7 @@ public class SnowstormClient {
 	public static final long DEFAULT_PAGESIZE = 500;
 
 	private static final String DEFAULT_MODULE_ID_METADATA_KEY = "defaultModuleId";
+	private static final String OPTIONAL_LANGUAGE_REFSET_METADATA_KEY = "optionalLanguageRefsets";
 	private static final ParameterizedTypeReference<List<ConceptPojo>> CONCEPT_LIST_TYPE_REF = new ParameterizedTypeReference<>() {};
 	private static final ParameterizedTypeReference<List<ConceptValidationResult>> CONCEPT_VALIDATION_RESULT_TYPE_REF = new ParameterizedTypeReference<>() {};
 
@@ -91,6 +95,15 @@ public class SnowstormClient {
 		Branch branch = getBranch(branchPath);
 		defaultModuleId = getMetadataString(branch, DEFAULT_MODULE_ID_METADATA_KEY);
 		return defaultModuleId;
+	}
+
+	public List<String> getOptionalLanguageRefsets(String branchPath) {
+		Branch branch = getBranch(branchPath);
+		if (branch != null && branch.getMetadata() != null && branch.getMetadata().containsKey(OPTIONAL_LANGUAGE_REFSET_METADATA_KEY)) {
+			Collection<OptionalLanguageRefset> optionalLanguageRefsets = new ObjectMapper().convertValue(branch.getMetadata().get(OPTIONAL_LANGUAGE_REFSET_METADATA_KEY), new TypeReference<>(){});
+			return optionalLanguageRefsets.stream().map(OptionalLanguageRefset::getRefsetId).collect(Collectors.toList());
+		}
+		return Collections.emptyList();
 	}
 
 	private String getMetadataString(Branch branch, String key) {
@@ -670,6 +683,47 @@ public class SnowstormClient {
 		@Override
 		public String toString() {
 			return "[ eclFilter='" + eclFilter + "']";
+		}
+	}
+
+	static class OptionalLanguageRefset {
+		private String refsetId;
+		private String key;
+		private String label;
+		private String language;
+
+		OptionalLanguageRefset() {}
+
+		public String getRefsetId() {
+			return refsetId;
+		}
+
+		public void setRefsetId(String refsetId) {
+			this.refsetId = refsetId;
+		}
+
+		public String getKey() {
+			return key;
+		}
+
+		public void setKey(String key) {
+			this.key = key;
+		}
+
+		public String getLabel() {
+			return label;
+		}
+
+		public void setLabel(String label) {
+			this.label = label;
+		}
+
+		public String getLanguage() {
+			return language;
+		}
+
+		public void setLanguage(String language) {
+			this.language = language;
 		}
 	}
 

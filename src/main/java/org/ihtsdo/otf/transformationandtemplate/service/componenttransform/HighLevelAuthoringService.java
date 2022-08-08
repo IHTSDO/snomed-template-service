@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 
 import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
-import static org.ihtsdo.otf.utils.StringUtils.isEmpty;
-import static org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult.Severity.ERROR;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
+import static org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult.Severity.ERROR;
+import static org.ihtsdo.otf.utils.StringUtils.isEmpty;
 
 /**
  * Service which acts as the logged in user and provides high level authoring functionality.
@@ -219,6 +219,8 @@ public class HighLevelAuthoringService {
 				return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", request));
 			}
 
+			List<String> optionalLanguageRefsets = snowstormClient.getOptionalLanguageRefsets(request.getBranchPath());
+
 			// retrieve all concepts before processing update
 			List<ConceptPojo> concepts = new ArrayList <>();
 			for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
@@ -243,6 +245,16 @@ public class HighLevelAuthoringService {
 							descriptionsFound.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
 						} else {
 							invalidModuleDescriptions.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+						}
+
+						if (!optionalLanguageRefsets.isEmpty() && loadedDescription.isActive() && !descriptionUpdate.isActive()) {
+							Set<String> intersectedLanguageRefsets = optionalLanguageRefsets.stream()
+									.distinct()
+									.filter(loadedDescription.getAcceptabilityMap().keySet()::contains)
+									.collect(Collectors.toSet());
+							if (!intersectedLanguageRefsets.isEmpty()) {
+								getChangeResult(changes, descriptionUpdate, DESCRIPTION_WITH_ID_COMPARATOR).addWarning("The description is referenced in following context based language reference set " + intersectedLanguageRefsets);
+							}
 						}
 					}
 				}
@@ -572,7 +584,7 @@ public class HighLevelAuthoringService {
 		return new ArrayList<>(changes);
 	}
 
-	private void updateDescriptionBatch(List<ConceptPojo> concepts,  Map<String, DescriptionPojo> descriptionIdMap, List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws BusinessServiceException, TimeoutException {
+	private void updateDescriptionBatch(List<ConceptPojo> concepts,  Map<String, DescriptionPojo> descriptionIdMap, List<ChangeResult<DescriptionPojo>> changes, String branchPath) throws TimeoutException {
 		// Update existing descriptions
 		for (ConceptPojo loadedConcept : concepts) {
 			for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
