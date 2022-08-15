@@ -155,7 +155,14 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		taskChanges.setStatus("IN_PROGRESS");
 		asClient.updateAuthoringTaskNotNullFieldsAreSet(taskChanges);
 	}
-	
+
+	@Override
+	public DataBroker getReportDataUploader() {
+		//Currently no requirement for AP scripts to upload to S3
+		return null;
+	}
+
+
 	protected RefsetMemberPojo removeRefsetMember(IConcept c, RefsetMemberPojo rm) throws TermServerScriptException {
 		//Has this rm been published?
 		try {
