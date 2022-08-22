@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClientException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.Sets.difference;
@@ -598,7 +599,30 @@ public class HighLevelAuthoringService {
 						loadedDescription.setModuleId(descriptionUpdate.getModuleId());
 					}
 					if (descriptionUpdate.getAcceptabilityMap() != null) {
-						loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+						if (loadedDescription.getAcceptabilityMap() == null) {
+							descriptionUpdate.getAcceptabilityMap().values().removeAll(Collections.singleton(null));
+							loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+						} else {
+							Map<String, DescriptionPojo.Acceptability> updateAcceptabilityMap = descriptionUpdate.getAcceptabilityMap();
+							Map<String, DescriptionPojo.Acceptability> loadedAcceptabilityMap = loadedDescription.getAcceptabilityMap();
+							Set<String> languageRefsetsAdded = updateAcceptabilityMap.keySet().stream()
+									.distinct()
+									.filter(Predicate.not(loadedAcceptabilityMap.keySet()::contains))
+									.collect(Collectors.toSet());
+
+							Set<String> languageRefsetsUpdated = updateAcceptabilityMap.keySet().stream()
+									.distinct()
+									.filter(loadedAcceptabilityMap.keySet()::contains)
+									.collect(Collectors.toSet());
+							languageRefsetsAdded.forEach(languageRefset -> loadedDescription.getAcceptabilityMap().put(languageRefset, updateAcceptabilityMap.get(languageRefset)));
+							languageRefsetsUpdated.forEach(languageRefset -> {
+								if (updateAcceptabilityMap.get(languageRefset) == null) {
+									loadedDescription.getAcceptabilityMap().remove(languageRefset);
+								} else {
+									loadedDescription.getAcceptabilityMap().put(languageRefset, updateAcceptabilityMap.get(languageRefset));
+								}
+							});
+						}
 					}
 					if (!descriptionUpdate.isActive()) {
 						loadedDescription.setInactivationIndicator(descriptionUpdate.getInactivationIndicator());

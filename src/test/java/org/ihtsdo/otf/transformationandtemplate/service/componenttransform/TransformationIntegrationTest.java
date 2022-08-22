@@ -173,6 +173,66 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
+	public void testUpdateAcceptability() throws BusinessServiceException, InterruptedException, TimeoutException {
+		String branchPath = "MAIN/KAITEST/KAITEST-103";
+
+		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå").setDescriptionId("2148514019");
+		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap();
+		svDescription.setLang("sv");
+		svDescription.setType(DescriptionPojo.Type.SYNONYM);
+		svAcceptabilityMap.put("46011000052107", PREFERRED);
+		svAcceptabilityMap.put("500191000057100", PREFERRED); // Laboratory Medicine language reference set
+		svDescription.setAcceptabilityMap(svAcceptabilityMap);
+		svDescription.setModuleId("45991000052106");
+
+		// Update acceptability to N for Laboratory Medicine language reference set
+		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("45991000052106");
+		Mockito.when(authoringServicesClientMock.retrieveProject(any())).thenReturn(new AuthoringProject());
+		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Arrays.asList(
+				new ConceptPojo("210958007").add(new DescriptionPojo("Bite (event)").setDescriptionId("456")).add(svDescription)));
+
+		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-update-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-update-tsv-test.tsv"), false));
+
+		int wait = 0;
+		int maxWait = 10;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
+
+		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
+		assertEquals(1, changeResults.size());
+		assertEquals(TRUE, changeResults.get(0).getSuccess());
+
+		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
+		ArgumentCaptor<String> stringArgumentCaptor = ArgumentCaptor.forClass(String.class);
+
+		Mockito.verify(snowstormClientMock).saveUpdateConceptsNoValidation(conceptsSavedCaptor.capture(), stringArgumentCaptor.capture());
+
+		assertEquals(branchPath, stringArgumentCaptor.getValue());
+
+		DescriptionPojo descriptionSV = null;
+		for (ConceptPojo conceptPojo : conceptsSavedCaptor.getValue()) {
+			for (DescriptionPojo description : conceptPojo.getDescriptions()) {
+				if ("följdtillstånd efter fraktur på handleds- och handnivå".equals(description.getTerm())) {
+					descriptionSV = description;
+				}
+			}
+		}
+		assertNotNull(descriptionSV);
+
+		assertEquals("följdtillstånd efter fraktur på handleds- och handnivå", descriptionSV.getTerm());
+		assertEquals("sv", descriptionSV.getLang());
+		Map<String, DescriptionPojo.Acceptability> acceptabilityMap = descriptionSV.getAcceptabilityMap();
+		assertEquals(1, acceptabilityMap.size());
+		assertTrue(acceptabilityMap.containsKey("46011000052107"));
+		assertEquals(PREFERRED, acceptabilityMap.get("46011000052107"));
+	}
+
+	@Test
 	public void testUpdateDesriptionAgainstInvalidModule() throws BusinessServiceException, InterruptedException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-101";
 
