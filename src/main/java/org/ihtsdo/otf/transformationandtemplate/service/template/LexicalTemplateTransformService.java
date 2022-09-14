@@ -34,11 +34,15 @@ public class LexicalTemplateTransformService {
 		
 		Map<String, DescriptionPojo> slotFsnValueMap = new HashMap<>();
 		for (String slot : slotValueMap.keySet()) {
-			DescriptionPojo fsnPojo = slotValueMap.get(slot).stream()
+			Optional<DescriptionPojo> optionalFsnPojo = slotValueMap.get(slot).stream()
 					.filter(DescriptionPojo::isActive)
 					.filter(v -> v.getType() == DescriptionPojo.Type.FSN)
-					.findFirst().get();
-			slotFsnValueMap.put(slot, fsnPojo);
+					.findFirst();
+			if (!optionalFsnPojo.isEmpty()) {
+				slotFsnValueMap.put(slot, optionalFsnPojo.get());
+			} else {
+				LOGGER.warn("No FSN found for slot {}", slot);
+			}
 		}
 		Map<String, List<DescriptionPojo>> slotPtValueMap = new HashMap<>();
 		for (String slot : slotValueMap.keySet()) {

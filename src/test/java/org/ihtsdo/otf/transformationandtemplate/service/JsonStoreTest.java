@@ -1,17 +1,16 @@
 package org.ihtsdo.otf.transformationandtemplate.service;
 
+import org.junit.jupiter.api.Test;
 import org.snomed.authoringtemplate.domain.*;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.util.Assert;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class JsonStoreTest extends AbstractServiceTest {
 
@@ -20,10 +19,10 @@ public class JsonStoreTest extends AbstractServiceTest {
 
 	@Test
 	public void testSaveLoad() throws Exception {
-		Assert.assertNull(templateJsonStore.load("one", ConceptMini.class));
+		assertNull(templateJsonStore.load("one", ConceptMini.class));
 		templateJsonStore.save("one", new ConceptMini("123"));
 		final ConceptMini one = templateJsonStore.load("one", ConceptMini.class);
-		Assert.assertEquals("123", one.getConceptId());
+		assertEquals("123", one.getConceptId());
 	}
 
 	@Test
@@ -32,7 +31,7 @@ public class JsonStoreTest extends AbstractServiceTest {
 		templateJsonStore.save("two", new ConceptMini("200"));
 		templateJsonStore.save("three", new ConceptMini("300"));
 		final Set<ConceptMini> conceptMinis = templateJsonStore.loadAll(ConceptMini.class);
-		Assert.assertEquals(3, conceptMinis.size());
+		assertEquals(3, conceptMinis.size());
 	}
 	
 	

@@ -4,8 +4,8 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.snomed.authoringtemplate.domain.CaseSignificance;
 import org.snomed.authoringtemplate.domain.Description;
 import org.snomed.authoringtemplate.domain.DescriptionType;
@@ -15,7 +15,7 @@ import org.snomed.authoringtemplate.domain.LexicalTemplate.ReplacementRule;
 import java.util.*;
 
 import static org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings.PREFERRED;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.snomed.authoringtemplate.domain.CaseSignificance.*;
 
 public class LexicalTemplateTransformationServiceTest extends AbstractServiceTest {
@@ -23,7 +23,7 @@ public class LexicalTemplateTransformationServiceTest extends AbstractServiceTes
 	private List<LexicalTemplate> lexicalTemplates;
 	private List<Description> descriptions;
 	
-	@Before
+	@BeforeEach
 	public void setUp() {
 		LexicalTemplate course = new LexicalTemplate("course", "[course]", "clinicalCourse", Collections.emptyList());
 		

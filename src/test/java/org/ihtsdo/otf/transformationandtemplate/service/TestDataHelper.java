@@ -112,8 +112,12 @@ public class TestDataHelper {
 
 	public static Map<String, DescriptionPojo.Acceptability> constructAcceptabilityMap(DescriptionPojo.Acceptability usValue, DescriptionPojo.Acceptability gbValue) {
 		Map<String, DescriptionPojo.Acceptability> result = new HashMap<>();
-		result.put("900000000000509007", usValue);
-		result.put("900000000000508004", gbValue);
+		if (usValue != null) {
+			result.put("900000000000509007", usValue);
+		}
+		if (gbValue != null) {
+			result.put("900000000000508004", gbValue);
+		}
 		return result;
 	}
 

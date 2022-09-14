@@ -1,16 +1,17 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import static org.junit.Assert.assertEquals;
 
 import java.util.Collections;
 import java.util.Set;
 
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateUtil;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@ExtendWith(SpringExtension.class)
 public class TemplateUtilTest {
 	
 	@Test

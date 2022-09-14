@@ -11,8 +11,9 @@ import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.ENTIRE_TERM_CASE_SENSITIVE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.FSN;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
@@ -57,7 +58,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	private String destination;
 	
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		source = "Allergy to [substance]";
 		destination = "Allergy to [substance] V2";
@@ -86,16 +87,19 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	}
 	
 	
-	@Test(expected=ServiceException.class)
+	@Test
 	public void testValidateWithFailure() throws Exception {
 		setUpTemplates("CT guided [procedure] of [body structure]");
 		ConceptTemplate sourceTemplate = templateService.loadOrThrow("CT guided [procedure] of [body structure]");
 		ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
-		transformService.validate(sourceTemplate, destinationTemplate);
+		Assertions.assertThrows(ServiceException.class, () -> {
+			transformService.validate(sourceTemplate, destinationTemplate);
+		});
+
 	}
 	
 	@Test
-	public void testAllegyToSubstanceTempalteTransformation() throws Exception {
+	public void testAllergyToSubstanceTemplateTransformation() throws Exception {
 		initTestConcepts("Allergy_To_Almond_Concept.json", "Allergy_To_Almond_Concept_Trasformed.json");
 		mockTerminologyServerClient();
 		mockSearchConcepts(false);
@@ -130,8 +134,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		assertEquals(3, stated.size());
 		for ( RelationshipPojo pojo : stated) {
 			assertNotNull(pojo.getType().getPt());
-			assertNotNull("Target should not be null", pojo.getTarget());
-			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
+			assertNotNull(pojo.getTarget(), "Target should not be null");
+			assertNotNull(pojo.getTarget().getConceptId(), "Target concept shouldn't be null");
 			assertFalse(pojo.getTarget().getConceptId().isEmpty());
 		}
 		assertEquals(6, concept.getRelationships().size());
@@ -211,6 +215,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		inactiveFsnPojo.setTerm("inactive_" + conceptMini.getFsn() );
 		inactiveFsnPojo.setCaseSignificance(ENTIRE_TERM_CASE_SENSITIVE);
 		inactiveFsnPojo.setType(FSN);
+		inactiveFsnPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, null));
 		descriptions.add(inactiveFsnPojo);
 		
 		DescriptionPojo fsnPojo = new DescriptionPojo();
@@ -219,6 +224,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		fsnPojo.setTerm(conceptMini.getFsn().getTerm());
 		fsnPojo.setCaseSignificance(CASE_INSENSITIVE);
 		fsnPojo.setType(FSN);
+		fsnPojo.setAcceptabilityMap(TestDataHelper.constructAcceptabilityMap(PREFERRED, null));
+
 		DescriptionPojo ptPojo = new DescriptionPojo();
 		ptPojo.setTerm(TemplateUtil.getDescriptionFromFSN(conceptMini.getFsn().getTerm()));
 		if (ptPojo.getTerm().equals("Aluminium")) {
@@ -284,8 +291,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		assertEquals(3, classAxiomRels.size());
 		for ( RelationshipPojo pojo : classAxiomRels) {
 			assertNotNull(pojo.getType().getPt());
-			assertNotNull("Target should not be null", pojo.getTarget());
-			assertNotNull("Target concept shouldn't be null", pojo.getTarget().getConceptId());
+			assertNotNull(pojo.getTarget(), "Target should not be null");
+			assertNotNull(pojo.getTarget().getConceptId(), "Target concept shouldn't be null");
 			assertFalse(pojo.getTarget().getConceptId().isEmpty());
 		}
 		
@@ -327,7 +334,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	
 	@Test
-	public void testSingleConceptTranformation() throws Exception {
+	public void testSingleConceptTransformation() throws Exception {
 		initTestConcepts("Allergy_to_Aluminium_Concept_WithAxiomOnly.json", "Allergy_to_Aluminium_Concept_WithAxiomOnly_Transformed.json");
 		Set<String> concepts = new HashSet<>();
 		concepts.add("402306009");
@@ -347,8 +354,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testMultipleSlotsWithinTheSameAttributeType() throws Exception {
-		String tempalteName = "Fracture dislocation of [body structure] (disorder)";
-		setUpTemplates(tempalteName);
+		String templateName = "Fracture dislocation of [body structure] (disorder)";
+		setUpTemplates(templateName);
 		initTestConcepts("Fracture_dislocation_of_elbow_joint_New_Concept.json", "Fracture_dislocation_of_elbow_joint_transformed.json");
 		mockTerminologyServerClient();
 		mockSearchConcepts(true);
@@ -359,7 +366,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		mockSearchAttributeValuesWithinRange("<<773760007 |Traumatic event (event)|", Collections.singletonList("773760007"));
 		// invoke the first mock method call
 		terminologyServerClient.searchConcepts("MAIN", new ArrayList<>(Collections.singleton("123")));
-		ConceptPojo result = transformService.transformConcept("MAIN/test", new TemplateTransformRequest(null, tempalteName),
+		ConceptPojo result = transformService.transformConcept("MAIN/test", new TemplateTransformRequest(null, templateName),
 				conceptToTransform, terminologyServerClient);
 		verifyTransformation(result);
 	}
@@ -411,7 +418,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	private void initTestConcepts(String sourceConceptJson, String transformedJson) throws IOException {
 		InputStream resourceAsStream = getClass().getResourceAsStream(sourceConceptJson);
-		assertNotNull(sourceConceptJson + " stream must not be null", resourceAsStream);
+		assertNotNull(resourceAsStream, sourceConceptJson + " stream must not be null");
 		try (Reader sourceConceptReader = new InputStreamReader(resourceAsStream, UTF_8);
 			 Reader transformedJsonReader = new InputStreamReader(getClass().getResourceAsStream(transformedJson), UTF_8)) {
 				conceptToTransform = gson.fromJson(sourceConceptReader, ConceptPojo.class);

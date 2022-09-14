@@ -11,8 +11,7 @@ import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.transformationandtemplate.rest.error.InputError;
 import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
@@ -24,7 +23,7 @@ import java.util.*;
 
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance.CASE_INSENSITIVE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.FSN;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
@@ -229,10 +228,10 @@ public class TemplateConceptCreateServiceTest extends AbstractServiceTest {
 			}
 		}
 		if (mustHave && !isFound) {
-			Assert.fail("Attribute type of 370132008 should be present but is not");
+			fail("Attribute type of 370132008 should be present but is not");
 		}
 		if (!mustHave && isFound) {
-			Assert.fail("Attribute type of 370132008 should not be present but is");
+			fail("Attribute type of 370132008 should not be present but is");
 		}
 	}
 

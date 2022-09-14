@@ -8,15 +8,15 @@ import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -25,10 +25,10 @@ import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
 import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(properties = "application.properties")
 public class TransformationIntegrationTest {
 
@@ -51,7 +51,7 @@ public class TransformationIntegrationTest {
 	private BranchService branchService;
 
 
-	@Before
+	@BeforeEach
 	public void before() {
 		Mockito.when(snowstormClientFactory.getClientForCurrentUser()).thenReturn(snowstormClientMock);
 		Mockito.when(authoringServicesClientFactory.getClientForCurrentUser()).thenReturn(authoringServicesClientMock);

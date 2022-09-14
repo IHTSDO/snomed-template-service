@@ -1,21 +1,21 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-@RunWith(JUnit4.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@ExtendWith(SpringExtension.class)
 public class TemplateParserServiceTest {
 	
 	private LogicalTemplateParserService parserService;
 	
-	@Before
+	@BeforeEach
 	public void setUp() {
 		parserService = new LogicalTemplateParserService();
 	}

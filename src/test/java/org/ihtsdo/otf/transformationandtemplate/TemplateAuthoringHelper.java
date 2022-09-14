@@ -10,13 +10,14 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.io.Files;
 
 import javax.script.ScriptException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This is not a unit test.
@@ -63,7 +64,7 @@ public class TemplateAuthoringHelper {
 						slot = true;
 					}
 					if (type.contains("Is a (attribute)")) {
-						Assert.assertEquals(1, range.size());
+						assertEquals(1, range.size());
 						template = range.get(0) + ":\n";
 						group = null;
 					} else {

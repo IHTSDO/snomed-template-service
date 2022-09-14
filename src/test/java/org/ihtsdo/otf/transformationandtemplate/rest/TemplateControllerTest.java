@@ -11,18 +11,15 @@ import org.ihtsdo.otf.transformationandtemplate.AbstractTest;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
-@RunWith(SpringRunner.class)
 public class TemplateControllerTest extends AbstractTest {
 
 	@Autowired
@@ -36,7 +33,7 @@ public class TemplateControllerTest extends AbstractTest {
 
 	private MockMvc mockMvc;
 
-	@Before
+	@BeforeEach
 	public void setup() throws IOException, ServiceException {
 		mockMvc = webAppContextSetup(webApplicationContext).build();
 		ConceptTemplate conceptTemplate = new ConceptTemplate();
@@ -59,7 +56,7 @@ public class TemplateControllerTest extends AbstractTest {
 				.andExpect(status().isOk());
 	}
 	
-	@After
+	@AfterEach
 	public void tearDown() throws IOException {
 		FileUtils.deleteDirectory(templateJsonStore.getStoreDirectory());
 	}

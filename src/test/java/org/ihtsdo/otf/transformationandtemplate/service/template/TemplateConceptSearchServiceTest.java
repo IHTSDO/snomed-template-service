@@ -10,8 +10,8 @@ import org.ihtsdo.otf.transformationandtemplate.service.AbstractServiceTest;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.logical.Attribute;
@@ -27,7 +27,7 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.when;
 
@@ -52,7 +52,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	
 	private String templateName;
 	
-	@Before
+	@BeforeEach
 	public void setUp() {
 		logicalTemplateParser = new LogicalTemplateParserService();
 		gson = new GsonBuilder().setPrettyPrinting().create();

@@ -1,9 +1,9 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Set;
 
 import static org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper.createRelationshipPojo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@RunWith(JUnit4.class)
+@ExtendWith(SpringExtension.class)
 public class RoleGroupNumberGeneratorTest {
 
 	@Test
