@@ -249,7 +249,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	}
 
 	@Test
-	public void testAllergicReactionCausedBySubstanceTempalteTransformation() throws Exception {
+	public void testAllergicReactionCausedBySubstanceTemplateTransformation() throws Exception {
 		source = "Allergic reaction caused by [substance]";
 		destination = "Allergic reaction caused by [substance] (disorder) V2";
 		setUpTemplates(source, destination);

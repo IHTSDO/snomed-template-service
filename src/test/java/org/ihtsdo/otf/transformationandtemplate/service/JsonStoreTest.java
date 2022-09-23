@@ -3,7 +3,6 @@ package org.ihtsdo.otf.transformationandtemplate.service;
 import org.junit.jupiter.api.Test;
 import org.snomed.authoringtemplate.domain.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.Assert;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;

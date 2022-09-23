@@ -119,7 +119,6 @@ public class LexicalTemplateTransformationServiceTest extends AbstractServiceTes
 		assertEquals(2, results.size());
 		assertEquals("Sudden onset AND short duration contact dermatitis of bone of C5-C7 caused by dPB1*1401 (disorder)", results.get(0).getTerm());
 		assertEquals(ENTIRE_TERM_CASE_SENSITIVE, results.get(0).getCaseSignificance());
-		
 	}
 	
 	@Test
@@ -152,7 +151,6 @@ public class LexicalTemplateTransformationServiceTest extends AbstractServiceTes
 		assertEquals(2, results.size());
 		assertEquals("Chronic aggressive contact dermatitis of transplant caused by blood material (disorder)", results.get(0).getTerm());
 		assertEquals(CASE_INSENSITIVE, results.get(0).getCaseSignificance());
-		
 	}
 	
 	@Test

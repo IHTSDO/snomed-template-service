@@ -151,12 +151,12 @@ public class HighLevelAuthoringService {
 					}
 
 				} else {
+					// Description not joined to any concept so will not appear in the update request
 					getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Concept %s not found.", description.getConceptId()));
-					// Description not joined to any concept so no will not appear in the update request.
 				}
 			}
 
-			// Set the the existing PT automatically to acceptable if any
+			// Set the existing PT automatically to acceptable if any
 			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty() && !updatedDescriptionTypes.isEmpty()) {
 				for (DescriptionPojo description : conceptPojo.getDescriptions()) {
 					if (description.isActive() &&

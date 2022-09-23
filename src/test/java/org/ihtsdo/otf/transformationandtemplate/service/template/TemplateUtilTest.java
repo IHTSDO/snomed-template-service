@@ -1,10 +1,8 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-
 import java.util.Collections;
 import java.util.Set;
 
-import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -20,7 +18,6 @@ public class TemplateUtilTest {
 				TemplateUtil.getDescriptionFromFSN("Environment or geographical location (environment / location)"));
 	}
 
-	
 	@Test
 	public void testInvalidFSNWithoutSpaceBeforeBracket() {
 		assertEquals("Environment or geographical location", 

@@ -11,7 +11,6 @@ import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,16 +27,16 @@ public class DescriptionTemplateTransformerTest {
 		ConceptPojo conceptToTransform = TestDataHelper.createConceptPojo();
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
 		String inactivationReason = "OUTDATED";
-		ConceptTemplate conceptTempalte = new ConceptTemplate();
-		conceptTempalte.setConceptOutline(conceptOutline);
+		ConceptTemplate conceptTemplate = new ConceptTemplate();
+		conceptTemplate.setConceptOutline(conceptOutline);
 		LexicalTemplate lexical = new LexicalTemplate();
 		lexical.setName("substance");
 		lexical.setTakeFSNFromSlot("substance");
-		conceptTempalte.addLexicalTemplate(lexical);
+		conceptTemplate.addLexicalTemplate(lexical);
 		Map<String, String> slotValueMap = new HashMap<>();
 		slotValueMap.put("substance", "Almond");
 		Map<String, Set<DescriptionPojo>> slotDescriptonValuesMap = TestDataHelper.constructSlotDescriptionValuesMap(slotValueMap, null, DescriptionType.FSN);
-		DescriptionTemplateTransformer transformer = new DescriptionTemplateTransformer(conceptToTransform, conceptTempalte, slotDescriptonValuesMap, inactivationReason);
+		DescriptionTemplateTransformer transformer = new DescriptionTemplateTransformer(conceptToTransform, conceptTemplate, slotDescriptonValuesMap, inactivationReason);
 		transformer.transform();
 		assertNotNull(conceptToTransform.getDescriptions());
 		assertEquals(4, conceptToTransform.getDescriptions().size());

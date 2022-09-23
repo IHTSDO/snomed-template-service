@@ -187,14 +187,14 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	
 
 	protected boolean report(IConcept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
+		String semTag = null;
 		try {
-			String semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
-			return report(TAB_0, task, c.getConceptId(), c.getFsnTerm(), semTag, severity, action, details);
+			semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
 		} catch (Exception e) {
 			//Allow for some issue with FSN
 			debug("FSN related exception while trying to report for " + c.getConceptId() + ": " + e);
-			return report(TAB_0, task, c.getConceptId(),"", "", severity, action, details);
 		}
+		return report(TAB_0, task, c.getConceptId(), c.getFsnTerm(), semTag, severity, action, details);
 	}
 
 }

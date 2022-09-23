@@ -38,7 +38,7 @@ public class LexicalTemplateTransformService {
 					.filter(DescriptionPojo::isActive)
 					.filter(v -> v.getType() == DescriptionPojo.Type.FSN)
 					.findFirst();
-			if (!optionalFsnPojo.isEmpty()) {
+			if (optionalFsnPojo.isPresent()) {
 				slotFsnValueMap.put(slot, optionalFsnPojo.get());
 			} else {
 				LOGGER.warn("No FSN found for slot {}", slot);
