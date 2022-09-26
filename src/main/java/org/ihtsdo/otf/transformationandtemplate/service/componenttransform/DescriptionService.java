@@ -218,7 +218,7 @@ public class DescriptionService {
 					descriptionPojo -> descriptionPojo.getType() == null ? "Type is required" : null,
 					descriptionPojo -> descriptionPojo.getAcceptabilityMap().isEmpty() ||
 							descriptionPojo.getAcceptabilityMap().entrySet().stream()
-									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey())) ? "At least one valid acceptability entry is required" : null
+									.anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null) ? "At least one valid acceptability entry is required" : null
 			));
 		}
 		if (changeType == ChangeType.UPDATE) {

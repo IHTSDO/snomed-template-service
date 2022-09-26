@@ -18,8 +18,7 @@ import java.util.stream.Collectors;
 
 import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
-import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.ACCEPTABLE;
-import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.PREFERRED;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability.*;
 import static org.ihtsdo.otf.transformationandtemplate.service.client.ConceptValidationResult.Severity.ERROR;
 import static org.ihtsdo.otf.utils.StringUtils.isEmpty;
 
@@ -616,7 +615,7 @@ public class HighLevelAuthoringService {
 									.collect(Collectors.toSet());
 							languageRefsetsAdded.forEach(languageRefset -> loadedDescription.getAcceptabilityMap().put(languageRefset, updateAcceptabilityMap.get(languageRefset)));
 							languageRefsetsUpdated.forEach(languageRefset -> {
-								if (updateAcceptabilityMap.get(languageRefset) == null) {
+								if (NOT_ACCEPTABLE.equals(updateAcceptabilityMap.get(languageRefset))) {
 									loadedDescription.getAcceptabilityMap().remove(languageRefset);
 								} else {
 									loadedDescription.getAcceptabilityMap().put(languageRefset, updateAcceptabilityMap.get(languageRefset));
