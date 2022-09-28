@@ -91,14 +91,14 @@ public class TemplateUtil {
 		return result;
 	}
 	
-	public static Map<String, Set<ConceptMiniPojo>> getSlotNameToAttributeValueMap(Map<String, Attribute> slotNameToAttributeMap, ConceptPojo conceptPojo) {
+	public static Map<String, Set<ConceptMiniPojo>> getSlotNameToAttributeValueMap(Map<String, Attribute> slotNameToAttributeMap, ConceptTemplate template, ConceptPojo conceptPojo) throws ServiceException {
 		Map<String, Set<String>> attributeIdToSlotsMap = new HashMap<>();
 		for (String slotName : slotNameToAttributeMap.keySet()) {
 			attributeIdToSlotsMap.computeIfAbsent(slotNameToAttributeMap.get(slotName).getType(), slots -> new HashSet<>()).add(slotName);
 		}
 		
 		Map<String, Set<ConceptMiniPojo>> attributeTypeToTargetValuesMap = new HashMap<>();
-		
+		Map<String, Set<ConceptMiniPojo>> attributeTypeAndGroupToTargetValuesMap = new HashMap<>();
 		for (AxiomPojo axiom : conceptPojo.getClassAxioms()) {
 			for (RelationshipPojo relationship : axiom.getRelationships()) {
 				if (!relationship.isActive()) {
@@ -106,14 +106,22 @@ public class TemplateUtil {
 				}
 				attributeTypeToTargetValuesMap.computeIfAbsent(relationship.getType().getConceptId(), values -> new HashSet<>())
 					.add(relationship.getTarget());
+				attributeTypeAndGroupToTargetValuesMap.computeIfAbsent(relationship.getType().getConceptId() + "-" + relationship.getGroupId(), values -> new HashSet<>())
+						.add(relationship.getTarget());
 				
 			}
 		}
-		
-		Map<String , Set<ConceptMiniPojo>> result = new HashMap<>();
-		for (String attributeTyeId : attributeIdToSlotsMap.keySet()) {
-			for (String slotName : attributeIdToSlotsMap.get(attributeTyeId)) {
-				result.put(slotName, attributeTypeToTargetValuesMap.get(attributeTyeId));
+		List<Relationship> relationships = template.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
+		Map<String, Set<ConceptMiniPojo>> result = new HashMap<>();
+		for (String attributeTypeId : attributeIdToSlotsMap.keySet()) {
+			for (String slotName : attributeIdToSlotsMap.get(attributeTypeId)) {
+				Relationship relationship = relationships.stream().filter(r -> r.getTargetSlot() != null && r.getTargetSlot().getSlotName() != null && r.getTargetSlot().getSlotName().equals(slotName)).findFirst().orElse(null);
+				if (relationship == null) {
+					throw new ServiceException(String.format("Relationship not found in template concept outline for slot %s", slotName));
+				}
+				String typeAndGroupKey = attributeTypeId + "-" + relationship.getGroupId();
+				Set<ConceptMiniPojo> concepts = attributeTypeToTargetValuesMap.get(attributeTypeId).size() == 1 ? attributeTypeToTargetValuesMap.get(attributeTypeId) : (attributeTypeAndGroupToTargetValuesMap.containsKey(typeAndGroupKey) ? attributeTypeAndGroupToTargetValuesMap.get(typeAndGroupKey) : attributeTypeToTargetValuesMap.get(attributeTypeId));
+				result.put(slotName, concepts);
 			}
 		}
 		return result;

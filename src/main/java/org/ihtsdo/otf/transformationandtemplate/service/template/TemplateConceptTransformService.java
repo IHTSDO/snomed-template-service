@@ -219,9 +219,9 @@ public class TemplateConceptTransformService {
 		return transformed;
 	}
 
-	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowstormRestClient restClient) throws RestClientException {
+	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowstormRestClient restClient) throws RestClientException, ServiceException {
 		Map<String, Attribute> destinationSlotToAttributeMap = inputData.getDestinationSlotToAttributeMap();
-		Map<String, Set<ConceptMiniPojo>> slotToAttrbuteValuesMap = TemplateUtil.getSlotNameToAttributeValueMap(destinationSlotToAttributeMap, conceptPojo);
+		Map<String, Set<ConceptMiniPojo>> slotToAttrbuteValuesMap = TemplateUtil.getSlotNameToAttributeValueMap(destinationSlotToAttributeMap, inputData.getDestinationTemplate(), conceptPojo);
 		// validate using attribute slot range when there is more than one value for a given slot
 		Map<String, ConceptMiniPojo> slotToValuesMap = new HashMap<>();
 		String branchPath = inputData.getBranchPath();
