@@ -120,7 +120,7 @@ public class TemplateUtil {
 					throw new ServiceException(String.format("Relationship not found in template concept outline for slot %s", slotName));
 				}
 				String typeAndGroupKey = attributeTypeId + "-" + relationship.getGroupId();
-				Set<ConceptMiniPojo> concepts = attributeTypeToTargetValuesMap.get(attributeTypeId).size() == 1 ? attributeTypeToTargetValuesMap.get(attributeTypeId) : (attributeTypeAndGroupToTargetValuesMap.containsKey(typeAndGroupKey) ? attributeTypeAndGroupToTargetValuesMap.get(typeAndGroupKey) : attributeTypeToTargetValuesMap.get(attributeTypeId));
+				Set<ConceptMiniPojo> concepts = attributeTypeToTargetValuesMap.get(attributeTypeId).size() != 1 && attributeTypeAndGroupToTargetValuesMap.containsKey(typeAndGroupKey) ? attributeTypeAndGroupToTargetValuesMap.get(typeAndGroupKey) : attributeTypeToTargetValuesMap.get(attributeTypeId);
 				result.put(slotName, concepts);
 			}
 		}
