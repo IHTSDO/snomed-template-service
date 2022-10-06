@@ -273,7 +273,6 @@ public class LexicalTemplateTransformService {
 					(rule.getSlotTermStartsWith() != null && description.getTerm().startsWith(rule.getSlotTermStartsWith()))) {
 					result = result.replace(rule.getExistingTerm(), rule.getReplacement());
 					LOGGER.debug(term + " is replaced by " + result);
-					break;
 				}
 			}
 		} 
