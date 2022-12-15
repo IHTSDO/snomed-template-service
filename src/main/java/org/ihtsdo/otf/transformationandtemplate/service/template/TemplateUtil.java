@@ -114,14 +114,16 @@ public class TemplateUtil {
 		List<Relationship> relationships = template.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
 		Map<String, Set<ConceptMiniPojo>> result = new HashMap<>();
 		for (String attributeTypeId : attributeIdToSlotsMap.keySet()) {
-			for (String slotName : attributeIdToSlotsMap.get(attributeTypeId)) {
-				Relationship relationship = relationships.stream().filter(r -> r.getTargetSlot() != null && r.getTargetSlot().getSlotName() != null && r.getTargetSlot().getSlotName().equals(slotName)).findFirst().orElse(null);
-				if (relationship == null) {
-					throw new ServiceException(String.format("Relationship not found in template concept outline for slot %s", slotName));
+			if (attributeTypeToTargetValuesMap.containsKey(attributeTypeId)) {
+				for (String slotName : attributeIdToSlotsMap.get(attributeTypeId)) {
+					Relationship relationship = relationships.stream().filter(r -> r.getTargetSlot() != null && r.getTargetSlot().getSlotName() != null && r.getTargetSlot().getSlotName().equals(slotName)).findFirst().orElse(null);
+					if (relationship == null) {
+						throw new ServiceException(String.format("Relationship not found in template concept outline for slot %s", slotName));
+					}
+					String typeAndGroupKey = attributeTypeId + "-" + relationship.getGroupId();
+					Set<ConceptMiniPojo> concepts = attributeTypeToTargetValuesMap.get(attributeTypeId).size() != 1 && attributeTypeAndGroupToTargetValuesMap.containsKey(typeAndGroupKey) ? attributeTypeAndGroupToTargetValuesMap.get(typeAndGroupKey) : attributeTypeToTargetValuesMap.get(attributeTypeId);
+					result.put(slotName, concepts);
 				}
-				String typeAndGroupKey = attributeTypeId + "-" + relationship.getGroupId();
-				Set<ConceptMiniPojo> concepts = attributeTypeToTargetValuesMap.get(attributeTypeId).size() != 1 && attributeTypeAndGroupToTargetValuesMap.containsKey(typeAndGroupKey) ? attributeTypeAndGroupToTargetValuesMap.get(typeAndGroupKey) : attributeTypeToTargetValuesMap.get(attributeTypeId);
-				result.put(slotName, concepts);
 			}
 		}
 		return result;
