@@ -145,12 +145,12 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		if (writes == 0) {
 			String message = String.format("Script has not found any data to action for Branch %s.", branchPath);
 			info(message);
-			report(0, message);
+			report(TAB_0, message);
 		}
 
-		report(2, "Concepts added", this.added);
-		report(2, "Concepts removed", this.removed);
-		report(2, "Concepts duplicated", this.duplicated);
+		report(TAB_2, "Concepts added", this.added);
+		report(TAB_2, "Concepts removed", this.removed);
+		report(TAB_2, "Concepts duplicated", this.duplicated);
 
 		flushFiles(true, false);
 		percentageComplete(100);
@@ -340,7 +340,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 				for (List<String> item : items) {
 					try {
-						boolean success = report(1, item.toArray());
+						boolean success = report(TAB_1, item.toArray());
 
 						if (!success) {
 							warn(String.format("Failed to write duplicate row: %s", sctid));
@@ -356,7 +356,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 		if (duplicated == 0) {
 			try {
-				report(1, "No duplicates found");
+				report(TAB_1, "No duplicates found");
 			} catch (TermServerScriptException e) {
 				warn("Failed to write to spreadsheet");
 			}
