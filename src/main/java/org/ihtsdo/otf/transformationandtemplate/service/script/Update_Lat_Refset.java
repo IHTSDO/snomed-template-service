@@ -1,11 +1,16 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
+import org.ihtsdo.otf.utils.SnomedUtils;
 import org.snomed.otf.scheduler.domain.*;
+import org.snomed.otf.script.dao.ReportManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -54,6 +59,16 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	 */
 	private int removed = 0;
 
+	/**
+	 * Counter for how many Concepts have been duplicated within the reference set.
+	 */
+	private int duplicated = 0;
+
+	/**
+	 * A copy of the data in the spreadsheet which is analysed for duplicates.
+	 */
+	private final Multimap<String, List<String>> multiMapOfAllConceptsAddedToSpreadsheet = HashMultimap.create();
+
 	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
 	}
@@ -85,6 +100,17 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	}
 
 	@Override
+	protected String createGoogleSheet() throws TermServerScriptException {
+		reportManager = ReportManager.create(this, reportConfiguration);
+		reportManager.setTabNames(new String[] {"Process", "Duplicates", "Summary"});
+		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Info,Detail1, Detail2, ",
+												"Task,SCTID,FSN,Semtag,Severity,Action,Info,Detail1, Detail2, ",
+												"Issue, Count"};
+		reportManager.initialiseReportFiles(columnHeadings);
+		return reportManager.getUrl();
+	}
+
+	@Override
 	public void runJob() throws TermServerScriptException {
 		String branchPath = jobRun.getParamValue(paramBranchPath, task.getBranchPath());
 		boolean legacy = jobRun.getParamBoolean(paramLegacy);
@@ -110,6 +136,9 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		addConceptsToRefSet(branchPath, legacy, dryRun);
 		percentageComplete(90);
 
+		addDuplicateConceptsToRefSetDuplicatesTab();
+		percentageComplete(95);
+
 		/*
 		 * Finish
 		 * */
@@ -119,8 +148,9 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			report(0, message);
 		}
 
-		report(1, "Concepts added", this.added);
-		report(1, "Concepts removed", this.removed);
+		report(2, "Concepts added", this.added);
+		report(2, "Concepts removed", this.removed);
+		report(2, "Concepts duplicated", this.duplicated);
 
 		flushFiles(true, false);
 		percentageComplete(100);
@@ -265,7 +295,17 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		return !StringUtils.isEmpty(refsetMemberPojo.getReleasedEffectiveTime());
 	}
 
-	private void doReportOrLog(Concept concept, Severity severity, ReportActionType reportActionType, Object... details) throws TermServerScriptException {
+	private void doReportOrLog(Concept concept, Severity severity, ReportActionType reportActionType, String details) throws TermServerScriptException {
+		String semTag = null;
+
+		try {
+			semTag = SnomedUtils.deconstructFSN(concept.getFsnTerm(), true)[1];
+		} catch (Exception e) {
+			debug("FSN related exception while trying to report for " + concept.getConceptId() + ": " + e);
+		}
+
+		multiMapOfAllConceptsAddedToSpreadsheet.put(concept.getConceptId(), Lists.newArrayList(task.getKey(), concept.getConceptId(), concept.getFsnTerm(), semTag, severity.name(), reportActionType.name(), details));
+
 		boolean success = report(concept, severity, reportActionType, details);
 		if (!success) {
 			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, severity, reportActionType, details));
@@ -286,6 +326,39 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, definite, dryRun);
 				doReportOrLog(definite, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+			}
+		}
+	}
+
+	private void addDuplicateConceptsToRefSetDuplicatesTab() {
+		for (String sctid : multiMapOfAllConceptsAddedToSpreadsheet.keySet()) {
+			info("Writing information about duplicate records");
+			Collection<List<String>> items = multiMapOfAllConceptsAddedToSpreadsheet.get(sctid);
+
+			if (items.size() > 1) {
+				duplicated++;
+
+				for (List<String> item : items) {
+					try {
+						boolean success = report(1, item.toArray());
+
+						if (!success) {
+							warn(String.format("Failed to write duplicate row: %s", sctid));
+							return;
+						}
+					} catch (TermServerScriptException e) {
+						error(String.format("Failed to write duplicate row: %s", sctid), e);
+						return;
+					}
+				}
+			}
+		}
+
+		if (duplicated == 0) {
+			try {
+				report(1, "No duplicates found");
+			} catch (TermServerScriptException e) {
+				warn("Failed to write to spreadsheet");
 			}
 		}
 	}

@@ -127,7 +127,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		return "View <a target=\"_blank\" href=\"" + url + "\">report</a>";
 	}
 
-	private String createGoogleSheet() throws TermServerScriptException {
+	protected String createGoogleSheet() throws TermServerScriptException {
 		reportManager = ReportManager.create(this, reportConfiguration);
 		reportManager.setTabNames(new String[] {"Process", "Summary"});
 		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Info,Detail1, Detail2, ",
