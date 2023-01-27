@@ -443,7 +443,7 @@ public class SnowstormClient {
 		String activeStr = isActive == null ? "" : (isActive?"active ":"inactive ");
 		String updatedStr = isUpdated == null ? "" : "updated ";
 		String publishedStr = isPublished == null ? "" : (isPublished ? "existing " : "new ");
-		String termFilterStr = termFilter == null ? "" : ("'" + termFilter + "'");
+		String termFilterStr = termFilter == null ? "" : ("'" + termFilter + "' ");
 		String eclStr = ecl == null ? "" : ("matching " + ecl + " ");
 		logger.info("Requesting {}{}{}{}concepts {}from {} with searchAfter {}.", activeStr, updatedStr , publishedStr, termFilterStr, eclStr, branchPath, searchAfter);
 
