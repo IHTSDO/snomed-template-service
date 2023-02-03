@@ -430,7 +430,7 @@ public class SnowstormClient {
 					if (totalReceived.get() >= expected) {
 						return Mono.empty();
 					}
-					return fetchConceptPage(branchPath, true, true, activeFilter, termFilter, ecl, response.getSearchAfter());
+					return fetchConceptPage(branchPath, activeFilter, true, null, ecl, termFilter, response.getSearchAfter());
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
