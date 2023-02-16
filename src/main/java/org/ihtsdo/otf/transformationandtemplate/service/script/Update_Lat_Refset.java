@@ -376,6 +376,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		} else {
 			if (conceptsToRemove.containsKey(concept.getConceptId())) {
 				conceptsToRemove.remove(concept.getConceptId());
+				multiMapOfAllConceptsAddedToSpreadsheet.removeAll(concept.getConceptId());
 			} else {
 				conceptsToAdd.put(concept.getConceptId(), concept);
 			}
