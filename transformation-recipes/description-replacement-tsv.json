@@ -30,8 +30,16 @@
 			{
 				"langRefset3": "$tsv.19|map-constant",
 				"acceptability3": "$tsv.20|map-constant"
+			},
+			{
+				"langRefset4": "$tsv.21|map-constant",
+				"acceptability4": "$tsv.22|map-constant"
+			},
+			{
+				"langRefset5": "$tsv.23|map-constant",
+				"acceptability5": "$tsv.24|map-constant"
 			}
 		],
-		"notes": "$tsv.21"
+		"notes": "$tsv.25"
 	}
 }
