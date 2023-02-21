@@ -1,3 +1,3 @@
-conceptId	descriptionId	preferredTerm	term	inactivationIndicator	associationTargets1	associationTargets2	associationTargets3	associationTargets4	replacementDescriptionId	replacementTerm	newTerm	lang	caseSignificanceId	typeId	langRefset1	acceptability1	langRefset2	acceptability2	langRefset3	acceptability3	notes
+conceptId	descriptionId	preferredTerm	term	inactivationIndicator	associationTargets1	associationTargets2	associationTargets3	associationTargets4	replacementDescriptionId	replacementTerm	newTerm	lang	caseSignificanceId	typeId	langRefset1	acceptability1	langRefset2	acceptability2	langRefset3	acceptability3	langRefset4	acceptability4	langRefset5	acceptability5	notes
 410058007	3112261000052114			900000000000483008							New replacement term	sv	ci	SYNONYM	Swedish	PREFERRED
 54352009	2579921000052110			900000000000483008					846011000052110
