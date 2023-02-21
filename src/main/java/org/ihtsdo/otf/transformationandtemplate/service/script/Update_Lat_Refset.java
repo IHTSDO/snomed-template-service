@@ -203,13 +203,13 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			conceptsToRemove.addAll(getAllConceptsByECL(branchPath, byNoPrerequisiteAncestor));
 		} else {
 			conceptsToRemove.addAll(tsClient.findNewConcepts(branchPath, byLaterality, null));
-			conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, byLaterality));
+			conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byLaterality));
 
 			conceptsToRemove.addAll(tsClient.findNewConcepts(branchPath, byNoPrerequisiteAncestor, null));
-			conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, byNoPrerequisiteAncestor));
+			conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byNoPrerequisiteAncestor));
 		}
 
-		conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null));
+		conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null, null));
 
 		return conceptsToRemove;
 	}
@@ -372,7 +372,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			conceptsToAdd.addAll(getAllConceptsByECL(branchPath, byLaterality));
 		} else {
 			conceptsToAdd.addAll(tsClient.findNewConcepts(branchPath, byLaterality, null));
-			conceptsToAdd.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, byLaterality));
+			conceptsToAdd.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byLaterality));
 		}
 
 		// Concepts which are within a certain hierarchy and have an ancestor within the reference set
@@ -381,7 +381,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			conceptsToAdd.addAll(getAllConceptsByECL(branchPath, byHierarchy));
 		} else {
 			conceptsToAdd.addAll(tsClient.findNewConcepts(branchPath, byHierarchy, null));
-			conceptsToAdd.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, byHierarchy));
+			conceptsToAdd.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byHierarchy));
 		}
 
 		return conceptsToAdd;

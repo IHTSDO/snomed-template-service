@@ -420,7 +420,7 @@ public class SnowstormClient {
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
 
-	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, String termFilter, String ecl) {
+	public List<Concept> findUpdatedConcepts(String branchPath, boolean activeFilter, Boolean isPublished, String termFilter, String ecl) {
 		String searchAfter = null;
 		AtomicInteger totalReceived = new AtomicInteger(0);
 		return fetchConceptPage(branchPath, activeFilter, true, null, ecl, termFilter, searchAfter)
@@ -430,7 +430,7 @@ public class SnowstormClient {
 					if (totalReceived.get() >= expected) {
 						return Mono.empty();
 					}
-					return fetchConceptPage(branchPath, activeFilter, true, null, ecl, termFilter, response.getSearchAfter());
+					return fetchConceptPage(branchPath, activeFilter, true, isPublished, ecl, termFilter, response.getSearchAfter());
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}

@@ -133,7 +133,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//Firstly see if any inactivated concepts need to be removed,
 		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
-		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, "(body structure)", null);
+		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, true, "(body structure)", null); //inactive and published
 		legacy = jobRun.getParamBoolean(LEGACY);
 		
 		percentageComplete(legacy?1:10);
@@ -156,7 +156,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		updateRefset(CacheType.TargetConcept, SCTID_SP_REFSETID, "Part");
 		percentageComplete(legacy?6:60);
 		
-		checkNewStructureConcepts();
+		checkNewStructureConcepts(); //Also recently reactivated
 		percentageComplete(legacy?7:70);
 		
 		flushFiles(false, true);
@@ -265,12 +265,26 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	
 	private void checkNewStructureConcepts() throws TermServerScriptException {
 		String eclFilter = "< 123037004 |Body structure (body structure)|";
-		List<Concept> newSConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, "structure")
+		Set<Concept> newSConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, "structure")
 				.stream()
 				.filter(c -> isStructure(c))
-				.collect(Collectors.toList());
+				.collect(Collectors.toSet());
 		populateMemberCache(CacheType.ReferencedComponent, newSConcepts, false);
 		info("Recovered " + newSConcepts.size() + " new structure concepts");
+		
+		//Also search for active, published concepts with a null effective time to identify re-activations.
+		//Note will also pick up changes to definition status, so we might see some false positives 
+		//reported as already present
+		Set<Concept> reactivatedSConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), true, true, "structure",  eclFilter)
+				.stream()
+				.filter(c -> isStructure(c))
+				.collect(Collectors.toSet());
+		populateMemberCache(CacheType.ReferencedComponent, newSConcepts, false);
+		info("Recovered " + reactivatedSConcepts.size() + " reactivated structure concepts");
+		
+		newSConcepts.addAll(reactivatedSConcepts);
+		info("Recovered " + newSConcepts.size() + " unique new or reactivated structure concepts");
+		
 		for (Concept c : newSConcepts) {
 			final List<Concept> children = tsClient.getChildren(task.getBranchPath(), c.getConceptId());
 			if (children.size() == 0) {
