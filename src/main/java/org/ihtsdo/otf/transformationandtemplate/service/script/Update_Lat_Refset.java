@@ -46,8 +46,6 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 	 * run in dry mode, i.e. only produce the report and not to modify content.
 	 */
 	private static final String PARAM_DRY_RUN = "dry";
-	public static final boolean REMOVE_CONCEPT = false;
-	public static final boolean ADD_CONCEPT = true;
 
 	/**
 	 * Counter for how many rows have been written to the Google Sheet.
@@ -126,13 +124,13 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		info(String.format("Running with branchPath: %s legacy: %b dryRun: %b", branchPath, legacy, dryRun));
 		percentageComplete(20);
 
-		removeConceptsFromRefSet(branchPath, legacy);
+		collectConceptsToRemoveFromRefset(branchPath, legacy);
 		percentageComplete(50);
 
-		addConceptsToRefSet(branchPath, legacy);
+		collectConceptsToAddToRefset(branchPath, legacy);
 		percentageComplete(60);
 
-		performUniqueChangeToRefSetBasedOnHashMaps(branchPath, dryRun);
+		writeChangesToSnowstorm(branchPath, dryRun);
 		percentageComplete(70);
 
 		addDuplicateConceptsToRefSetDuplicatesTab();
@@ -155,7 +153,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		percentageComplete(100);
 	}
 
-	private void removeConceptsFromRefSet(String branchPath, boolean legacy) {
+	private void collectConceptsToRemoveFromRefset(String branchPath, boolean legacy) {
 		List<RefsetMemberPojo> rmToInactivate = new ArrayList<>();
 		Map<String, Concept> cache = new HashMap<>();
 
@@ -184,11 +182,11 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 				continue;
 			}
 
-			recordAdditionOrRemovalInHashMaps(ADD_CONCEPT, concept, rm);
+			conceptsToRemove.put(concept.getConceptId(), new Pair<>(concept, rm));
 		}
 	}
 
-	private Set<Concept> getConceptSetFromECLs(boolean findUpdatedConcepts, String branchPath, boolean legacy, String eclFirst, String eclSecond) {
+	private Set<Concept> getConceptSetFromECLs(boolean findInactivatedConcepts, String branchPath, boolean legacy, String eclFirst, String eclSecond) {
 		Set<Concept> conceptSet = new HashSet<>();
 
 		if (legacy) {
@@ -201,7 +199,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, eclSecond));
 		}
 
-		if (findUpdatedConcepts) {
+		if (findInactivatedConcepts) {
 			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null));
 		}
 
@@ -306,17 +304,23 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		this.writes = this.writes + 1;
 	}
 
-	private void addConceptsToRefSet(String branchPath, boolean legacy) {
-		Set<Concept> conceptsToAdd = getConceptSetFromECLs(false, branchPath, legacy, ECL_ADD_BY_LATERALITY, ECL_ADD_BY_HIERARCHY);
+	private void collectConceptsToAddToRefset(String branchPath, boolean legacy) {
+		Set<Concept> setOfConceptsToAdd = getConceptSetFromECLs(false, branchPath, legacy, ECL_ADD_BY_LATERALITY, ECL_ADD_BY_HIERARCHY);
 
-		if (!conceptsToAdd.isEmpty()) {
+		if (!setOfConceptsToAdd.isEmpty()) {
 			int x = 0;
-			int size = conceptsToAdd.size();
+			int size = setOfConceptsToAdd.size();
 
-			for (Concept concept : conceptsToAdd) {
+			for (Concept concept : setOfConceptsToAdd) {
 				x++;
 				info(String.format("Processing %d / %d Concepts to add to Reference Set.", x, size));
-				recordAdditionOrRemovalInHashMaps(REMOVE_CONCEPT, concept, null);
+
+				if (conceptsToRemove.containsKey(concept.getConceptId())) {
+					conceptsToRemove.remove(concept.getConceptId());
+					multiMapOfAllConceptsAddedToSpreadsheet.removeAll(concept.getConceptId());
+				} else {
+					conceptsToAdd.put(concept.getConceptId(), concept);
+				}
 			}
 		}
 	}
@@ -370,20 +374,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		return tsClient.createRefsetMember(branchPath, rm);
 	}
 
-	private void recordAdditionOrRemovalInHashMaps(boolean removeConcept, Concept concept, RefsetMemberPojo member) {
-		if (removeConcept) {
-			conceptsToRemove.put(concept.getConceptId(), new Pair<>(concept, member));
-		} else {
-			if (conceptsToRemove.containsKey(concept.getConceptId())) {
-				conceptsToRemove.remove(concept.getConceptId());
-				multiMapOfAllConceptsAddedToSpreadsheet.removeAll(concept.getConceptId());
-			} else {
-				conceptsToAdd.put(concept.getConceptId(), concept);
-			}
-		}
-	}
-
-	private void performUniqueChangeToRefSetBasedOnHashMaps(String branchPath, boolean dryRun) throws TermServerScriptException {
+	private void writeChangesToSnowstorm(String branchPath, boolean dryRun) throws TermServerScriptException {
 		for (Concept concept : conceptsToAdd.values()) {
 			RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
 			doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
