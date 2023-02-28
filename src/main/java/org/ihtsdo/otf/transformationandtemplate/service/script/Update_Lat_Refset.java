@@ -3,6 +3,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.script;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.gdata.util.common.base.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
@@ -20,29 +21,31 @@ import java.util.stream.Stream;
 /**
  * This script will add and remove Concepts to/from 723264001 |Lateralizable body structure reference set|.
  */
-public class Update_Lat_Refset extends AuthoringPlatformScript implements JobClass {
+public class Update_Lat_Refset extends AuthoringPlatformScript {
+	private static final String LAT_REFSETID = "723264001";
+	private static final String ECL_ADD_BY_LATERALITY = "(<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)|) MINUS ((^ 723264001) OR ( * : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|) ))";
+	private static final String ECL_ADD_BY_HIERARCHY = "((<< 91723000 |Anatomical structure (body structure)|) AND (< (^ 723264001))) MINUS ((^ 723264001) OR (* : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|)))";
+	private static final String ECL_REMOVE_BY_LATERALITY = "(^ 723264001 AND << 91723000 |Anatomical structure (body structure)|) : (272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right(qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
+	private static final String ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR = "^ 723264001 MINUS << 423857001";
 
-	/**
-	 * Reference set identifier.
-	 */
-	private final String LAT_REFSETID = "723264001";
+	private static final int CHUNK_SIZE = 20;
 
 	/**
 	 * Key for accessing request parameter to control whether the script should
 	 * process all Concepts or just recently created/modified.
 	 */
-	private final String paramLegacy = "legacy";
+	private static final String PARAM_LEGACY = "legacy";
 
 	/**
 	 * Key for accessing request parameter to control which branch to process.
 	 */
-	private final String paramBranchPath = "branch";
+	private static final String PARAM_BRANCH_PATH = "branch";
 
 	/**
 	 * Key for accessing request parameter to control whether the script should
 	 * run in dry mode, i.e. only produce the report and not to modify content.
 	 */
-	private final String paramDryRun = "dry";
+	private static final String PARAM_DRY_RUN = "dry";
 
 	/**
 	 * Counter for how many rows have been written to the Google Sheet.
@@ -68,6 +71,8 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	 * A copy of the data in the spreadsheet which is analysed for duplicates.
 	 */
 	private final Multimap<String, List<String>> multiMapOfAllConceptsAddedToSpreadsheet = HashMultimap.create();
+	private final HashMap<String, Concept> conceptsToAdd = new HashMap<>();
+	private final HashMap<String, Pair<Concept, RefsetMemberPojo>> conceptsToRemove = new HashMap<>();
 
 	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
@@ -76,15 +81,15 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	@Override
 	public Job getJob() {
 		JobParameters jobParameters = new JobParameters()
-				.add(paramLegacy)
+				.add(PARAM_LEGACY)
 				.withType(JobParameter.Type.BOOLEAN)
 				.withDefaultValue(false)
 				.withDescription("Change script to process all active Concepts, instead of only new/modified Concepts.")
-				.add(paramDryRun)
+				.add(PARAM_DRY_RUN)
 				.withType(JobParameter.Type.BOOLEAN)
 				.withDefaultValue(false)
 				.withDescription("Change script to run in dry mode, i.e. only produce report and not modify content.")
-				.add(paramBranchPath)
+				.add(PARAM_BRANCH_PATH)
 				.withType(JobParameter.Type.STRING)
 				.withDescription("Change which branch to process. Note, a new task will be created which references the report produced.")
 				.build();
@@ -112,32 +117,24 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 
 	@Override
 	public void runJob() throws TermServerScriptException {
-		String branchPath = jobRun.getParamValue(paramBranchPath, task.getBranchPath());
-		boolean legacy = jobRun.getParamBoolean(paramLegacy);
-		boolean dryRun = jobRun.getParamBoolean(paramDryRun);
+		String branchPath = jobRun.getParamValue(PARAM_BRANCH_PATH, task.getBranchPath());
+		boolean legacy = jobRun.getParamBoolean(PARAM_LEGACY);
+		boolean dryRun = jobRun.getParamBoolean(PARAM_DRY_RUN);
 
 		info(String.format("Running with branchPath: %s legacy: %b dryRun: %b", branchPath, legacy, dryRun));
-		percentageComplete(30);
+		percentageComplete(20);
 
-		/*
-		 * Remove Concept if:-
-		 * 	- Concept has been lateralised
-		 * 	- Concept no longer has prerequisite ancestor
-		 * 	- Concept has been inactivated
-		 * */
-		removeConceptsFromRefSet(branchPath, legacy, dryRun);
+		collectConceptsToRemoveFromRefset(branchPath, legacy);
+		percentageComplete(50);
+
+		collectConceptsToAddToRefset(branchPath, legacy);
 		percentageComplete(60);
 
-		/*
-		 * Add Concept if:-
-		 * 	- Concept has the laterality attribute with an appropriate value
-		 * 	- Concept is within a certain hierarchy and also has an ancestor within the reference set
-		 * */
-		addConceptsToRefSet(branchPath, legacy, dryRun);
-		percentageComplete(90);
+		writeChangesToSnowstorm(branchPath, dryRun);
+		percentageComplete(70);
 
 		addDuplicateConceptsToRefSetDuplicatesTab();
-		percentageComplete(95);
+		percentageComplete(90);
 
 		/*
 		 * Finish
@@ -156,12 +153,12 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		percentageComplete(100);
 	}
 
-	private void removeConceptsFromRefSet(String branchPath, boolean legacy, boolean dryRun) throws TermServerScriptException {
+	private void collectConceptsToRemoveFromRefset(String branchPath, boolean legacy) {
 		List<RefsetMemberPojo> rmToInactivate = new ArrayList<>();
 		Map<String, Concept> cache = new HashMap<>();
 
-		Set<Concept> relevantConceptsToRemove = getRelevantConceptsToRemove(branchPath, legacy);
-		chunk(relevantConceptsToRemove, 20)
+		Set<Concept> relevantConceptsToRemove = getConceptSetFromECLs(true, branchPath, legacy, ECL_REMOVE_BY_LATERALITY, ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR);
+		chunk(relevantConceptsToRemove)
 				.forEach(chunk -> {
 					cache.putAll(mapByConceptId(chunk));
 					List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, joinByConceptId(chunk), true);
@@ -185,33 +182,28 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 				continue;
 			}
 
-			ReportActionType reportActionType = removeRefsetMemberSilently(branchPath, rm, dryRun);
-			doReportOrLog(concept, Severity.LOW, reportActionType, "Removed by removing ReferenceSetMember " + rm.getId());
+			conceptsToRemove.put(concept.getConceptId(), new Pair<>(concept, rm));
 		}
 	}
 
-	private Set<Concept> getRelevantConceptsToRemove(String branchPath, boolean legacy) {
-		// Concepts which have been lateralised
-		String byLaterality = "(^ 723264001 AND << 91723000 |Anatomical structure (body structure)|) : (272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right(qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
+	private Set<Concept> getConceptSetFromECLs(boolean findInactivatedConcepts, String branchPath, boolean legacy, String eclFirst, String eclSecond) {
+		Set<Concept> conceptSet = new HashSet<>();
 
-		// Concepts which no longer have an appropriate prerequisite ancestor
-		String byNoPrerequisiteAncestor = "^ 723264001 MINUS (^ 723264001 AND << 423857001)";
-
-		Set<Concept> conceptsToRemove = new HashSet<>();
 		if (legacy) {
-			conceptsToRemove.addAll(getAllConceptsByECL(branchPath, byLaterality));
-			conceptsToRemove.addAll(getAllConceptsByECL(branchPath, byNoPrerequisiteAncestor));
+			conceptSet.addAll(getAllConceptsByECL(branchPath, eclFirst));
+			conceptSet.addAll(getAllConceptsByECL(branchPath, eclSecond));
 		} else {
-			conceptsToRemove.addAll(tsClient.findNewConcepts(branchPath, byLaterality, null));
-			conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byLaterality));
-
-			conceptsToRemove.addAll(tsClient.findNewConcepts(branchPath, byNoPrerequisiteAncestor, null));
-			conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byNoPrerequisiteAncestor));
+			conceptSet.addAll(tsClient.findNewConcepts(branchPath, eclFirst, null));
+			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, eclFirst));
+			conceptSet.addAll(tsClient.findNewConcepts(branchPath, eclSecond, null));
+			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, eclSecond));
 		}
 
-		conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null, null));
+		if (findInactivatedConcepts) {
+			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null, null));
+		}
 
-		return conceptsToRemove;
+		return conceptSet;
 	}
 
 	private List<Concept> getAllConceptsByECL(String branchPath, String ecl) {
@@ -236,19 +228,16 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 	}
 
 	// Split collection into X smaller collections (for batch processing)
-	private <T> Stream<List<T>> chunk(Set<T> set, int chunkSize) {
-		if (chunkSize <= 0) {
-			throw new IllegalArgumentException("length = " + chunkSize);
-		}
-
+	private <T> Stream<List<T>> chunk(Set<T> set) {
 		List<T> list = new ArrayList<>(set);
 		int size = list.size();
-		if (size <= 0) {
-			return Stream.empty();
+
+		if (size > 0) {
+			int fullChunks = (size - 1) / CHUNK_SIZE;
+			return IntStream.range(0, fullChunks + 1).mapToObj(n -> list.subList(n * CHUNK_SIZE, n == fullChunks ? size : (n + 1) * CHUNK_SIZE));
 		}
 
-		int fullChunks = (size - 1) / chunkSize;
-		return IntStream.range(0, fullChunks + 1).mapToObj(n -> list.subList(n * chunkSize, n == fullChunks ? size : (n + 1) * chunkSize));
+		return Stream.empty();
 	}
 
 	private Map<String, Concept> mapByConceptId(List<Concept> chunk) {
@@ -295,7 +284,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		return !StringUtils.isEmpty(refsetMemberPojo.getReleasedEffectiveTime());
 	}
 
-	private void doReportOrLog(Concept concept, Severity severity, ReportActionType reportActionType, String details) throws TermServerScriptException {
+	private void doReportOrLog(Concept concept, ReportActionType reportActionType, String details) throws TermServerScriptException {
 		String semTag = null;
 
 		try {
@@ -304,28 +293,34 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 			debug("FSN related exception while trying to report for " + concept.getConceptId() + ": " + e);
 		}
 
-		multiMapOfAllConceptsAddedToSpreadsheet.put(concept.getConceptId(), Lists.newArrayList(task.getKey(), concept.getConceptId(), concept.getFsnTerm(), semTag, severity.name(), reportActionType.name(), details));
+		multiMapOfAllConceptsAddedToSpreadsheet.put(concept.getConceptId(), Lists.newArrayList(task.getKey(), concept.getConceptId(), concept.getFsnTerm(), semTag, Severity.LOW.name(), reportActionType.name(), details));
 
-		boolean success = report(concept, severity, reportActionType, details);
+		boolean success = report(concept, Severity.LOW, reportActionType, details);
 		if (!success) {
-			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, severity, reportActionType, details));
+			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, Severity.LOW, reportActionType, details));
 			return;
 		}
 
 		this.writes = this.writes + 1;
 	}
 
-	private void addConceptsToRefSet(String branchPath, boolean legacy, boolean dryRun) throws TermServerScriptException {
-		Set<Concept> conceptsToAdd = getRelevantConceptsToAdd(branchPath, legacy);
-		if (!conceptsToAdd.isEmpty()) {
+	private void collectConceptsToAddToRefset(String branchPath, boolean legacy) {
+		Set<Concept> setOfConceptsToAdd = getConceptSetFromECLs(false, branchPath, legacy, ECL_ADD_BY_LATERALITY, ECL_ADD_BY_HIERARCHY);
+
+		if (!setOfConceptsToAdd.isEmpty()) {
 			int x = 0;
-			int size = conceptsToAdd.size();
-			for (Concept definite : conceptsToAdd) {
-				x = x + 1;
+			int size = setOfConceptsToAdd.size();
+
+			for (Concept concept : setOfConceptsToAdd) {
+				x++;
 				info(String.format("Processing %d / %d Concepts to add to Reference Set.", x, size));
 
-				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, LAT_REFSETID, definite, dryRun);
-				doReportOrLog(definite, Severity.LOW, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+				if (conceptsToRemove.containsKey(concept.getConceptId())) {
+					conceptsToRemove.remove(concept.getConceptId());
+					multiMapOfAllConceptsAddedToSpreadsheet.removeAll(concept.getConceptId());
+				} else {
+					conceptsToAdd.put(concept.getConceptId(), concept);
+				}
 			}
 		}
 	}
@@ -363,34 +358,10 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		}
 	}
 
-	private Set<Concept> getRelevantConceptsToAdd(String branchPath, boolean legacy) {
-		// Concepts which have the laterality attribute with an appropriate value
-		String byLaterality = "( (<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)|) MINUS ( * : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|) ) )  MINUS (^ 723264001)";
-
-		Set<Concept> conceptsToAdd = new HashSet<>();
-		if (legacy) {
-			conceptsToAdd.addAll(getAllConceptsByECL(branchPath, byLaterality));
-		} else {
-			conceptsToAdd.addAll(tsClient.findNewConcepts(branchPath, byLaterality, null));
-			conceptsToAdd.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byLaterality));
-		}
-
-		// Concepts which are within a certain hierarchy and have an ancestor within the reference set
-		String byHierarchy = "(( << 91723000 |Anatomical structure (body structure)| MINUS (* : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|)))  AND (<  (^ 723264001)))   MINUS (^ 723264001)";
-		if (legacy) {
-			conceptsToAdd.addAll(getAllConceptsByECL(branchPath, byHierarchy));
-		} else {
-			conceptsToAdd.addAll(tsClient.findNewConcepts(branchPath, byHierarchy, null));
-			conceptsToAdd.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, byHierarchy));
-		}
-
-		return conceptsToAdd;
-	}
-
-	private RefsetMemberPojo createRefSetMember(String branchPath, String refsetId, Concept concept, boolean dryRun) {
+	private RefsetMemberPojo createRefSetMember(String branchPath, Concept concept, boolean dryRun) {
 		this.added = this.added + 1;
 		RefsetMemberPojo rm = new RefsetMemberPojo()
-				.withRefsetId(refsetId)
+				.withRefsetId(LAT_REFSETID)
 				.withActive(true)
 				.withModuleId(SCTID_CORE_MODULE)
 				.withReferencedComponentId(concept.getId());
@@ -401,5 +372,19 @@ public class Update_Lat_Refset extends AuthoringPlatformScript implements JobCla
 		}
 
 		return tsClient.createRefsetMember(branchPath, rm);
+	}
+
+	private void writeChangesToSnowstorm(String branchPath, boolean dryRun) throws TermServerScriptException {
+		for (Concept concept : conceptsToAdd.values()) {
+			RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
+			doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+		}
+
+		for (Pair<Concept, RefsetMemberPojo> pair : conceptsToRemove.values()) {
+			Concept concept = pair.getFirst();
+			RefsetMemberPojo rm = pair.getSecond();
+			ReportActionType reportActionType = removeRefsetMemberSilently(branchPath, rm, dryRun);
+			doReportOrLog(concept, reportActionType, "Removed by removing ReferenceSetMember " + rm.getId());
+		}
 	}
 }
