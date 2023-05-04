@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  * 6. The combination of outcomes from 3 and 5 is the delta file for review
  * 
  * FRI-299 Adding the option to pick up legacy content as well with a 'legacy' parameter
- * which will check every 'Entire', 'Part' and 'All' BodyStructure to see if they're in the refset.
+ * which will check every 'Entire' (or 'All') and 'Part' BodyStructure to see if they're in the refset.
  */
 public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements JobClass {
 	
@@ -191,6 +191,10 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	private RefsetMemberPojo createOrUpdateRefsetMember(RefsetMemberPojo rm) throws TermServerScriptException {
+		/*if (rm.getAdditionalFields().getTargetComponentId().equals("1284947008")) {
+			debug("Here");
+		}*/
+		
 		populateConceptCache(rm.getReferencedComponentId(), rm.getAdditionalFields().getTargetComponentId());
 		IConcept sConcept = getConcept(rm.getReferencedComponentId());
 		IConcept xConcept = getConcept(rm.getAdditionalFields().getTargetComponentId()); 
@@ -292,7 +296,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			} else {
 				checkForAvailableChildren(c, "Entire", true, SCTID_SE_REFSETID, children);
 				checkForAvailableChildren(c, "Part", false, SCTID_SP_REFSETID, children);
-				checkForAvailableChildren(c, "All", false, SCTID_SP_REFSETID, children);
+				checkForAvailableChildren(c, "All", true, SCTID_SE_REFSETID, children);
 			}
 		}
 	}
@@ -320,7 +324,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			if (!isEntire && validChildren.size() == 0) {
 				return;
 			}
-			report(c, Severity.MEDIUM, ReportActionType.SKIPPING, "New 'S' concept featured " + validChildren.size() + " '" + (isEntire?"E":"P/A") + "' children.");
+			report(c, Severity.MEDIUM, ReportActionType.SKIPPING, "New 'S' concept featured " + validChildren.size() + " '" + (isEntire?"E/A":"P") + "' children.");
 		}
 	}
 
@@ -382,10 +386,6 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}
 		
 		Concept sConcept = structureParents.get(0);
-		
-		if (c.getConceptId().equals("64237003")) {
-			debug("here");
-		}
 
 		//From FRI-186 If this is an 'All' concept and we already have an 'Entire' then the 'All' is redundant
 		if (isAllConcept) {
@@ -626,11 +626,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	private boolean isEntire(IConcept c) {
-		return c.getFsnTerm().startsWith("Entire ");
+		return c.getFsnTerm().startsWith("Entire ") || c.getFsnTerm().startsWith("All ");
 	}
 
 	private boolean isPart(IConcept c) {
-		return c.getFsnTerm().startsWith("Part ") || c.getFsnTerm().startsWith("All ");
+		return c.getFsnTerm().startsWith("Part ");
 	}
 
 	private boolean isStructure(IConcept c) {

@@ -77,12 +77,18 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		initialiseReportConfiguration(jobRun);
 		ReportSheetManager.targetFolderId = "1fMHFzq5rP1WGmq3AXA2C2RwYXADzGLxR";
 		try {
-			task = asClient.createTask(jobRun.getProject(), taskTitle, "Report in progress");
-			jobRun.setStatus(JobStatus.Scheduled);
-			jobRun.setResultUrl(task.getKey());
-			logger.info("Created task " + task.getKey());
+			//Was a task specified to run against (exceptionally)?
+			if (jobRun.getTask() == null) {
+				task = asClient.createTask(jobRun.getProject(), taskTitle, "Report in progress");
+				jobRun.setStatus(JobStatus.Scheduled);
+				jobRun.setResultUrl(task.getKey());
+				logger.info("Created task " + task.getKey());
+			} else {
+				task = asClient.getTask(jobRun.getProject(), jobRun.getTask());
+				logger.info("Running in existing task " + task.getKey());
+			}
 		} catch (Exception e) {
-			throw new TermServerScriptException("Unable to create task in " + jobRun.getProject(), e);
+			throw new TermServerScriptException("Unable to establish task in " + jobRun.getProject(), e);
 		}
 	}
 	
@@ -90,7 +96,10 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		info ("Running " + this.getClass().getSimpleName());
 		updateTaskTitleState("Running");
 		String branchPath = task.getBranchPath();
-		tsClient.createBranch(branchPath);
+		//Do we need to create this branch?
+		if (jobRun.getTask() == null) {
+			tsClient.createBranch(branchPath);
+		}
 		tsClient.setAuthorFlag(branchPath, ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
 		try {
 			String url = createGoogleSheet();

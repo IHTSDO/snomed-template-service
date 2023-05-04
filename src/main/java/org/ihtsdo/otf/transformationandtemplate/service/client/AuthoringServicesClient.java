@@ -46,9 +46,20 @@ public class AuthoringServicesClient {
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}").build(projectKey))
 				.retrieve()
 				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve project '" + projectKey + "' : " + error)))
 				)
 				.bodyToMono(AuthoringProject.class)
+				.block();
+	}
+	
+	public AuthoringTask getTask(String projectKey, String taskKey) {
+		return restClient.get()
+				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(projectKey, taskKey))
+				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve task '" + taskKey + "' : " + error)))
+				)
+				.bodyToMono(AuthoringTask.class)
 				.block();
 	}
 
