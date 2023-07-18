@@ -6,6 +6,7 @@ import com.google.common.collect.Multimap;
 import com.google.gdata.util.common.base.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.CodeSystemVersion;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
@@ -121,13 +122,22 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		boolean legacy = jobRun.getParamBoolean(PARAM_LEGACY);
 		boolean dryRun = jobRun.getParamBoolean(PARAM_DRY_RUN);
 
-		info(String.format("Running with branchPath: %s legacy: %b dryRun: %b", branchPath, legacy, dryRun));
+		String shortName = extractShortName(branchPath);
+		CodeSystemVersion csv = tsClient.getLatestVersion(shortName, false, false);
+		String versionBranchPath = null;
+
+		if (csv != null) {
+			versionBranchPath = csv.getBranchPath();
+		}
+
+		info(String.format("Running with branchPath: %s, legacy: %b, dryRun: %b, Version Branch Path: %s",
+			branchPath, legacy, dryRun, versionBranchPath));
 		percentageComplete(20);
 
-		collectConceptsToRemoveFromRefset(branchPath, legacy);
+		collectConceptsToRemoveFromRefset(versionBranchPath, branchPath, legacy);
 		percentageComplete(50);
 
-		collectConceptsToAddToRefset(branchPath, legacy);
+		collectConceptsToAddToRefset(versionBranchPath, branchPath, legacy);
 		percentageComplete(60);
 
 		writeChangesToSnowstorm(branchPath, dryRun);
@@ -153,11 +163,37 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		percentageComplete(100);
 	}
 
-	private void collectConceptsToRemoveFromRefset(String branchPath, boolean legacy) {
+	private String extractShortName(String branchPath) {
+		if ("MAIN".equals(branchPath)) {
+			return "SNOMEDCT";
+		}
+
+		if (StringUtils.isEmpty(branchPath)) {
+			throw new IllegalArgumentException("Branch path must contain at least MAIN");
+		}
+
+		String[] parts = branchPath.split("/");
+
+		if (parts.length < 2) {
+			throw new IllegalArgumentException("Branch path must contain a short name");
+		}
+
+		if (branchPath.startsWith("MAIN/SNOMEDCT-")) {
+			return parts[1];
+		}
+
+		if (branchPath.startsWith("MAIN/")) {
+			return "SNOMEDCT";
+		}
+
+		throw new IllegalArgumentException("Branch path must contain a short name and start with MAIN");
+	}
+
+	private void collectConceptsToRemoveFromRefset(String versionBranchPath, String branchPath, boolean legacy) {
 		List<RefsetMemberPojo> rmToInactivate = new ArrayList<>();
 		Map<String, Concept> cache = new HashMap<>();
 
-		Set<Concept> relevantConceptsToRemove = getConceptSetFromECLs(true, branchPath, legacy, ECL_REMOVE_BY_LATERALITY, ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR);
+		Set<Concept> relevantConceptsToRemove = getConceptSetFromECLs(true, versionBranchPath, branchPath, legacy, ECL_REMOVE_BY_LATERALITY, ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR);
 		chunk(relevantConceptsToRemove)
 				.forEach(chunk -> {
 					cache.putAll(mapByConceptId(chunk));
@@ -186,17 +222,15 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		}
 	}
 
-	private Set<Concept> getConceptSetFromECLs(boolean findInactivatedConcepts, String branchPath, boolean legacy, String eclFirst, String eclSecond) {
+	private Set<Concept> getConceptSetFromECLs(boolean findInactivatedConcepts, String versionBranchPath, String branchPath, boolean legacy, String eclFirst, String eclSecond) {
 		Set<Concept> conceptSet = new HashSet<>();
 
-		if (legacy) {
-			conceptSet.addAll(getAllConceptsByECL(branchPath, eclFirst));
-			conceptSet.addAll(getAllConceptsByECL(branchPath, eclSecond));
-		} else {
-			conceptSet.addAll(tsClient.findNewConcepts(branchPath, eclFirst, null));
-			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, eclFirst));
-			conceptSet.addAll(tsClient.findNewConcepts(branchPath, eclSecond, null));
-			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, true, null, null, eclSecond));
+		conceptSet.addAll(getAllConceptsByECL(branchPath, eclFirst));
+		conceptSet.addAll(getAllConceptsByECL(branchPath, eclSecond));
+
+		if (!legacy && versionBranchPath != null) {
+			getAllConceptsByECL(versionBranchPath, eclFirst).forEach(conceptSet::remove);
+			getAllConceptsByECL(versionBranchPath, eclSecond).forEach(conceptSet::remove);
 		}
 
 		if (findInactivatedConcepts) {
@@ -304,8 +338,8 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		this.writes = this.writes + 1;
 	}
 
-	private void collectConceptsToAddToRefset(String branchPath, boolean legacy) {
-		Set<Concept> setOfConceptsToAdd = getConceptSetFromECLs(false, branchPath, legacy, ECL_ADD_BY_LATERALITY, ECL_ADD_BY_HIERARCHY);
+	private void collectConceptsToAddToRefset(String versionBranchPath, String branchPath, boolean legacy) {
+		Set<Concept> setOfConceptsToAdd = getConceptSetFromECLs(false, versionBranchPath, branchPath, legacy, ECL_ADD_BY_LATERALITY, ECL_ADD_BY_HIERARCHY);
 
 		if (!setOfConceptsToAdd.isEmpty()) {
 			int x = 0;

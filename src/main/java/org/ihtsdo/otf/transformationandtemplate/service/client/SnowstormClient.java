@@ -8,13 +8,14 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Branch;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptChangeBatchStatus;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.CodeSystemVersion;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ItemsPage;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -119,6 +120,38 @@ public class SnowstormClient {
 				.retrieve()
 				.bodyToMono(Branch.class)
 				.block();
+	}
+
+	/**
+	 * Retrieves the latest version of a code system based on the given parameters.
+	 *
+	 * @param shortName           the short name of the code system
+	 * @param futureVersions      indicates whether to include future versions of the code system
+	 * @param internalReleases    indicates whether to include internal releases of the code system
+	 *
+	 * @return the latest version of the code system, or null if no versions are found.
+	 */
+	public CodeSystemVersion getLatestVersion(String shortName, boolean futureVersions, boolean internalReleases) {
+		ItemsPage<CodeSystemVersion> versions =
+			webClient.get()
+				.uri(uriBuilder -> uriBuilder
+						.path("/codesystems/{shortName}/versions")
+						.queryParam("futureVersions", futureVersions)
+						.queryParam("internalReleases", internalReleases)
+						.build(shortName)
+				)
+				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(new ParameterizedTypeReference<ItemsPage<CodeSystemVersion>>() {})
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve versions for '" + shortName + "' : " + error)))
+				)
+				.bodyToMono(new ParameterizedTypeReference<ItemsPage<CodeSystemVersion>>() {})
+				.block();
+
+		if (versions == null || versions.getTotal() == 0 || versions.getItems().isEmpty()) {
+			return null;
+		}
+
+		return versions.getItems().get(versions.getItems().size() - 1);
 	}
 
 	public ConceptChangeBatchStatus getBatchStatus(String locationHeader, int maxWaitSeconds) throws TimeoutException {
