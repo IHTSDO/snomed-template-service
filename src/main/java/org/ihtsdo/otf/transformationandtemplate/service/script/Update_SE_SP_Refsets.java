@@ -172,8 +172,9 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			flushFiles(false, true);
 			checkAllConcepts(40, CacheType.TargetConcept, SCTID_SE_REFSETID, "All");
 			checkAllConcepts(70, CacheType.TargetConcept, SCTID_SP_REFSETID, "Part");
-			flushFiles(false, true);
 		}
+
+		flushFiles(false, true);
 	}
 	
 	private void populateScopeExclusions() throws TermServerScriptException {
