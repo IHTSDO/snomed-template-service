@@ -198,7 +198,20 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		
 		populateConceptCache(rm.getReferencedComponentId(), rm.getAdditionalFields().getTargetComponentId());
 		IConcept sConcept = getConcept(rm.getReferencedComponentId());
-		IConcept xConcept = getConcept(rm.getAdditionalFields().getTargetComponentId()); 
+		IConcept xConcept = getConcept(rm.getAdditionalFields().getTargetComponentId());
+
+		if (Objects.equals(rm.getReferencedComponentId(), rm.getAdditionalFields().getTargetComponentId())) {
+			String sConceptId = sConcept.getConceptId() + "|" + sConcept.getFsnTerm() + "|";
+			report(sConcept, Severity.MEDIUM, ReportActionType.SKIPPING, String.format("ReferenceSetMember cannot be updated as it would result in %s being linked to itself.", sConceptId));
+			return null;
+		}
+
+		if (!isBodyStructure(sConcept)) {
+			String sConceptId = sConcept.getConceptId() + "|" + sConcept.getFsnTerm() + "|";
+			String xConceptId = xConcept.getConceptId() + "|" + xConcept.getFsnTerm() + "|";
+			report(xConcept, Severity.MEDIUM, ReportActionType.SKIPPING, String.format("%s is not a body structure so cannot be used as a replacement for %s", sConceptId, xConceptId));
+			return null;
+		}
 		
 		//Is one of these concepts out of scope?
 		if (outOfScope.contains(sConcept.getConceptId()) || outOfScope.contains(xConcept.getConceptId())) {
@@ -639,6 +652,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		String term = c.getFsnTerm().replace("(body structure)", "");
 		return term.startsWith("Structure ") || 
 				(term.contains("structure") && !isEntire(c) && !isPart(c));
+	}
+
+	private boolean isBodyStructure(IConcept c) {
+		String term = c.getFsnTerm();
+		return term.contains("(body structure)");
 	}
 	
 	private void populateMemberCache(CacheType cacheType, Collection<Concept> concepts, boolean forceRefresh) {
