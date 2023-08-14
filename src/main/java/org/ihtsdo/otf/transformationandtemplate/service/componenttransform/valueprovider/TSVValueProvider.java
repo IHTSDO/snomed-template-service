@@ -11,8 +11,7 @@ public class TSVValueProvider implements ValueProvider {
 	@Override
 	public String getValue(String[] columns) {
 		if (tsvIndex > -1 && columns.length > tsvIndex) {
-			String value = columns[tsvIndex];
-			return value;
+            return columns[tsvIndex];
 		}
 		return null;
 	}

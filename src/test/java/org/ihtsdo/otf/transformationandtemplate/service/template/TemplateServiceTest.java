@@ -32,11 +32,13 @@ public class TemplateServiceTest extends AbstractServiceTest {
 	@Test
 	public void testCreate() throws Exception {
 		final ConceptTemplate templateRequest = new ConceptTemplate();
-		templateRequest.setLogicalTemplate("71388002 |Procedure|:\n" +
-				"\t[[~1..1]] {\n" +
-				"\t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,\n" +
-				"\t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]]\n" +
-				"\t}\n");
+		templateRequest.setLogicalTemplate("""
+                71388002 |Procedure|:
+                \t[[~1..1]] {
+                \t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,
+                \t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]]
+                \t}
+                """);
 
 		templateRequest.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
 		templateRequest.setConceptOutline(new ConceptOutline(DefinitionStatus.FULLY_DEFINED).addDescription(new Description("CT of $slotX$")).setModuleId(org.ihtsdo.otf.constants.Concepts.MODULE));
@@ -74,11 +76,13 @@ public class TemplateServiceTest extends AbstractServiceTest {
 	@Test
 	public void testUpdate() throws Exception {
 		final ConceptTemplate templateRequest1 = new ConceptTemplate();
-		templateRequest1.setLogicalTemplate("71388002 |Procedure|:\n" +
-				"\t[[~1..1]] {\n" +
-				"\t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,\n" +
-				"\t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]]\n" +
-				"\t}\n");
+		templateRequest1.setLogicalTemplate("""
+                71388002 |Procedure|:
+                \t[[~1..1]] {
+                \t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,
+                \t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]]
+                \t}
+                """);
 
 		templateRequest1.addLexicalTemplate(new LexicalTemplate("slotX", "Procedure", "proc", Lists.newArrayList("entire")));
 		templateRequest1.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $slotX$")));
@@ -86,11 +90,13 @@ public class TemplateServiceTest extends AbstractServiceTest {
 		assertEquals("one", name);
 
 		final ConceptTemplate templateRequest2 = new ConceptTemplate();
-		templateRequest2.setLogicalTemplate("71388002 |Procedure|:\n" +
-				"\t[[~1..1]] {\n" +
-				"\t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]],\n" +
-				"\t\t363703001 |Has intent| = 429892002 |Guidance intent|\n" +
-				"\t}\n");
+		templateRequest2.setLogicalTemplate("""
+                71388002 |Procedure|:
+                \t[[~1..1]] {
+                \t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @proc]],
+                \t\t363703001 |Has intent| = 429892002 |Guidance intent|
+                \t}
+                """);
 
 		templateRequest2.addLexicalTemplate(new LexicalTemplate("proc", "Procedure", "proc", Lists.newArrayList("entire")));
 		templateRequest2.setConceptOutline(new ConceptOutline().addDescription(new Description("CT of $proc$")));
@@ -153,17 +159,19 @@ public class TemplateServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testCreateTemplateWithSelfGroupedAttribute() throws Exception {
-		String logicTemplate = "64572001 |Disease (disorder)|:\n" + 
-		"	[[~0..1]] {\n" + 
-		"		263502005 |Clinical course (attribute)| = [[+id(<288524001 |Courses (qualifier value)|) @course]]\n" + 
-		"	}, \n" + 
-		"	[[~1..1]] {\n" + 
-		"		[[~1..1]] 370135005 |Pathological process (attribute)| = 441862004 |Infectious process (qualifier value)|,\n" + 
-		"		[[~0..1]] 363698007 |Finding site (attribute)| = [[+id(<<442083009 |Anatomical or acquired body structure (body structure)|) @bodyStructure]],\n" + 
-		"		[[~0..1]] 116676008 |Associated morphology (attribute)| = [[+id(<<49755003 |Morphologically abnormal structure (morphologic abnormality)|) @morphology]],\n" + 
-		"		[[~1..1]] 246075003 |Causative agent (attribute)| = [[+id(<<409822003 |Superkingdom Bacteria (organism)|) @bacteria]],\n" + 
-		"		[[~0..1]] 246454002 |Occurrence (attribute)| = [[+id(<282032007 |Periods of life (qualifier value)|) @periodsOfLife]]\n" + 
-		"	}\n";
+		String logicTemplate = """
+                64572001 |Disease (disorder)|:
+                	[[~0..1]] {
+                		263502005 |Clinical course (attribute)| = [[+id(<288524001 |Courses (qualifier value)|) @course]]
+                	},\s
+                	[[~1..1]] {
+                		[[~1..1]] 370135005 |Pathological process (attribute)| = 441862004 |Infectious process (qualifier value)|,
+                		[[~0..1]] 363698007 |Finding site (attribute)| = [[+id(<<442083009 |Anatomical or acquired body structure (body structure)|) @bodyStructure]],
+                		[[~0..1]] 116676008 |Associated morphology (attribute)| = [[+id(<<49755003 |Morphologically abnormal structure (morphologic abnormality)|) @morphology]],
+                		[[~1..1]] 246075003 |Causative agent (attribute)| = [[+id(<<409822003 |Superkingdom Bacteria (organism)|) @bacteria]],
+                		[[~0..1]] 246454002 |Occurrence (attribute)| = [[+id(<282032007 |Periods of life (qualifier value)|) @periodsOfLife]]
+                	}
+                """;
 		ConceptTemplate templateRequest = new ConceptTemplate();
 		templateRequest.setLogicalTemplate(logicTemplate);
 		templateRequest.addLexicalTemplate(new LexicalTemplate("course", "[course]", "course", null));

@@ -28,7 +28,7 @@ import java.net.URISyntaxException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Matchers.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
@@ -49,9 +49,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	private LogicalTemplateParserService logicalTemplateParser;
 
 	private Gson gson;
-	
-	private String templateName;
-	
+
 	@BeforeEach
 	public void setUp() {
 		logicalTemplateParser = new LogicalTemplateParserService();
@@ -133,13 +131,14 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 		
 	@Test
 	public void testConstructEclQuery() throws IOException, ServiceException {
-		String logical = "420134006 |Propensity to adverse reactions (disorder)|:\n" + 
-				"	\n" + 
-				"	370135005 |Pathological process (attribute)| = 472964009 |Allergic process (qualifier value)|,\n" + 
-				"	{\n" + 
-				"		246075003 |Causative agent (attribute)| = [[+id(<105590001 |Substance (substance)|) @substance]],\n" + 
-				"		255234002 |After (attribute)| = 609327009 |Allergic sensitization (disorder)|\n" + 
-				"	}";
+		String logical = """
+                420134006 |Propensity to adverse reactions (disorder)|:
+                	
+                	370135005 |Pathological process (attribute)| = 472964009 |Allergic process (qualifier value)|,
+                	{
+                		246075003 |Causative agent (attribute)| = [[+id(<105590001 |Substance (substance)|) @substance]],
+                		255234002 |After (attribute)| = 609327009 |Allergic sensitization (disorder)|
+                	}""";
 		LogicalTemplate logicalTemplate = logicalTemplateParser.parseTemplate(logical);
 		List<String> focusConcepts = logicalTemplate.getFocusConcepts();
 		List<AttributeGroup> attributeGroups = logicalTemplate.getAttributeGroups();
@@ -152,8 +151,13 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testConstructEclQueryWithCardinality() throws IOException, ServiceException {
-		String logical = "71388002 |Procedure|:\n\t[[~1..1]] {\n\t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,\n\t\t[[~1..1]] "
-				+ "405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]]\n\t}\n";
+		String logical = """
+                71388002 |Procedure|:
+                \t[[~1..1]] {
+                \t\t260686004 |Method| = 312251004 |Computed tomography imaging action|,
+                \t\t[[~1..1]] 405813007 |Procedure site - Direct| = [[+id(<< 442083009 |Anatomical or acquired body structure|) @procSite]]
+                \t}
+                """;
 		LogicalTemplate logicalTemplate = logicalTemplateParser.parseTemplate(logical);
 		List<String> focusConcepts = logicalTemplate.getFocusConcepts();
 		List<AttributeGroup> attributeGroups = logicalTemplate.getAttributeGroups();
@@ -186,7 +190,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	
 	@Test
 	public void testConstructEclQueryWithCompoundAttributeRange() throws Exception {
-		templateName = "LOINC Template - Process Observable - 100 - 2";
+		String templateName = "LOINC Template - Process Observable - 100 - 2";
 		ConceptTemplate template = setUpTemplate(templateName);
 		LogicalTemplate logicalTemplate = logicalTemplateParser.parseTemplate(template.getLogicalTemplate());
 		String ecl = searchService.constructEclQuery(logicalTemplate.getFocusConcepts(), logicalTemplate.getAttributeGroups(), logicalTemplate.getUngroupedAttributes());

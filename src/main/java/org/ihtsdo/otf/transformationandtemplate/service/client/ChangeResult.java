@@ -3,7 +3,6 @@ package org.ihtsdo.otf.transformationandtemplate.service.client;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
-import org.springframework.web.reactive.function.BodyInserters;
 
 import static java.lang.String.format;
 

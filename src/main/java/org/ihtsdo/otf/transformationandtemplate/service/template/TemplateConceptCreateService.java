@@ -91,9 +91,9 @@ public class TemplateConceptCreateService {
 		List<List<String>> slotValuesByRow = new ArrayList<>();
 		for (int i = 0; i < slotColumnValues.get(0).size(); i++) {
 			List<String> values = new ArrayList<>();
-			for (int k = 0; k < slotColumnValues.size(); k++) {
-				values.add(slotColumnValues.get(k).get(i));
-			}
+            for (List<String> slotColumnValue : slotColumnValues) {
+                values.add(slotColumnValue.get(i));
+            }
 			slotValuesByRow.add(values);
 		}
 		List<ConceptOutline> generatedConcepts = new ArrayList<>();
@@ -293,7 +293,7 @@ public class TemplateConceptCreateService {
 				return partitionIdentifier.equals("00") || partitionIdentifier.equals("10");
 			}
 		} catch (StringIndexOutOfBoundsException e) {
-			e.printStackTrace();
+			logger.error("Failed to validate concept id '{}'", conceptId, e);
 		}
 		return false;
 	}

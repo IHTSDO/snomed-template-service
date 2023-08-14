@@ -130,10 +130,7 @@ public class TemplateTransformRequest {
 		} else if (!sourceTemplate.equals(other.sourceTemplate))
 			return false;
 		if (destinationTemplate == null) {
-			if (other.destinationTemplate != null)
-				return false;
-		} else if (!destinationTemplate.equals(other.destinationTemplate))
-			return false;
-		return true;
-	}
+            return other.destinationTemplate == null;
+		} else return destinationTemplate.equals(other.destinationTemplate);
+    }
 }

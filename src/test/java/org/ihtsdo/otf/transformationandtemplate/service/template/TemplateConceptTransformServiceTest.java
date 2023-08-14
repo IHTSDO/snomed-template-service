@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -48,15 +50,14 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	private ConceptPojo transformedConcept;
 	
 	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
-	
-	// set it to true to print out concept in json
-	private boolean isDebug = false;
-	
+
 	private TemplateTransformRequest transformRequest;
 	
 	private String source;
 	
 	private String destination;
+
+	private final Logger LOGGER = LoggerFactory.getLogger(getClass());
 	
 	@BeforeEach
 	public void setUp() throws Exception {
@@ -92,10 +93,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 		setUpTemplates("CT guided [procedure] of [body structure]");
 		ConceptTemplate sourceTemplate = templateService.loadOrThrow("CT guided [procedure] of [body structure]");
 		ConceptTemplate destinationTemplate = templateService.loadOrThrow(destination);
-		Assertions.assertThrows(ServiceException.class, () -> {
-			transformService.validate(sourceTemplate, destinationTemplate);
-		});
-
+		Assertions.assertThrows(ServiceException.class, () -> transformService.validate(sourceTemplate, destinationTemplate));
 	}
 	
 	@Test
@@ -401,7 +399,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 					errorMsgMap.put(key, transformationResult.getFailures().get(key));
 				}
 			} catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
+				LOGGER.error("Unexpected error", e);
 				fail("No exceptions should be thrown");
 			}
 		}
@@ -431,6 +429,8 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	}
 	
 	private void verifyTransformation(ConceptPojo transformed) {
+		// set it to true to print out concept in json
+		boolean isDebug = false;
 		if (isDebug) {
 			System.out.println(gson.toJson(transformed));
 		}

@@ -38,18 +38,15 @@ public class DescriptionService {
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public List<ChangeResult<? extends SnomedComponent>> startBatchTransformation(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
-		switch (recipe.getChangeType()) {
-			case CREATE:
-				return createDescriptions(recipe, request);
-			case REPLACE:
-				return replaceDescriptions(recipe, request);
-			case UPDATE:
-			case INACTIVATE:
-				// This code for update or inactivate
-				return updateDescriptions(recipe, request);
-			default:
-				throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
-		}
+        return switch (recipe.getChangeType()) {
+            case CREATE -> createDescriptions(recipe, request);
+            case REPLACE -> replaceDescriptions(recipe, request);
+            case UPDATE, INACTIVATE ->
+                // This code for update or inactivate
+                    updateDescriptions(recipe, request);
+            default ->
+                    throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
+        };
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> replaceDescriptions(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {

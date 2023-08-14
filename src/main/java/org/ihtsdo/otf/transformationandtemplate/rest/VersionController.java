@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = "Version", description = "Build Version")
 public class VersionController {
 
-	@Autowired
-	BuildProperties buildProperties;
+	@Autowired(required = false)
+	private BuildProperties buildProperties;
 
 	@ApiOperation("Software build version and timestamp.")
 	@RequestMapping(value = "/version", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -26,8 +26,8 @@ public class VersionController {
 
 	public static final class BuildVersion {
 
-		private String version;
-		private String time;
+		private final String version;
+		private final String time;
 
 		BuildVersion(String version, String time) {
 			this.version = version;

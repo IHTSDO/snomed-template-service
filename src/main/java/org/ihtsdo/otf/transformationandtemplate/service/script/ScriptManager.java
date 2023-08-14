@@ -43,7 +43,7 @@ public class ScriptManager {
 	@Value("${template-service.script.SEP.out-of-scope}")
 	private String SEPOutOfScope;
 	
-	public static enum ConfigItem{SEP_OUT_OF_SCOPE};
+	public enum ConfigItem { SEP_OUT_OF_SCOPE }
 	
 	Map<String, Class<? extends JobClass>> knownJobMap;
 	Set<Job> knownJobs;
@@ -128,10 +128,10 @@ public class ScriptManager {
 	}
 
 	public String getConfig(ConfigItem configItem) {
-		switch (configItem) {
-			case SEP_OUT_OF_SCOPE : return SEPOutOfScope;
-			default : throw new IllegalArgumentException("Unrecognised config item " + configItem);
-		}
+        return switch (configItem) {
+            case SEP_OUT_OF_SCOPE -> SEPOutOfScope;
+            default -> throw new IllegalArgumentException("Unrecognised config item " + configItem);
+        };
 	}
 
 

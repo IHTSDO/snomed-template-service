@@ -15,7 +15,6 @@ import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJo
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.domain.StatusAndMessage;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
-import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.DescriptionReplacementPojo;
@@ -165,29 +164,29 @@ public class ComponentTransformService {
 	}
 
 	public List<ChangeResult<DescriptionPojo>> loadDescriptionTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
-		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<DescriptionPojo>>>() {});
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<>() {
+        });
 	}
 
 	public List<ChangeResult<DescriptionReplacementPojo>> loadDescriptionReplacementTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
-		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<DescriptionReplacementPojo>>>() {});
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<>() {
+        });
 	}
 
 	public List<ChangeResult<AxiomPojo>> loadAxiomTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
-		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<List<ChangeResult<AxiomPojo>>>() {});
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<>() {
+        });
 	}
 
 	private List<ChangeResult<? extends SnomedComponent>> doRunTransform(ComponentTransformationJob job, TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		if (request.getTaskTitle() == null) {
 			request.setTaskTitle(recipe.getTitle());
 		}
-		switch (recipe.getComponent()) {
-			case DESCRIPTION:
-				return descriptionService.startBatchTransformation(recipe, request);
-			case AXIOM:
-				return axiomService.startBatchTransformation(recipe, request);
-			default:
-				throw new ProcessingException("Unable to transform component of type " + recipe.getComponent());
-		}
+        return switch (recipe.getComponent()) {
+            case DESCRIPTION -> descriptionService.startBatchTransformation(recipe, request);
+            case AXIOM -> axiomService.startBatchTransformation(recipe, request);
+            default -> throw new ProcessingException("Unable to transform component of type " + recipe.getComponent());
+        };
 	}
 
 	private <T> T readJobResource(ComponentTransformationJob job, String resourceName, Class<T> resourceClass) throws BusinessServiceException {

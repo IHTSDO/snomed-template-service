@@ -60,7 +60,7 @@ public class TransformationIntegrationTest {
 
 		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå").setDescriptionId("789");
 
-		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap();
+		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap<>();
 		svDescription.setLang("sv");
 		svDescription.setType(DescriptionPojo.Type.SYNONYM);
 		svAcceptabilityMap.put("46011000052107", PREFERRED);
@@ -174,7 +174,7 @@ public class TransformationIntegrationTest {
 		String branchPath = "MAIN/KAITEST/KAITEST-103";
 
 		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå").setDescriptionId("2148514019");
-		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap();
+		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap<>();
 		svDescription.setLang("sv");
 		svDescription.setType(DescriptionPojo.Type.SYNONYM);
 		svAcceptabilityMap.put("46011000052107", PREFERRED);
@@ -234,7 +234,7 @@ public class TransformationIntegrationTest {
 		String branchPath = "MAIN/KAITEST/KAITEST-101";
 
 		DescriptionPojo enDescription = new DescriptionPojo("Test").setDescriptionId("2148514019");
-		Map<String, DescriptionPojo.Acceptability> enAcceptabilityMap = new HashMap();
+		Map<String, DescriptionPojo.Acceptability> enAcceptabilityMap = new HashMap<>();
 		enDescription.setLang("en");
 		enDescription.setType(DescriptionPojo.Type.SYNONYM);
 		enAcceptabilityMap.put("900000000000509007", PREFERRED);
@@ -271,7 +271,7 @@ public class TransformationIntegrationTest {
 		String branchPath = "MAIN/KAITEST/KAITEST-100";
 
 		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå");
-		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap();
+		Map<String, DescriptionPojo.Acceptability> svAcceptabilityMap = new HashMap<>();
 		svDescription.setLang("sv");
 		svDescription.setType(DescriptionPojo.Type.SYNONYM);
 		svAcceptabilityMap.put("46011000052107", PREFERRED);
@@ -283,7 +283,7 @@ public class TransformationIntegrationTest {
 		DescriptionPojo svDescription1 = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå 1");
 		svDescription1.setLang("sv");
 		svDescription1.setType(DescriptionPojo.Type.SYNONYM);
-		svAcceptabilityMap = new HashMap();
+		svAcceptabilityMap = new HashMap<>();
 		svAcceptabilityMap.put("46011000052107", PREFERRED);
 		svDescription1.setAcceptabilityMap(svAcceptabilityMap);
 		svDescription1.setModuleId("45991000052106");
@@ -293,7 +293,7 @@ public class TransformationIntegrationTest {
 		DescriptionPojo svDescription2 = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå 2");
 		svDescription2.setLang("sv");
 		svDescription2.setType(DescriptionPojo.Type.SYNONYM);
-		svAcceptabilityMap = new HashMap();
+		svAcceptabilityMap = new HashMap<>();
 		svAcceptabilityMap.put("46011000052107", ACCEPTABLE);
 		svDescription2.setAcceptabilityMap(svAcceptabilityMap);
 		svDescription2.setModuleId("45991000052106");

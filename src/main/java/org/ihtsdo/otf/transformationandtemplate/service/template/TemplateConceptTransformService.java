@@ -191,8 +191,7 @@ public class TemplateConceptTransformService {
 	}
 	
 	private ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowstormRestClient restClient) throws ServiceException {
-		ConceptPojo transformed = conceptPojo;
-		ConceptTemplate conceptTemplate = inputData.getDestinationTemplate();
+        ConceptTemplate conceptTemplate = inputData.getDestinationTemplate();
 		Map<String, ConceptMiniPojo> attributeSlotValueMap;
 		try {
 			attributeSlotValueMap = constructSlotToTargetValueMap(inputData, conceptPojo, restClient);
@@ -204,19 +203,19 @@ public class TemplateConceptTransformService {
 			if (DefinitionStatus.FULLY_DEFINED == conceptTemplate.getConceptOutline().getDefinitionStatus()) {
 				definitionStatus =  org.ihtsdo.otf.rest.client.terminologyserver.pojo.DefinitionStatus.FULLY_DEFINED;
 			}
-			transformed.setDefinitionStatus(definitionStatus);
-			RelationshipTemplateTransformer relationShipTransformer = new RelationshipTemplateTransformer(transformed, conceptTemplate.getConceptOutline(), attributeSlotValueMap, inputData.getConceptIdMap());
+			conceptPojo.setDefinitionStatus(definitionStatus);
+			RelationshipTemplateTransformer relationShipTransformer = new RelationshipTemplateTransformer(conceptPojo, conceptTemplate.getConceptOutline(), attributeSlotValueMap, inputData.getConceptIdMap());
 			relationShipTransformer.transform();
 		}
 		
 		if (inputData.getTransformRequest().isLexicalTransform()) {
 			Map<String, Set<DescriptionPojo>> slotDescriptionsMap = getSlotDescriptionValuesMap(inputData.getBranchPath(), attributeSlotValueMap, restClient);
-			DescriptionTemplateTransformer transformer = new DescriptionTemplateTransformer(transformed, conceptTemplate, slotDescriptionsMap,
+			DescriptionTemplateTransformer transformer = new DescriptionTemplateTransformer(conceptPojo, conceptTemplate, slotDescriptionsMap,
 					inputData.getTransformRequest().getInactivationReason());
 			transformer.transform();
-			transformed.setEffectiveTime(null);
+			conceptPojo.setEffectiveTime(null);
 		}
-		return transformed;
+		return conceptPojo;
 	}
 
 	private Map<String, ConceptMiniPojo> constructSlotToTargetValueMap(TransformationInputData inputData, ConceptPojo conceptPojo, SnowstormRestClient restClient) throws RestClientException, ServiceException {

@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +39,7 @@ public class TemplateAuthoringHelper {
 	private static String readAndConvertInput() throws IOException {
 		File file = new File("snomed-templates/.input.txt");
 
-		List<String> lines = Files.readLines(file, Charset.forName("UTF-8"));
+		List<String> lines = Files.readLines(file, StandardCharsets.UTF_8);
 
 		String type = null;
 		List<String> range = new ArrayList<>();
@@ -91,9 +91,9 @@ public class TemplateAuthoringHelper {
 							}
 							template += ") @" + slotName + "]]";
 						} else {
-							for (int i = 0; i < range.size(); i++) { 
-								template += range.get(i);
-							}
+                            for (String s : range) {
+                                template += s;
+                            }
 						}
 					}
 					type = null;

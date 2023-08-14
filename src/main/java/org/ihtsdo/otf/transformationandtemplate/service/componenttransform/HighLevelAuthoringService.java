@@ -227,8 +227,8 @@ public class HighLevelAuthoringService {
 				Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
 				List<ConceptPojo> fullConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath);
 				concepts.addAll(fullConcepts.stream()
-								.filter(c1 -> concepts.stream().noneMatch(c2 -> c1.equals(c2)))
-								.collect(Collectors.toList())
+								.filter(c1 -> concepts.stream().noneMatch(c1::equals))
+								.toList()
 				);
 			}
 

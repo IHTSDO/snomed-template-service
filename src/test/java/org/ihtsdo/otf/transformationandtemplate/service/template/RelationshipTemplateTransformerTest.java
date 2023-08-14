@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.ihtsdo.otf.transformationandtemplate.service.TestDataHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
@@ -23,9 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 @ExtendWith(SpringExtension.class)
 public class RelationshipTemplateTransformerTest {
-	
-	private RelationshipTemplateTransformer transformer;
-	
+
 	@Test
 	public void testTransform() throws ServiceException {
 		ConceptPojo conceptToTransform = TestDataHelper.createConceptPojo();
@@ -33,7 +30,7 @@ public class RelationshipTemplateTransformerTest {
 		ConceptOutline conceptOutline = TestDataHelper.createConceptOutline();
 		Map<String, ConceptMiniPojo> attributeSlotMap = new HashMap<>();
 		attributeSlotMap.put("substance", new ConceptMiniPojo("256350002"));
-		transformer = new RelationshipTemplateTransformer(conceptToTransform, conceptOutline, attributeSlotMap, new HashMap<String, ConceptMiniPojo>());
+		RelationshipTemplateTransformer transformer = new RelationshipTemplateTransformer(conceptToTransform, conceptOutline, attributeSlotMap, new HashMap<>());
 		transformer.transform();
 		AxiomPojo classAxiom = conceptToTransform.getClassAxioms().iterator().next();
 		assertEquals(4, classAxiom.getRelationships().size());
@@ -41,25 +38,25 @@ public class RelationshipTemplateTransformerTest {
 		List<RelationshipPojo> inActiveRels = classAxiom.getRelationships()
 				.stream()
 				.filter(r -> !r.isActive())
-				.collect(Collectors.toList());
+				.toList();
 		assertEquals(0, inActiveRels.size());
 		
 		List<RelationshipPojo> activeRels = classAxiom.getRelationships()
 				.stream()
 				.filter(RelationshipPojo::isActive)
-				.collect(Collectors.toList());
+				.toList();
 		assertEquals(4, activeRels.size());
 		
 		List<RelationshipPojo> group0Rels = activeRels
 				.stream()
 				.filter(r -> r.getGroupId() == 0)
-				.collect(Collectors.toList());
+				.toList();
 		assertEquals(2, group0Rels.size());
 		
 		List<RelationshipPojo> group1Rels = activeRels
 				.stream()
 				.filter(r -> r.getGroupId() == 1)
-				.collect(Collectors.toList());
+				.toList();
 		assertEquals(2, group1Rels.size());
 	}
 	

@@ -30,13 +30,12 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-
-import static com.google.common.base.Predicates.not;
+import static java.util.function.Predicate.not;
 import static springfox.documentation.builders.PathSelectors.regex;
 
-@Configuration
-@EnableSwagger2
 @EnableWebSecurity
+@EnableSwagger2
+@Configuration
 public class Config extends WebSecurityConfigurerAdapter {
 	
 	@Bean
@@ -94,6 +93,7 @@ public class Config extends WebSecurityConfigurerAdapter {
 				.select()
 				.apis(RequestHandlerSelectors.any())
 				.paths(not(regex("/error")))
+				.paths(not(regex("/")))
 				.build();
 	}
 

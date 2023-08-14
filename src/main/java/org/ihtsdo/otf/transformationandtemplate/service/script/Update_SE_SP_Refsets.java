@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
 import org.ihtsdo.otf.exception.TermServerScriptException;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptMiniPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo.HistoricalAssociation;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.IConcept;
@@ -49,7 +50,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	
 	public static final String BODY_STRUCTURE_ECL = "<< 123037004";
 	public static final String LEGACY = "Check existing concepts";
-	private static Multimap<String, String> blockList = ArrayListMultimap.create();
+	private static final Multimap<String, String> blockList = ArrayListMultimap.create();
 	static {
 		blockList.put("280432007","243950006"); // 280432007|Structure of region of mediastinum (body structure)| -> 243950006|Entire inferior mediastinum (body structure)|
 		blockList.put("64237003","245621003"); // 64237003|Structure of left half of head (body structure)| -> 245621003|Entire primary upper left molar tooth (body structure)|
@@ -95,7 +96,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		blockList.put("362889002","38266002");  //362889002|Entire anatomical structure (body structure)| -> 38266002|Entire body as a whole (body structure)|
 	}
 	
-	private enum CacheType { ReferencedComponent, TargetConcept };
+	private enum CacheType { ReferencedComponent, TargetConcept }
 	private Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByReferencedConceptCache = new HashMap<>();
 	private Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByTargetConceptCache = new HashMap<>();
 	private Set<String> cachedMembers = new HashSet<>();
@@ -105,9 +106,8 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	private Set<String> examined = new HashSet<>();
 	private Set<String> outOfScope = new HashSet<>();
 	
-	private HistoricalAssociation[] associationTypes = new HistoricalAssociation[] { HistoricalAssociation.SAME_AS, HistoricalAssociation.REPLACED_BY, HistoricalAssociation.ALTERNATIVE, HistoricalAssociation.POSSIBLY_EQUIVALENT_TO };
-	private boolean legacy = false;
-	
+	private final HistoricalAssociation[] associationTypes = new HistoricalAssociation[] { HistoricalAssociation.SAME_AS, HistoricalAssociation.REPLACED_BY, HistoricalAssociation.ALTERNATIVE, HistoricalAssociation.POSSIBLY_EQUIVALENT_TO };
+
 	public Update_SE_SP_Refsets(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
 	}
@@ -134,30 +134,30 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//To ensure the path is clear for any new members to be added
 		info("Checking for body structure concepts recently inactivated");
 		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, true, "(body structure)", null); //inactive and published
-		legacy = jobRun.getParamBoolean(LEGACY);
+		boolean legacy = jobRun.getParamBoolean(LEGACY);
 		
-		percentageComplete(legacy?1:10);
+		percentageComplete(legacy ?1:10);
 		
 		info("Checking " + inactivatedConcepts.size() + " inactive body structure concepts");
 		removeInvalidEntries(SCTID_SE_REFSETID, inactivatedConcepts);
-		percentageComplete(legacy?2:30);
+		percentageComplete(legacy ?2:30);
 		
 		removeInvalidEntries(SCTID_SP_REFSETID, inactivatedConcepts);
-		percentageComplete(legacy?3:30);
+		percentageComplete(legacy ?3:30);
 		
 		updateRefset(CacheType.TargetConcept, SCTID_SE_REFSETID, "Entire");
-		percentageComplete(legacy?4:40);
+		percentageComplete(legacy ?4:40);
 		flushFiles(false, true);
 		
 		updateRefset(CacheType.TargetConcept, SCTID_SE_REFSETID, "All");
-		percentageComplete(legacy?5:50);
+		percentageComplete(legacy ?5:50);
 		flushFiles(false, true);
 		
 		updateRefset(CacheType.TargetConcept, SCTID_SP_REFSETID, "Part");
-		percentageComplete(legacy?6:60);
+		percentageComplete(legacy ?6:60);
 		
 		checkNewStructureConcepts(); //Also recently reactivated
-		percentageComplete(legacy?7:70);
+		percentageComplete(legacy ?7:70);
 		
 		flushFiles(false, true);
 		
@@ -165,7 +165,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		for (Map.Entry<String,RefsetMemberPojo> entry : historicalReplacementMap.entrySet()) {
 			createOrUpdateRefsetMember(entry.getValue());
 		}
-		percentageComplete(legacy?8:80);
+		percentageComplete(legacy ?8:80);
 		
 		if (legacy) {
 			checkAllConcepts(10, CacheType.TargetConcept, SCTID_SE_REFSETID, "Entire");
@@ -182,7 +182,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		try {
 			List<Concept> conceptOOS = tsClient.conceptsByECL(task.getBranchPath(), mgr.getConfig(ConfigItem.SEP_OUT_OF_SCOPE));
 			outOfScope = conceptOOS.stream()
-					.map(c -> c.getConceptId())
+					.map(ConceptMiniPojo::getConceptId)
 					.collect(Collectors.toSet());
 			info ("Cached " + outOfScope.size() + " concepts as being out of scope");
 		} catch (Exception e) {
@@ -285,7 +285,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		String eclFilter = "< 123037004 |Body structure (body structure)|";
 		Set<Concept> newSConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, "structure")
 				.stream()
-				.filter(c -> isStructure(c))
+				.filter(this::isStructure)
 				.collect(Collectors.toSet());
 		populateMemberCache(CacheType.ReferencedComponent, newSConcepts, false);
 		info("Recovered " + newSConcepts.size() + " new structure concepts");
@@ -295,7 +295,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		//reported as already present
 		Set<Concept> reactivatedSConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), true, true, "structure",  eclFilter)
 				.stream()
-				.filter(c -> isStructure(c))
+				.filter(this::isStructure)
 				.collect(Collectors.toSet());
 		populateMemberCache(CacheType.ReferencedComponent, newSConcepts, false);
 		info("Recovered " + reactivatedSConcepts.size() + " reactivated structure concepts");
@@ -509,22 +509,18 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	private List<RefsetMemberPojo> getRefsetMembers(CacheType cacheType, String refsetId, Set<String> ids, Boolean active) {
-		Map<String, Map<String, Set<RefsetMemberPojo>>> caches = null;
-		switch (cacheType) {
-			case ReferencedComponent: 
-				caches = refsetMemberByReferencedConceptCache;
-				break;
-			case TargetConcept: 
-				caches = refsetMemberByTargetConceptCache;
-		}
-		
-		final Map<String, Set<RefsetMemberPojo>> refsetCache = caches.get(refsetId);
+		Map<String, Map<String, Set<RefsetMemberPojo>>> caches = switch (cacheType) {
+            case ReferencedComponent -> refsetMemberByReferencedConceptCache;
+            case TargetConcept -> refsetMemberByTargetConceptCache;
+        };
+
+        final Map<String, Set<RefsetMemberPojo>> refsetCache = caches.get(refsetId);
 		//Check if we tried to populate the cache for these ids, even if it returned no members
 		Set<String> missedCache = ids.stream()
 				.filter(s -> !refsetCache.containsKey(s))
 				.collect(Collectors.toSet());
 		
-		if (missedCache.size() > 0) {
+		if (!missedCache.isEmpty()) {
 			String missedCacheStr = missedCache.stream().collect(Collectors.joining(", "));
 			warn(cacheType + " refset cache miss for " + missedCacheStr);
 			populateMemberCache(cacheType, missedCache, false);
@@ -660,7 +656,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 	
 	private void populateMemberCache(CacheType cacheType, Collection<Concept> concepts, boolean forceRefresh) {
-		populateMemberCache(cacheType, concepts.stream().map(c -> c.getId()).collect(Collectors.toSet()), forceRefresh);
+		populateMemberCache(cacheType, concepts.stream().map(Concept::getId).collect(Collectors.toSet()), forceRefresh);
 	}
 	
 	private void populateMemberCache(CacheType cacheType, Set<String> sctIds, boolean forceRefresh) {
@@ -689,16 +685,14 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}
 		
 		//Get all refset members for these concepts and then pick out the ones we're interested in
-		List<RefsetMemberPojo> members = new ArrayList<>();
-		switch (cacheType) {
-			case ReferencedComponent: 
-				members =  tsClient.findRefsetMemberByReferencedComponentIds(task.getBranchPath(), null, sctIds, null);
-				break;
-			case TargetConcept: 
-				members = tsClient.findRefsetMemberByTargetComponentIds(task.getBranchPath(), null, sctIds, null);
-		}
-		
-		//Now regardless of which type of search we're doing, we can actually also populate the other cache
+		List<RefsetMemberPojo> members = switch (cacheType) {
+            case ReferencedComponent ->
+                    tsClient.findRefsetMemberByReferencedComponentIds(task.getBranchPath(), null, sctIds, null);
+            case TargetConcept ->
+                    tsClient.findRefsetMemberByTargetComponentIds(task.getBranchPath(), null, sctIds, null);
+        };
+
+        //Now regardless of which type of search we're doing, we can actually also populate the other cache
 		//at the same time
 		for (RefsetMemberPojo member : members) {
 			if (refsetsOfInterest.contains(member.getRefsetId())) {
@@ -715,19 +709,10 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 
 	private void prePopulateMemberCaches(Map<String, Map<String, Set<RefsetMemberPojo>>> caches, Set<String> sctIds) {
 		for (String refsetId : refsetsOfInterest) {
-			Map<String, Set<RefsetMemberPojo>> refsetCache = caches.get(refsetId);
-			if (refsetCache == null) {
-				refsetCache = new HashMap<>();
-				caches.put(refsetId, refsetCache);
-			}
-			
-			for (String key : sctIds) {
-				Set<RefsetMemberPojo> members = refsetCache.get(key);
-				if (members == null) {
-					members = new HashSet<>();
-					refsetCache.put(key, members);
-				}
-			}
+            Map<String, Set<RefsetMemberPojo>> refsetCache = caches.computeIfAbsent(refsetId, k -> new HashMap<>());
+            for (String key : sctIds) {
+                Set<RefsetMemberPojo> members = refsetCache.computeIfAbsent(key, k -> new HashSet<>());
+            }
 		}
 	}
 
@@ -762,11 +747,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 
 	private void populateConceptCache(String... sctIds) {
 		//List needs to be modifiable, so create afresh
-		populateConceptCache(new ArrayList<String>(Arrays.asList(sctIds)));
+		populateConceptCache(new ArrayList<>(Arrays.asList(sctIds)));
 	}
 
 	private void populateConceptCache(List<String> sctIds) {
-		//Remove any concepts we already have cachced
+		//Remove any concepts we already have cached
 		sctIds.removeAll(miniConceptCache.keySet());
 		for (Concept c : tsClient.getConcepts(task.getBranchPath(), sctIds)) {
 			miniConceptCache.put(c.getConceptId(), c);

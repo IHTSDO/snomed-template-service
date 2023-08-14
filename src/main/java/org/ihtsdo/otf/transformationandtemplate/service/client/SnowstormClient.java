@@ -664,7 +664,7 @@ public class SnowstormClient {
 		}
 		
 		String ecl = ">!" + concepts.stream()
-						.map(c -> c.getId())
+						.map(Concept::getId)
 						.collect(Collectors.joining(" OR >! "));
 		
 		ConceptSearchRequest request = new ConceptSearchRequest().withEclFilter(ecl);
