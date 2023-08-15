@@ -1,13 +1,15 @@
 package org.ihtsdo.otf.transformationandtemplate.rest.error;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 
 public class InputError extends RuntimeException {
 
+	@Serial
 	private static final long serialVersionUID = 1000054542741285670L;
 	
-	private List<String> messages;
+	private final List<String> messages;
 
 	public InputError(List<String> messages) {
 		this.messages = messages;

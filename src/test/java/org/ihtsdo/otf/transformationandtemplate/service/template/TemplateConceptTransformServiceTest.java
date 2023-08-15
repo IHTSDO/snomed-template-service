@@ -49,7 +49,7 @@ public class TemplateConceptTransformServiceTest extends AbstractServiceTest {
 	
 	private ConceptPojo transformedConcept;
 	
-	private Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
 	private TemplateTransformRequest transformRequest;
 	

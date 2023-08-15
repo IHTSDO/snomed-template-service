@@ -1,7 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.rest;
 
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
@@ -41,28 +41,27 @@ public class TransformationController {
 	public ResponseEntity<Void> createTransformationJob(
 			@PathVariable String branchPath,
 
-			@ApiParam("Recipe key")
+			@Parameter( description = "Recipe key")
 			@PathVariable String recipe,
 
-			@ApiParam("Batch size")
+			@Parameter( description = "Batch size")
 			@RequestParam(defaultValue = "100") int batchSize,
-
-			@ApiParam("Project key (optional - batches split between tasks)")
+			@Parameter( description = "Project key (optional - batches split between tasks)")
 			@RequestParam(required = false) String projectKey,
 
-			@ApiParam("Task title (optional)")
+			@Parameter( description = "Task title (optional)")
 			@RequestParam(required = false) String taskTitle,
 
-			@ApiParam("Task assignee (optional)")
+			@Parameter( description = "Task assignee (optional)")
 			@RequestParam(required = false) String taskAssignee,
 
-			@ApiParam("Task reviewer (optional)")
+			@Parameter( description = "Task reviewer (optional)")
 			@RequestParam(required = false) String taskReviewer,
 
-			@RequestParam("tsvFile") MultipartFile tsvFile,
+			@Parameter(description = "tsvFile") MultipartFile tsvFile,
 			UriComponentsBuilder uriComponentsBuilder,
 
-			@ApiParam("Skip SNOMED Drools validation (optional)")
+			@Parameter( description = "Skip SNOMED Drools validation (optional)")
 			@RequestParam(required = false, defaultValue = "false") boolean skipDroolsValidation) throws BusinessServiceException, IOException {
 
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
@@ -77,7 +76,7 @@ public class TransformationController {
 	@RequestMapping(value = "/{branchPath}/recipes/{recipe}/jobs/{jobId}", method = RequestMethod.GET, produces = "application/json")
 	public ComponentTransformationJob getTransformationJob(
 			@PathVariable String branchPath,
-			@ApiParam("Recipe key")
+			@Parameter( description = "Recipe key")
 			@PathVariable String recipe,
 			@PathVariable String jobId) throws BusinessServiceException {
 
@@ -90,7 +89,7 @@ public class TransformationController {
 	@ResponseBody
 	public void getTransformationJobResultAsTsv(
 			@PathVariable String branchPath,
-			@ApiParam("Recipe key")
+			@Parameter( description = "Recipe key")
 			@PathVariable String recipe,
 			@PathVariable String jobId,
 			HttpServletResponse servletResponse) throws BusinessServiceException, IOException {

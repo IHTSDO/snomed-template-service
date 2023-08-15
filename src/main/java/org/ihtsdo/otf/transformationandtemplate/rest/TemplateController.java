@@ -6,6 +6,7 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import org.ihtsdo.otf.transformationandtemplate.rest.util.ControllerHelper;
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.BranchService;
@@ -114,7 +115,7 @@ public class TemplateController {
 	@ResponseBody
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
 												 @PathVariable String templateName,
-												 @RequestParam("tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
+												 @Parameter(description = "tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
 		setBatchChangeFlagOnBranch(branchPath);
 		return createService.generateConcepts(branchPath, templateName, tsvFile.getInputStream());

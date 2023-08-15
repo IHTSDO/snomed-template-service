@@ -97,12 +97,12 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 	
 	private enum CacheType { ReferencedComponent, TargetConcept }
-	private Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByReferencedConceptCache = new HashMap<>();
-	private Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByTargetConceptCache = new HashMap<>();
-	private Set<String> cachedMembers = new HashSet<>();
-	private Map<String, IConcept> miniConceptCache = new HashMap<>();
+	private final Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByReferencedConceptCache = new HashMap<>();
+	private final Map<String, Map<String, Set<RefsetMemberPojo>>> refsetMemberByTargetConceptCache = new HashMap<>();
+	private final Set<String> cachedMembers = new HashSet<>();
+	private final Map<String, IConcept> miniConceptCache = new HashMap<>();
 	
-	private Map<String, RefsetMemberPojo> historicalReplacementMap = new HashMap<>();
+	private final Map<String, RefsetMemberPojo> historicalReplacementMap = new HashMap<>();
 	private Set<String> examined = new HashSet<>();
 	private Set<String> outOfScope = new HashSet<>();
 	
@@ -192,10 +192,6 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	private RefsetMemberPojo createOrUpdateRefsetMember(RefsetMemberPojo rm) throws TermServerScriptException {
-		/*if (rm.getAdditionalFields().getTargetComponentId().equals("1284947008")) {
-			debug("Here");
-		}*/
-		
 		populateConceptCache(rm.getReferencedComponentId(), rm.getAdditionalFields().getTargetComponentId());
 		IConcept sConcept = getConcept(rm.getReferencedComponentId());
 		IConcept xConcept = getConcept(rm.getAdditionalFields().getTargetComponentId());
@@ -600,10 +596,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		ConceptPage page = tsClient.fetchConceptPageBlocking(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, null);
 		long totalExpected = page.getTotal();
 		long totalReceived = page.getItems().size();
-		
-		/*if (page.getItems().stream().anyMatch(c -> c.getId().equals("182028002"))) {
-			debug("here");
-		}*/
+
 		//Even when we have as many items as expected we still want to run through this loop one last time
 		while (totalReceived <= totalExpected) {
 			//The term filter isn't "starts with", so we can filter those out.

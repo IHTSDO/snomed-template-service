@@ -659,7 +659,7 @@ public class SnowstormClient {
 	}
 
 	public List<Concept> getParents(String branchPath, Collection<Concept> concepts) {
-		if (concepts == null || concepts.size() == 0) {
+		if (concepts == null || concepts.isEmpty()) {
 			return new ArrayList<>();
 		}
 		

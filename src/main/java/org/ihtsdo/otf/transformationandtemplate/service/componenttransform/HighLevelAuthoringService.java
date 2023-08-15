@@ -33,7 +33,7 @@ public class HighLevelAuthoringService {
 	private final AuthoringServicesClient authoringServicesClient;
 	private final boolean skipDroolsValidation;
 
-	private int processingBatchMaxSize;
+	private final int processingBatchMaxSize;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 

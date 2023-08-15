@@ -1,9 +1,8 @@
 package org.ihtsdo.otf.transformationandtemplate.rest;
 
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.service.script.ScriptManager;
 import org.snomed.otf.scheduler.domain.Job;
@@ -21,16 +20,16 @@ public class BatchJobController {
 	@Autowired
 	private ScriptManager scriptManager;
 
-	@ApiOperation(value="List jobs")
+	@Operation(summary="List jobs")
 	@RequestMapping(value = "/batch-jobs", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public Set<Job> listJobs() throws IOException {
 		return scriptManager.listJobs();
 	}
 
-	@ApiOperation(value="Run job")
+	@Operation(summary="Run job")
 	@ApiResponses({
-			@ApiResponse(code = 200, message = "OK")
+			@ApiResponse(responseCode = "200",  description = "OK")
 	})
 	@RequestMapping(value="/batch-jobs", method= RequestMethod.POST)
 	public JobRun runJob(@RequestBody JobRun jobRun) throws BusinessServiceException {

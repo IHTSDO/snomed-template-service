@@ -15,11 +15,11 @@ import java.util.*;
 
 public class RelationshipTemplateTransformer {
 
-	private ConceptPojo conceptToTransform;
-	private ConceptOutline conceptOutline;
-	private Map<String, ConceptMiniPojo> attributeSlotMap;
-	private Map<String, ConceptMiniPojo> conceptIdMap;
-	private Logger logger = LoggerFactory.getLogger(getClass());
+	private final ConceptPojo conceptToTransform;
+	private final ConceptOutline conceptOutline;
+	private final Map<String, ConceptMiniPojo> attributeSlotMap;
+	private final Map<String, ConceptMiniPojo> conceptIdMap;
+	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	static final Comparator<RelationshipPojo> RELATIONSHIP_COMPARATOR = Comparator
 			.comparing(RelationshipPojo::getCharacteristicType, Comparator.nullsFirst(String::compareTo).reversed())

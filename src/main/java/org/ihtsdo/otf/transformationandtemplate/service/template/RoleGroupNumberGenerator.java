@@ -7,7 +7,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 
 public class RoleGroupNumberGenerator {
 	
-	private Set<Integer> groupInUse;
+	private final Set<Integer> groupInUse;
 	
 	public RoleGroupNumberGenerator(List<List<RelationshipPojo>> relationshipGroups) {
 		groupInUse = new HashSet<>();

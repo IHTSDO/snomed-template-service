@@ -109,7 +109,7 @@ public class LexicalTemplateTransformService {
 				nonOrderedSlots.add(slotName);
 			}
 		}
-		if (orderedLexicalTemplates.size() != 0) {
+		if (!orderedLexicalTemplates.isEmpty()) {
 			orderedLexicalTemplates.sort(Comparator.comparing(LexicalTemplate::getOrder));
 			orderedLexicalTemplates.forEach(item -> orderedTermSlotNames.add(item.getName()));
 		}

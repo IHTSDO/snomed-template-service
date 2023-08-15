@@ -88,15 +88,6 @@ public class TemplateConceptSearchService {
 			return result;
 		}
 
-		// TODO Remove unused code? Should it be used?
-//		List<Description> descriptions = conceptTemplate.getConceptOutline().getDescriptions();
-//		List<Pattern> patterns = new ArrayList<>();
-//		for (Description description : descriptions) {
-//			if (description.getTermTemplate() != null) {
-//				patterns.add(TemplateUtil.constructTermPattern(description.getTermTemplate()));
-//			}
-//		}
-
 		Map<Pattern, Set<String>> fsnPatternSlotsMap = TemplateUtil.compilePatterns(
 				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN));
 
