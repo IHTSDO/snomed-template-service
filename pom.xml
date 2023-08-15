@@ -63,14 +63,6 @@
             <artifactId>reactor-spring</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-impl</artifactId>
         </dependency>
@@ -165,6 +157,7 @@
                     <execution>
                         <goals>
                             <goal>build-info</goal>
+                            <goal>repackage</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -201,7 +194,7 @@
                                     <goal>jdeb</goal>
                                 </goals>
                                 <configuration>
-                                    <deb>${project.build.directory}/${packageName}-${project.version}-all.deb</deb>
+                                    <deb>${project.build.directory}/${project.artifactId}-${project.version}-all.deb</deb>
                                     <controlDir>${basedir}/src/deb/control</controlDir>
                                     <snapshotExpand>true</snapshotExpand>
                                     <snapshotEnv>BUILD_NUMBER</snapshotEnv>
@@ -215,7 +208,7 @@
                                             <type>file</type>
                                             <mapper>
                                                 <type>perm</type>
-                                                <prefix>/opt/${packageName}/</prefix>
+                                                <prefix>/opt/${project.artifactId}/</prefix>
                                             </mapper>
                                         </data>
                                         <data>
@@ -224,12 +217,12 @@
                                             <type>directory</type>
                                             <mapper>
                                                 <type>perm</type>
-                                                <prefix>/opt/${packageName}/transformation-recipes</prefix>
+                                                <prefix>/opt/${project.artifactId}/transformation-recipes</prefix>
                                             </mapper>
                                         </data>
                                         <data>
                                             <src>${basedir}/src/deb/supervisor.conf</src>
-                                            <dst>/etc/supervisor/conf.d/${packageName}.conf</dst>
+                                            <dst>/etc/supervisor/conf.d/${project.artifactId}.conf</dst>
                                             <type>file</type>
                                         </data>
                                     </dataSet>
