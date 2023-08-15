@@ -147,11 +147,11 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		
 		updateRefset(CacheType.TargetConcept, SCTID_SE_REFSETID, "Entire");
 		percentageComplete(legacy ?4:40);
-		flushFiles(false, true);
+		flushFiles(false);
 		
 		updateRefset(CacheType.TargetConcept, SCTID_SE_REFSETID, "All");
 		percentageComplete(legacy ?5:50);
-		flushFiles(false, true);
+		flushFiles(false);
 		
 		updateRefset(CacheType.TargetConcept, SCTID_SP_REFSETID, "Part");
 		percentageComplete(legacy ?6:60);
@@ -159,7 +159,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		checkNewStructureConcepts(); //Also recently reactivated
 		percentageComplete(legacy ?7:70);
 		
-		flushFiles(false, true);
+		flushFiles(false);
 		
 		//Now see if any of those historical replacements can be used
 		for (Map.Entry<String,RefsetMemberPojo> entry : historicalReplacementMap.entrySet()) {
@@ -169,12 +169,12 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		
 		if (legacy) {
 			checkAllConcepts(10, CacheType.TargetConcept, SCTID_SE_REFSETID, "Entire");
-			flushFiles(false, true);
+			flushFiles(false);
 			checkAllConcepts(40, CacheType.TargetConcept, SCTID_SE_REFSETID, "All");
 			checkAllConcepts(70, CacheType.TargetConcept, SCTID_SP_REFSETID, "Part");
 		}
 
-		flushFiles(false, true);
+		flushFiles(false);
 	}
 	
 	private void populateScopeExclusions() throws TermServerScriptException {
@@ -654,7 +654,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		String term = c.getFsnTerm();
 		return term.contains("(body structure)");
 	}
-	
+
 	private void populateMemberCache(CacheType cacheType, Collection<Concept> concepts, boolean forceRefresh) {
 		populateMemberCache(cacheType, concepts.stream().map(Concept::getId).collect(Collectors.toSet()), forceRefresh);
 	}

@@ -159,7 +159,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		report(TAB_2, "Concepts removed", this.removed);
 		report(TAB_2, "Concepts duplicated", this.duplicated);
 
-		flushFiles(true, false);
+		flushFiles(true);
 		percentageComplete(100);
 	}
 
