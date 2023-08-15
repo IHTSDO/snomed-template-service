@@ -666,39 +666,46 @@ public class SnowstormClient {
 		String ecl = ">!" + concepts.stream()
 						.map(Concept::getId)
 						.collect(Collectors.joining(" OR >! "));
-		
-		ConceptSearchRequest request = new ConceptSearchRequest().withEclFilter(ecl);
-		long currentOffset = 0;
-		return fetchConceptPage(branchPath, request, currentOffset)
+
+		String searchAfter = null;
+		return fetchConceptPage(branchPath, ecl, searchAfter)
 				.expand(response -> {
-					long expected = response.getTotal();
-					long totalReceived = response.getOffset() + response.getItems().size();
-					if (totalReceived >= expected) {
+					if (response.getTotal() == response.getItems().size() || response.getSearchAfter() == searchAfter) {
 						return Mono.empty();
 					}
-					return fetchConceptPage(branchPath, request, totalReceived);
+					return fetchConceptPage(branchPath, ecl, response.getSearchAfter());
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
-	
-	private Mono<ConceptPage> fetchConceptPage(String branchPath, ConceptSearchRequest request,
-			long currentOffset) {
-			logger.info("Requesting concepts from " + branchPath + " with ConceptSearchRequest " + request + " and offset " + currentOffset);
-			return webClient.post()
-					.uri(uriBuilder -> uriBuilder
-							.path("{branch}/concepts/search")
-							.queryParam("offset", currentOffset)
-							.queryParam("limit", DEFAULT_PAGESIZE)
-							.build(branchPath))
-					.bodyValue(request)
-					.retrieve()
-					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
-							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error))))
-					.bodyToMono(ConceptPage.class);
-		}
+
+	private Mono<ConceptPage> fetchConceptPage(String branchPath, String ecl, String searchAfter) {
+		ConceptSearchRequest request = new ConceptSearchRequest().withEclFilter(ecl).withSearchAfter(searchAfter);
+		logger.info("Requesting concepts from " + branchPath + " with request " + request);
+		return webClient.post()
+				.uri(uriBuilder -> uriBuilder
+						.path("{branch}/concepts/search")
+						.build(branchPath))
+				.bodyValue(request)
+				.retrieve()
+				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error))))
+				.bodyToMono(ConceptPage.class);
+	}
 
 	class ConceptSearchRequest {
 		String eclFilter;
+
+		String searchAfter;
+
+		public ConceptSearchRequest withEclFilter(String eclFilter) {
+			this.eclFilter = eclFilter;
+			return this;
+		}
+
+		public ConceptSearchRequest withSearchAfter(String searchAfter) {
+			this.searchAfter = searchAfter;
+			return this;
+		}
 
 		public String getEclFilter() {
 			return eclFilter;
@@ -707,15 +714,18 @@ public class SnowstormClient {
 		public void setEclFilter(String eclFilter) {
 			this.eclFilter = eclFilter;
 		}
-		
-		public ConceptSearchRequest withEclFilter(String eclFilter) {
-			this.eclFilter = eclFilter;
-			return this;
+
+		public String getSearchAfter() {
+			return searchAfter;
 		}
-		
+
+		public void setSearchAfter(String searchAfter) {
+			this.searchAfter = searchAfter;
+		}
+
 		@Override
 		public String toString() {
-			return "[ eclFilter='" + eclFilter + "']";
+			return "[eclFilter='" + eclFilter + "', searchAfter='" + searchAfter + "']";
 		}
 	}
 
