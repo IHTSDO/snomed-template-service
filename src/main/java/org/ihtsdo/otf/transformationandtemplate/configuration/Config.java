@@ -92,6 +92,7 @@ public class Config {
 	}
 
 	// Swagger Config
+	@Bean
 	public OpenAPI apiInfo() {
 		final String version = buildProperties != null ? buildProperties.getVersion() : "DEV";
 		return new OpenAPI()
