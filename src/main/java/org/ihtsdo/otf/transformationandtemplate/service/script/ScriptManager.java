@@ -17,6 +17,7 @@ import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.reflections.Reflections;
+import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.Job;
@@ -75,7 +76,7 @@ public class ScriptManager {
 		knownJobs = new HashSet<>();
 		
 		//Now what jobs do I know about?
-		Reflections reflections = new Reflections("org.ihtsdo.otf.transformationandtemplate.service.script");
+		Reflections reflections = new Reflections(new ConfigurationBuilder().forPackages("org.ihtsdo.otf.transformationandtemplate.service.script"));
 		Set<Class<? extends JobClass>> jobClasses = reflections.getSubTypesOf(JobClass.class);
 		
 		logger.info("Job Manager detected {} job classes", jobClasses.size());
