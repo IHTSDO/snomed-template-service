@@ -25,8 +25,10 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
@@ -35,6 +37,8 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @EnableWebSecurity
 @Configuration
@@ -125,16 +129,22 @@ public class Config {
 	// Security
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-		http.authorizeRequests()
-				.antMatchers("/swagger-ui.html",
-						"/version",
-						"/swagger-ui/**",
-						"/v3/api-docs/**").permitAll()
-				.anyRequest().authenticated()
-				.and().httpBasic();
-		http.csrf().disable();
-		http.addFilterBefore(new RequestHeaderAuthenticationDecorator(), FilterSecurityInterceptor.class);
+		http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+		http.authorizeHttpRequests((authorize) ->
+				authorize.requestMatchers(new String[]{
+								"/swagger-ui.html",
+								"/version",
+								"/swagger-ui/**",
+								"/v3/api-docs/**"
+						})
+						.permitAll()
+						.anyRequest()
+						.authenticated()
+		);
+		http.httpBasic(withDefaults());
+		http.csrf(AbstractHttpConfigurer::disable);
+		http.addFilterBefore(new RequestHeaderAuthenticationDecorator(), AuthorizationFilter.class);
+
 		return http.build();
 	}
 
