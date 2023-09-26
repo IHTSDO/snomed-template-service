@@ -1,6 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -28,7 +28,7 @@ public class AuthoringServicesClient {
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks").build(projectKey))
 				.body(BodyInserters.fromValue(asMap("summary", title, "description", description)))
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create task: " + error)))
 				)
 				.bodyToMono(AuthoringTask.class)
@@ -45,7 +45,7 @@ public class AuthoringServicesClient {
 		return restClient.get()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}").build(projectKey))
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve project '" + projectKey + "' : " + error)))
 				)
 				.bodyToMono(AuthoringProject.class)
@@ -56,7 +56,7 @@ public class AuthoringServicesClient {
 		return restClient.get()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(projectKey, taskKey))
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve task '" + taskKey + "' : " + error)))
 				)
 				.bodyToMono(AuthoringTask.class)
@@ -68,7 +68,7 @@ public class AuthoringServicesClient {
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks/{taskKey}").build(task.getProjectKey(), task.getKey()))
 				.body(BodyInserters.fromValue(task))
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
 				)
 				.bodyToMono(AuthoringTask.class)

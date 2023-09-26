@@ -15,7 +15,7 @@ import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -141,7 +141,7 @@ public class SnowstormClient {
 						.build(shortName)
 				)
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(new ParameterizedTypeReference<ItemsPage<CodeSystemVersion>>() {})
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(new ParameterizedTypeReference<ItemsPage<CodeSystemVersion>>() {})
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve versions for '" + shortName + "' : " + error)))
 				)
 				.bodyToMono(new ParameterizedTypeReference<ItemsPage<CodeSystemVersion>>() {})
@@ -248,7 +248,7 @@ public class SnowstormClient {
 							.build(branchPath))
 					.body(Mono.just(rm), RefsetMemberPojo.class)
 					.retrieve()
-					.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+					.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 							.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create member: " + rm + " due to "+ error)))
 					)
 					.bodyToMono(RefsetMemberPojo.class)
@@ -279,7 +279,7 @@ public class SnowstormClient {
 				.build(branchPath, rm.getId()))
 		.body(Mono.just(rm), RefsetMemberPojo.class)
 		.retrieve()
-		.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+		.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 				.flatMap(error -> Mono.error(new TermServerScriptException("Failed to updated member: " + rm + " due to "+ error)))
 		)
 		.bodyToMono(RefsetMemberPojo.class)
@@ -295,7 +295,7 @@ public class SnowstormClient {
 				.path("{branch}/members/{uuid}")
 				.build(branchPath, rm.getId()))
 		.retrieve()
-		.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+		.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 				.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
 		)
 		.bodyToMono(Void.class)
@@ -492,7 +492,7 @@ public class SnowstormClient {
 						.queryParam("limit", DEFAULT_PAGESIZE)
 						.build(branchPath))
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error)))
 				)
 				.bodyToMono(ConceptPage.class);
@@ -651,7 +651,7 @@ public class SnowstormClient {
 					.queryParam("conceptIds", sctIds)
 					.build(branchPath))
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class) 
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error))))
 				.bodyToMono(ConceptPage.class)
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS))
@@ -687,7 +687,7 @@ public class SnowstormClient {
 						.build(branchPath))
 				.bodyValue(request)
 				.retrieve()
-				.onStatus(HttpStatus::isError, response -> response.bodyToMono(String.class)
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to recover concepts: " + error))))
 				.bodyToMono(ConceptPage.class);
 	}
