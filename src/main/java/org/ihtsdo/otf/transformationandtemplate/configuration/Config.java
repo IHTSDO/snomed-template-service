@@ -13,7 +13,7 @@ import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.valueprovider.ValueProviderFactory;
 import org.ihtsdo.sso.integration.RequestHeaderAuthenticationDecorator;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
-import org.springdoc.core.GroupedOpenApi;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.info.BuildProperties;
