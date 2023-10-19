@@ -197,7 +197,7 @@ public class SnowstormClient {
 				.uri(uriBuilder -> uriBuilder
 						.path("/branches")
 						.build(branchPath))
-				.body(BodyInserters.fromValue(RestClientHelper.asMap("name", name, "parent", parent)))
+				.body(BodyInserters.fromValue(Map.of("name", name, "parent", parent)))
 				.retrieve()
 				.bodyToMono(Map.class)
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));

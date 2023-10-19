@@ -6,9 +6,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Mono;
 
-import static org.ihtsdo.otf.transformationandtemplate.service.client.RestClientHelper.asMap;
-
 import org.ihtsdo.otf.exception.TermServerScriptException;
+
+import java.util.Map;
 
 public class AuthoringServicesClient {
 
@@ -26,7 +26,7 @@ public class AuthoringServicesClient {
 		// Create a new task using project key and return branch path
 		return restClient.post()
 				.uri(uriBuilder -> uriBuilder.path("/projects/{projectKey}/tasks").build(projectKey))
-				.body(BodyInserters.fromValue(asMap("summary", title, "description", description)))
+				.body(BodyInserters.fromValue(Map.of("summary", title, "description", description)))
 				.retrieve()
 				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to create task: " + error)))

@@ -1,6 +1,5 @@
 package org.ihtsdo.otf.transformationandtemplate.service.client;
 
-import com.amazonaws.util.StringMapBuilder;
 
 import reactor.netty.http.client.HttpClient;
 
@@ -11,8 +10,6 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import java.util.Map;
 
 public class RestClientHelper {
 
@@ -37,19 +34,5 @@ public class RestClientHelper {
 			builder.defaultCookie(split[0], split[1]);
 		}
 		return builder.build();
-	}
-
-	public static Map<String, String> asMap(String... keyThenValueThenRepeat) {
-		StringMapBuilder stringMapBuilder = new StringMapBuilder();
-		String key = null;
-		for (String s : keyThenValueThenRepeat) {
-			if (key == null) {
-				key = s;
-			} else {
-				stringMapBuilder.put(key, s);
-				key = null;
-			}
-		}
-		return stringMapBuilder.build();
 	}
 }
