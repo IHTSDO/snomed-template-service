@@ -49,6 +49,11 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 	private static final String PARAM_DRY_RUN = "dry";
 
 	/**
+	 * Key for accessing request parameter to exclude Concepts from being processed.
+	 */
+	private static final String PARAM_EXCLUDE = "exclude";
+
+	/**
 	 * Counter for how many rows have been written to the Google Sheet.
 	 */
 	private int writes = 0;
@@ -93,6 +98,9 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 				.add(PARAM_BRANCH_PATH)
 				.withType(JobParameter.Type.STRING)
 				.withDescription("Change which branch to process. Note, a new task will be created which references the report produced.")
+				.add(PARAM_EXCLUDE)
+				.withType(JobParameter.Type.STRING)
+				.withDescription("List of Concept Ids to be ignored during processing.")
 				.build();
 		return new Job()
 				.withCategory(new JobCategory(JobType.BATCH_JOB, JobCategory.REFSET_UPDATE))
@@ -121,6 +129,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		String branchPath = jobRun.getParamValue(PARAM_BRANCH_PATH, task.getBranchPath());
 		boolean legacy = jobRun.getParamBoolean(PARAM_LEGACY);
 		boolean dryRun = jobRun.getParamBoolean(PARAM_DRY_RUN);
+		String excluded = jobRun.getParamValue(PARAM_EXCLUDE);
 
 		String shortName = extractShortName(branchPath);
 		CodeSystemVersion csv = tsClient.getLatestVersion(shortName, false, false);
@@ -140,7 +149,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		collectConceptsToAddToRefset(versionBranchPath, branchPath, legacy);
 		percentageComplete(60);
 
-		writeChangesToSnowstorm(branchPath, dryRun);
+		writeChangesToSnowstorm(branchPath, dryRun, excluded);
 		percentageComplete(70);
 
 		addDuplicateConceptsToRefSetDuplicatesTab();
@@ -408,17 +417,25 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		return tsClient.createRefsetMember(branchPath, rm);
 	}
 
-	private void writeChangesToSnowstorm(String branchPath, boolean dryRun) throws TermServerScriptException {
+	private void writeChangesToSnowstorm(String branchPath, boolean dryRun, String excluded) throws TermServerScriptException {
 		for (Concept concept : conceptsToAdd.values()) {
-			RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
-			doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+			if (excluded != null && excluded.contains(concept.getConceptId())) {
+				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified but has been ignored.");
+			} else {
+				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
+				doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+			}
 		}
 
 		for (Pair<Concept, RefsetMemberPojo> pair : conceptsToRemove.values()) {
 			Concept concept = pair.getFirst();
-			RefsetMemberPojo rm = pair.getSecond();
-			ReportActionType reportActionType = removeRefsetMemberSilently(branchPath, rm, dryRun);
-			doReportOrLog(concept, reportActionType, "Removed by removing ReferenceSetMember " + rm.getId());
+			if (excluded != null && excluded.contains(concept.getConceptId())) {
+				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified but has been ignored.");
+			} else {
+				RefsetMemberPojo rm = pair.getSecond();
+				ReportActionType reportActionType = removeRefsetMemberSilently(branchPath, rm, dryRun);
+				doReportOrLog(concept, reportActionType, "Removed by removing ReferenceSetMember " + rm.getId());
+			}
 		}
 	}
 }
