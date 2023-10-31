@@ -203,6 +203,13 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		Map<String, Concept> cache = new HashMap<>();
 
 		Set<Concept> relevantConceptsToRemove = getConceptSetFromECLs(true, versionBranchPath, branchPath, legacy, ECL_REMOVE_BY_LATERALITY, ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR);
+
+		// Exclude these semantic tags (cell, cell structure, morphologic abnormality) from Lateralizable reference set
+		List<Concept> allLateralizableMembers = getAllConceptsByECL(branchPath, "^" + LAT_REFSETID + "{{ M active = 1 }}");
+		relevantConceptsToRemove.addAll(allLateralizableMembers.stream()
+				.filter(c -> c.isActive() && (c.getFsnTerm().endsWith("(cell)") || c.getFsnTerm().endsWith("(cell structure)") || c.getFsnTerm().endsWith("(morphologic abnormality)")))
+				.collect(Collectors.toList()));
+
 		chunk(relevantConceptsToRemove)
 				.forEach(chunk -> {
 					cache.putAll(mapByConceptId(chunk));
