@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.rest;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -28,6 +29,7 @@ import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -71,15 +73,22 @@ public class TemplateController {
 		return ControllerHelper.getCreatedResponse(templateName);
 	}
 
-	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.PUT, produces = "application/json")
+	@RequestMapping(value = "/templates", method = RequestMethod.PUT, produces = "application/json")
 	@ResponseBody
-	public ConceptTemplate updateTemplate(@PathVariable String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException, ServiceException {
+	public ConceptTemplate updateTemplate(@RequestParam String templateName, @RequestBody ConceptTemplate conceptTemplate) throws IOException, ServiceException {
 		return templateService.update(templateName, conceptTemplate);
 	}
 
 	@RequestMapping(value = "/templates", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public Set<ConceptTemplate> listTemplates() throws IOException {
+	public Set<ConceptTemplate> listTemplates(@RequestParam(required = false) String templateName) throws IOException {
+		if (StringUtils.hasLength(templateName)) {
+			ConceptTemplate template = templateService.load(templateName);
+			if (template == null) {
+				throw new ResourceNotFoundException("Template", templateName);
+			}
+			return Collections.singleton(template);
+		}
 		return templateService.listAll();
 	}
 
@@ -92,29 +101,19 @@ public class TemplateController {
 				descendantOf, ancestorOf);
 	}
 
-	@RequestMapping(value = "/templates/{templateName}", method = RequestMethod.GET, produces = "application/json")
-	@ResponseBody
-	public ConceptTemplate getTemplate(@PathVariable String templateName) throws ResourceNotFoundException, IOException {
-		ConceptTemplate template = templateService.load(templateName);
-		if (template == null) {
-			throw new ResourceNotFoundException("Template", templateName);
-		}
-		return template;
-	}
-
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/empty-input-file", method = RequestMethod.GET,
+	@RequestMapping(value = "/templates/empty-input-file", method = RequestMethod.GET,
 			produces = "text/tab-separated-values; charset=utf-8")
-	public void getEmptyInputFile(@PathVariable String branchPath, @PathVariable String templateName,
+	public void getEmptyInputFile(@RequestParam String templateName,
 								  HttpServletResponse response) throws IOException, ResourceNotFoundException {
 
 		response.setContentType("text/tab-separated-values; charset=utf-8");
 		templateService.writeEmptyInputFile(templateName, response.getOutputStream());
 	}
 
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/generate", method = RequestMethod.POST, consumes = "multipart/form-data")
+	@RequestMapping(value = "/{branchPath}/templates/generate", method = RequestMethod.POST, consumes = "multipart/form-data")
 	@ResponseBody
 	public List<ConceptOutline> generateConcepts(@PathVariable String branchPath,
-												 @PathVariable String templateName,
+												 @RequestParam String templateName,
 												 @Parameter(description = "tsvFile") MultipartFile tsvFile) throws IOException, ServiceException {
 		branchPath = BranchPathUriUtil.decodePath(branchPath);
 		setBatchChangeFlagOnBranch(branchPath);
@@ -126,10 +125,10 @@ public class TemplateController {
 		templateService.reloadCache();
 	}
 	
-	@RequestMapping(value = "/{branchPath}/templates/{templateName}/concepts", method = RequestMethod.GET, produces = "application/json")
+	@RequestMapping(value = "/{branchPath}/templates/concept-search", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public Set<String> searchConcepts(@PathVariable String branchPath,
-									  @PathVariable String templateName,
+									  @RequestParam String templateName,
 									  @RequestParam Boolean logicalMatch,
 									  @RequestParam(required=false) Boolean lexicalMatch,
 									  @RequestParam(defaultValue="true") boolean stated) throws ServiceException {

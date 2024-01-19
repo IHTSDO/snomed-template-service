@@ -429,8 +429,17 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 			if (excluded != null && excluded.contains(concept.getConceptId())) {
 				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified but has been ignored.");
 			} else {
-				RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
-				doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+				List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, concept.getId(), false);
+				if(tscResponse.isEmpty()){
+					RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
+					doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+				} else {
+					RefsetMemberPojo existingRefSetMember = tscResponse.get(0);
+					existingRefSetMember.setActive(true);
+					existingRefSetMember.setEffectiveTime(null);
+					tsClient.updateRefsetMember(branchPath, existingRefSetMember);
+					doReportOrLog(concept, ReportActionType.REFSET_MEMBER_REACTIVATED, "Added by re-activating ReferenceSetMember " + existingRefSetMember.getId());
+				}
 			}
 		}
 

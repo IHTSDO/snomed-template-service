@@ -45,14 +45,14 @@ public class TemplateControllerTest extends AbstractTest {
 
 	@Test
 	public void getTemplate() throws Exception {
-		mockMvc.perform(get("/templates/a%2Fb"))
+		mockMvc.perform(get("/templates?templateName=a%2Fb"))
 				.andExpect(status().isOk());
 	}
 
 	
 	@Test
 	public void getTemplateNameWithBracket() throws Exception {
-		mockMvc.perform(get("/templates/Allergy to [substance] (finding)"))
+		mockMvc.perform(get("/templates?templateName=Allergy to [substance] (finding)"))
 				.andExpect(status().isOk());
 	}
 	
