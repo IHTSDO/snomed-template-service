@@ -177,7 +177,7 @@ public class TemplateConceptSearchService {
 				}
 				batchJob.add(conceptPojo);
 				counter++;
-				if (counter % batchMax == 0 || counter == transformRequest.getConceptsToTransform().size()) {
+				if (counter % batchMax == 0 || counter == concepts.size()) {
 					// Do work
 					final List<ConceptPojo> task = batchJob;
 					results.add(executorService.submit(() -> batchTransform(input, task, restClient)));
