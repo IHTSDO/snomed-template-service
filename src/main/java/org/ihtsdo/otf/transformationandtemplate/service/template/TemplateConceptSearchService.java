@@ -1,32 +1,34 @@
 package org.ihtsdo.otf.transformationandtemplate.service.template;
 
-import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
-import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.ihtsdo.otf.rest.client.RestClientException;
+import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClient;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RelationshipPojo;
 import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
+import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
+import org.ihtsdo.otf.transformationandtemplate.service.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
-import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.logical.Attribute;
 import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Pattern;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-
-import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.FSN;
-import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type.SYNONYM;
 
 @Service
 public class TemplateConceptSearchService {
@@ -39,7 +41,10 @@ public class TemplateConceptSearchService {
 
 	@Autowired 
 	private LogicalTemplateParserService logicalTemplateParser;
-	
+
+	@Autowired
+	private TemplateConceptTransformService templateConceptTransformService;
+
 	@Autowired
 	private SnowstormRestClientFactory terminologyClientFactory;
 	
@@ -49,7 +54,12 @@ public class TemplateConceptSearchService {
 	private static final Logger LOGGER = LoggerFactory.getLogger(TemplateConceptSearchService.class);
 
 	private static final int MAX = 200000;
-	
+
+	@Value("${transformation.batch.max}")
+	private int batchMax;
+
+	private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+
 	public Set<String> searchConceptsByTemplate(String templateName, String branchPath, 
 			Boolean logicalMatch, Boolean lexicalMatch, boolean stated) throws ServiceException, ResourceNotFoundException {
 		
@@ -70,17 +80,17 @@ public class TemplateConceptSearchService {
 				LogicalTemplate logical = logicalTemplateParser.parseTemplate(conceptTemplate.getLogicalTemplate());
 				if (lexicalMatch != null) {
 					Set<String> logicalResult = performLogicalSearch(conceptTemplate, logical, branchPath, true, stated);
-					return performLexicalSearch(conceptTemplate, logicalResult, branchPath, lexicalMatch);
+					return performLexicalSearch(conceptTemplate, logicalResult, branchPath, logical, lexicalMatch);
 				} else {
 					return performLogicalSearch(conceptTemplate, logical, branchPath, logicalMatch, stated);
 				}
 		} catch (IOException e) {
-			throw new ServiceException("Failed to load tempate " + templateName);
+			throw new ServiceException("Failed to load template " + templateName);
 		}
 	}
 	
 	private Set<String> performLexicalSearch(ConceptTemplate conceptTemplate,
-			Set<String> logicalMatched, String branchPath, boolean lexicalMatch) throws ServiceException {
+			Set<String> logicalMatched, String branchPath, LogicalTemplate logical, boolean lexicalMatch) throws ServiceException {
 		
 		Set<String> result = new HashSet<>();
 		if (logicalMatched == null || logicalMatched.isEmpty()) {
@@ -88,62 +98,106 @@ public class TemplateConceptSearchService {
 			return result;
 		}
 
-		Map<Pattern, Set<String>> fsnPatternSlotsMap = TemplateUtil.compilePatterns(
-				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.FSN));
-
-		Map<Pattern, Set<String>> synoymPatternSlotsMap = TemplateUtil.compilePatterns(
-				TemplateUtil.getTermTemplates(conceptTemplate, DescriptionType.SYNONYM));
 		try {
 			Collection<ConceptPojo> concepts = terminologyClientFactory.getClient()
 					.searchConcepts(branchPath, new ArrayList<>(logicalMatched));
+
+			Map<String, List<DescriptionPojo>> originalConceptToDescriptionMap = new HashMap<>();
 			for (ConceptPojo conceptPojo : concepts) {
-				List<String> synoyms = conceptPojo.getDescriptions()
-						.stream()
-						.filter(DescriptionPojo::isActive)
-						.filter(d -> d.getType() == SYNONYM)
-						.map(DescriptionPojo::getTerm)
-						.collect(Collectors.toList());
-				
-				List<String> fsns = conceptPojo.getDescriptions()
-						.stream()
-						.filter(DescriptionPojo::isActive)
-						.filter(d -> d.getType() == FSN)
-						.map(DescriptionPojo::getTerm)
-						.collect(Collectors.toList());
-				
-				boolean isMatched = false;
-				for (Pattern pattern : fsnPatternSlotsMap.keySet()) {
-					isMatched = isPatternMatched(pattern, fsns);
-					if (!isMatched) {
-						break;
-					} 
-				}
-				for (Pattern pattern : synoymPatternSlotsMap.keySet()) {
-					isMatched = isPatternMatched(pattern, synoyms);
-					if (!isMatched) {
-						break;
-					} 
-				}
-				if (lexicalMatch && isMatched) {
-					result.add(conceptPojo.getConceptId());
-				} else if (!lexicalMatch && !isMatched){
-					result.add(conceptPojo.getConceptId());
-				}
+				List<DescriptionPojo> originalDescriptions =  new ArrayList<>();
+				conceptPojo.getDescriptions().forEach(desc -> {
+					DescriptionPojo clonedDescription = new DescriptionPojo();
+					BeanUtils.copyProperties(desc, clonedDescription);
+					originalDescriptions.add(clonedDescription);
+				});
+				originalConceptToDescriptionMap.put(conceptPojo.getConceptId(), originalDescriptions);
 			}
-			LOGGER.info("Logical search results={} and lexical search results={}", logicalMatched.size(), result.size());
-			return result;
-		} catch (RestClientException e) {
+
+			TemplateTransformRequest transformRequest = new TemplateTransformRequest();
+			transformRequest.setDestinationTemplate(conceptTemplate.getName());
+			TemplateTransformation transformation = templateConceptTransformService.createTemplateTransformation(branchPath, transformRequest);
+
+			// Start transformations in multiple threads
+			List<Future<List<ConceptPojo>>> futureTasks = performTransform(concepts, transformation, logical, terminologyClientFactory.getClient());
+
+			// Gather transformed concepts
+			try {
+				List<ConceptPojo> transformationConcepts = new ArrayList<>();
+				for (Future<List<ConceptPojo>> future : futureTasks) {
+					transformationConcepts.addAll(future.get());
+				}
+				transformationConcepts.forEach(transformationResult -> {
+					transformationConcepts.forEach(conceptPojo -> {
+						int count = 0;
+						for (DescriptionPojo transformedDesc : conceptPojo.getDescriptions()) {
+							for (DescriptionPojo originalDesc : originalConceptToDescriptionMap.get(conceptPojo.getConceptId())) {
+								if (transformedDesc.getTerm().equals(originalDesc.getTerm()) && originalDesc.isActive() && transformedDesc.getType().equals(originalDesc.getType())) {
+									count++;
+									break;
+								}
+							}
+						}
+						boolean isMatched = count > 0 && count == conceptPojo.getDescriptions().size();
+						if (lexicalMatch && isMatched) {
+							result.add(conceptPojo.getConceptId());
+						} else if (!lexicalMatch && !isMatched) {
+							result.add(conceptPojo.getConceptId());
+						}
+					});
+				});
+				LOGGER.info("Logical search results={} and lexical search results={}", logicalMatched.size(), result.size());
+				return result;
+			} catch (ExecutionException | InterruptedException e) {
+				throw new ServiceException("Failed to complete lexical template search.", e);
+			}
+        } catch (RestClientException e) {
 			throw new ServiceException("Failed to complete lexical template search.", e);
 		}
+    }
+
+	public List<Future<List<ConceptPojo>>> performTransform(Collection<ConceptPojo> concepts, TemplateTransformation transformation, LogicalTemplate logical, SnowstormRestClient restClient) throws ServiceException {
+		String branchPath = transformation.getBranchPath();
+		TemplateTransformRequest transformRequest = transformation.getTransformRequest();
+		String destinationTemplate = transformRequest.getDestinationTemplate();
+
+		List<Future<List<ConceptPojo>>> results = new ArrayList<>();
+		try {
+			ConceptTemplate destination = templateService.loadOrThrow(destinationTemplate);
+			TransformationInputData input = new TransformationInputData(transformRequest);
+			input.setDestinationSlotToAttributeMap(TemplateUtil.getSlotToAttributeMap(logical, true));
+			input.setDestinationTemplate(destination);
+
+			input.setBranchPath(branchPath);
+			input.setConceptIdMap(templateConceptTransformService.getDestinationConceptsMap(branchPath, restClient, destination));
+			List<ConceptPojo> batchJob = null;
+			int counter=0;
+			for (ConceptPojo conceptPojo : concepts) {
+				if (batchJob == null) {
+					batchJob = new ArrayList<>();
+				}
+				batchJob.add(conceptPojo);
+				counter++;
+				if (counter % batchMax == 0 || counter == concepts.size()) {
+					// Do work
+					final List<ConceptPojo> task = batchJob;
+					results.add(executorService.submit(() -> batchTransform(input, task, restClient)));
+					batchJob = null;
+				}
+			}
+		} catch (IOException e) {
+			throw new ServiceException("Failed to load template " + destinationTemplate, e);
+		}
+		return results;
 	}
 
-	private boolean isPatternMatched(Pattern pattern, Collection<String> terms) {
-		for (String term : terms) {
-			if (pattern.matcher(term).matches()) {
-				return true;
+	public List<ConceptPojo> batchTransform(TransformationInputData input, List<ConceptPojo> conceptPojos, SnowstormRestClient restClient) throws ServiceException {
+		List<ConceptPojo> transformedConcepts = new ArrayList<>();
+		if (conceptPojos != null) {
+			for (ConceptPojo pojo : conceptPojos) {
+				transformedConcepts.add(templateConceptTransformService.performTransform(pojo, input, restClient));
 			}
 		}
-		return false;
+		return transformedConcepts;
 	}
 
 	private Set<String> performLogicalSearch(ConceptTemplate conceptTemplate, LogicalTemplate logical,
@@ -161,7 +215,7 @@ public class TemplateConceptSearchService {
 			Set<String> results = new HashSet<>(terminologyClientFactory.getClient().eclQuery(branchPath, ecl, MAX, stated));
 			List<ConceptPojo> conceptPojos = terminologyClientFactory.getClient().searchConcepts(branchPath, new ArrayList<>(results));
 			Set<String> toRemove = findConceptsNotMatchExactly(conceptPojos, attributeGroups, unGroupedAttributes, stated);
-			if (toRemove.size() > 0) {
+			if (!toRemove.isEmpty()) {
 				LOGGER.info("Total concepts " + toRemove.size() + " are removed from results.");
 				results.removeAll(toRemove);
 			}

@@ -190,7 +190,7 @@ public class TemplateConceptTransformService {
 		return result;
 	}
 	
-	private ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowstormRestClient restClient) throws ServiceException {
+	public ConceptPojo performTransform(ConceptPojo conceptPojo, TransformationInputData inputData, SnowstormRestClient restClient) throws ServiceException {
         ConceptTemplate conceptTemplate = inputData.getDestinationTemplate();
 		Map<String, ConceptMiniPojo> attributeSlotValueMap;
 		try {
@@ -245,7 +245,7 @@ public class TemplateConceptTransformService {
 		return slotToValuesMap;
 	}
 
-	private Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowstormRestClient client, ConceptTemplate destination) throws ServiceException {
+	public Map<String, ConceptMiniPojo> getDestinationConceptsMap(String branchPath, SnowstormRestClient client, ConceptTemplate destination) throws ServiceException {
 		List<String> conceptIds = new ArrayList<>();
 		List<Relationship> relationships = destination.getConceptOutline().getClassAxioms().stream().findFirst().get().getRelationships();
 		for (Relationship rel : relationships) {
