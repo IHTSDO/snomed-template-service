@@ -139,7 +139,7 @@ public class TransformationController {
 						description.getId(),
 						description.getConceptId(),
 						description.getTerm(),
-						changeResult.getSuccess().toString(),
+						changeResult.getSuccess() != null ? changeResult.getSuccess().toString() : "The success status is unknown",
 						changeResult.getMessageOrEmpty()
 				));
 			}
@@ -158,7 +158,7 @@ public class TransformationController {
 				writer.println(String.join(TAB,
 						descriptionReplacement.getId(),
 						descriptionReplacement.getConceptId(),
-						changeResult.getSuccess().toString(),
+						changeResult.getSuccess() != null ? changeResult.getSuccess().toString() : "The success status is unknown",
 						changeResult.getMessageOrEmpty()
 				));
 			}
@@ -179,7 +179,7 @@ public class TransformationController {
 						axiom.getConceptId(),
 						axiom.getId(),
 						axiom.getOwlExpression(),
-						changeResult.getSuccess().toString(),
+						changeResult.getSuccess() != null ? changeResult.getSuccess().toString() : "The success status is unknown",
 						changeResult.getMessageOrEmpty()
 				));
 			}
