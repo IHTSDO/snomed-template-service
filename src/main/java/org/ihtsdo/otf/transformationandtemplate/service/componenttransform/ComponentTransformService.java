@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ihtsdo.otf.resourcemanager.ResourceManager;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.SnomedComponent;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
@@ -49,6 +50,9 @@ public class ComponentTransformService {
 	private static final String STATUS_FILE = "status.json";
 	public static final String RESULTS_FILE = "results.json";
 	public static final String INPUT_TSV = "input.tsv";
+
+	@Autowired
+	private ConceptService conceptService;
 
 	@Autowired
 	private DescriptionService descriptionService;
@@ -178,11 +182,17 @@ public class ComponentTransformService {
         });
 	}
 
+	public List<ChangeResult<ConceptPojo>> loadConceptTransformationJobResults(String branchPath, String jobId) throws BusinessServiceException {
+		return readJobResource(branchPath, jobId, RESULTS_FILE, new TypeReference<>() {
+		});
+	}
+
 	private List<ChangeResult<? extends SnomedComponent>> doRunTransform(ComponentTransformationJob job, TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
 		if (request.getTaskTitle() == null) {
 			request.setTaskTitle(recipe.getTitle());
 		}
         return switch (recipe.getComponent()) {
+			case CONCEPT -> conceptService.startBatchTransformation(recipe, request);
             case DESCRIPTION -> descriptionService.startBatchTransformation(recipe, request);
             case AXIOM -> axiomService.startBatchTransformation(recipe, request);
             default -> throw new ProcessingException("Unable to transform component of type " + recipe.getComponent());

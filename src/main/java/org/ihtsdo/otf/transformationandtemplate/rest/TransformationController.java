@@ -3,6 +3,7 @@ package org.ihtsdo.otf.transformationandtemplate.rest;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.*;
@@ -114,6 +115,10 @@ public class TransformationController {
 			List<ChangeResult<AxiomPojo>> changeResults = componentTransformService.loadAxiomTransformationJobResults(branchPath, jobId);
 			setTSVHeaders(jobId, servletResponse);
 			writeAxiomResults(changeResults, servletResponse);
+		} else if (componentType == ComponentType.CONCEPT) {
+			List<ChangeResult<ConceptPojo>> changeResults = componentTransformService.loadConceptTransformationJobResults(branchPath, jobId);
+			setTSVHeaders(jobId, servletResponse);
+			writeConceptResults(changeResults, servletResponse);
 		} else {
 			throw new BusinessServiceException(format("Writing TSV for type %s is not yet implemented.", componentType));
 		}
@@ -123,6 +128,25 @@ public class TransformationController {
 		servletResponse.setContentType("text/tsv; charset=UTF-8");
 		servletResponse.setCharacterEncoding("UTF-8");
 		servletResponse.setHeader("Content-Disposition", format("inline; filename=\"batch-transformation-results-%s.txt\"", jobId));
+	}
+
+	private void writeConceptResults(List<ChangeResult<ConceptPojo>> changeResults, HttpServletResponse servletResponse) throws IOException {
+		try (PrintWriter writer = servletResponse.getWriter()) {
+			writer.println(String.join(TAB,
+					"concept_id",
+					"fsn",
+					"success",
+					"message"));
+			for (ChangeResult<ConceptPojo> changeResult : changeResults) {
+				ConceptPojo conceptPojo = changeResult.getComponent();
+				writer.println(String.join(TAB,
+						conceptPojo.getConceptId(),
+						conceptPojo.getFsn(),
+						changeResult.getSuccess() != null ? changeResult.getSuccess().toString() : "The success status is unknown",
+						changeResult.getMessageOrEmpty()
+				));
+			}
+		}
 	}
 
 	private void writeDescriptionResults(List<ChangeResult<DescriptionPojo>> descriptionChangeResults, HttpServletResponse servletResponse) throws IOException {
