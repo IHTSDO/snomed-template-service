@@ -18,20 +18,7 @@
 		"translatedPreferredTerm": "$tsv.9",
 		"lang": "$tsv.10",
 		"caseSignificanceId": "$tsv.11|map-constant",
-		"acceptability": [
-			{
-				"langRefset1": "$tsv.12|map-constant",
-				"acceptability1": "$tsv.13|map-constant"
-			},
-			{
-				"langRefset2": "$tsv.14|map-constant",
-				"acceptability2": "$tsv.15|map-constant"
-			},
-			{
-				"langRefset3": "$tsv.16|map-constant",
-				"acceptability3": "$tsv.17|map-constant"
-			}
-		],
-		"notes": "$tsv.18"
+		"langRefset": "$tsv.12|map-constant",
+		"notes": "$tsv.13"
 	}
 }

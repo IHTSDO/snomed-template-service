@@ -93,13 +93,13 @@ public class ConceptService {
 				descriptions.add(usDescription);
 
 				// GB preferred term
-				if (!StringUtils.hasLength(translatedPreferredTerm)) {
+				if (translatedPreferredTerm == null || !StringUtils.hasLength(translatedPreferredTerm.trim())) {
 					CaseSignificance gbCaseSignificance = CaseSignificance.fromConceptId(componentTransformation.getValueString("gbCaseSignificanceId"));
 					gbCaseSignificance = gbCaseSignificance != null ? gbCaseSignificance : usCaseSignificance;
 					Map<String, Object> gbTermMap = generateGBTerms(highLevelAuthoringService, usPreferredTerm, gbPreferredTerm);
 					if (!CollectionUtils.isEmpty(gbTermMap)) {
 						String generatedGBPreferredTerm = (String) gbTermMap.get("gbPreferredTerm");
-						if (StringUtils.hasLength(generatedGBPreferredTerm)) {
+						if (generatedGBPreferredTerm != null && StringUtils.hasLength(generatedGBPreferredTerm.trim())) {
 							if (generatedGBPreferredTerm.equals(usDescription.getTerm())) {
 								usDescription.getAcceptabilityMap().put(RF2Constants.GB_ENG_LANG_REFSET, Acceptability.PREFERRED);
 							} else {
@@ -125,9 +125,9 @@ public class ConceptService {
 				if (StringUtils.hasLength(translatedPreferredTerm)) {
 					CaseSignificance translatedCaseSignificance = CaseSignificance.fromConceptId(componentTransformation.getValueString("caseSignificanceId"));
 					acceptabilityMap = new HashMap<>();
-					Map<String, String> acceptabilityStrings = componentTransformation.getValueMap("acceptability");
-					if (acceptabilityStrings != null) {
-						acceptabilityMap = getAcceptabilityMapFromConceptIdStringMap(acceptabilityStrings);
+					String langRefset = componentTransformation.getValueString("langRefset");
+					if (langRefset != null) {
+						acceptabilityMap.put(langRefset, Acceptability.PREFERRED);
 					}
 					DescriptionPojo translatedDescription = getNewDescription(Type.SYNONYM, translatedPreferredTerm, componentTransformation.getValueString("lang"), acceptabilityMap, translatedCaseSignificance);
 					descriptions.add(translatedDescription);
@@ -232,7 +232,7 @@ public class ConceptService {
 			}
 		}
 
-		result.put("gbPreferredTerm", StringUtils.hasLength(inputGBPreferredTerm) ? inputGBPreferredTerm : gbPreferredTerm);
+		result.put("gbPreferredTerm", inputGBPreferredTerm != null && StringUtils.hasLength(inputGBPreferredTerm.trim()) ? inputGBPreferredTerm.trim() : gbPreferredTerm);
 		result.put("gbAcceptableTerms", gbAcceptableTerms);
 		return result;
 	}
