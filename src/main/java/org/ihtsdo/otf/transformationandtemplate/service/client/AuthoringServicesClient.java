@@ -9,6 +9,7 @@ import reactor.core.publisher.Mono;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 
 import java.util.Map;
+import java.util.Set;
 
 public class AuthoringServicesClient {
 
@@ -72,6 +73,17 @@ public class AuthoringServicesClient {
 						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to delete member: " + error)))
 				)
 				.bodyToMono(AuthoringTask.class)
+				.block();
+	}
+
+	public DialectVariations getEnUsToEnGbSuggestions(Set<String> words) {
+		return restClient.get()
+				.uri(uriBuilder -> uriBuilder.path("/dialect/en-us/suggestions/en-gb").queryParam("words", String.join(",", words)).build())
+				.retrieve()
+				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
+						.flatMap(error -> Mono.error(new TermServerScriptException("Failed to retrieve the mapping terms and acceptable synonym variations: " + error)))
+				)
+				.bodyToMono(DialectVariations.class)
 				.block();
 	}
 }

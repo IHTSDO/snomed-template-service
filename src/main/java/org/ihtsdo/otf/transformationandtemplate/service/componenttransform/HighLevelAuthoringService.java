@@ -3,7 +3,9 @@ package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 import com.google.common.collect.Iterables;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
+import org.ihtsdo.otf.snomedboot.domain.ConceptConstants;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
+import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.slf4j.Logger;
@@ -48,6 +50,60 @@ public class HighLevelAuthoringService {
 		this.authoringServicesClient = authoringServicesClient;
 		this.processingBatchMaxSize = processingBatchMaxSize;
 		this.skipDroolsValidation = skipDroolsValidation;
+	}
+
+	public List<ChangeResult<? extends SnomedComponent>> createConcepts(ComponentTransformationRequest request, List<ConceptPojo> concepts, List<ChangeResult<ConceptPojo>> changes) throws BusinessServiceException {
+		if (concepts.isEmpty()) {
+			return new ArrayList<>(changes);
+		}
+		logger.info("Starting process to save {} concepts.", concepts.size());
+
+		try {
+			// Initial terminology server communication check
+			snowstormClient.getBranch("MAIN");
+
+			String defaultModuleId;
+			try {
+				defaultModuleId = snowstormClient.getDefaultModuleId(request.getBranchPath());
+			} catch (WebClientException e) {
+				logger.info("Failed to load branch {} from the terminology server.", request, e);
+				return failAllRemaining(changes, format("Failed to load branch %s from the terminology server.", request));
+			}
+
+			// a fallback to core module
+			if (defaultModuleId == null) {
+				defaultModuleId = ConceptConstants.CORE_MODULE;
+			}
+
+			// Give new concepts a temporary UUID
+			concepts.forEach(concept -> {
+				concept.setConceptId(Optional.ofNullable(concept.getConceptId()).orElse(UUID.randomUUID().toString()));
+				concept.getDescriptions().forEach(description -> {
+					description.setDescriptionId(Optional.ofNullable(description.getDescriptionId()).orElse(UUID.randomUUID().toString()));
+				});
+				concept.getClassAxioms().forEach(axiom -> {
+					axiom.setAxiomId(Optional.ofNullable(axiom.getAxiomId()).orElse(UUID.randomUUID().toString()));
+				});
+			});
+
+			// Split into batches of how many changes per branch / task
+			int batchNumber = 0;
+			for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(concepts, request.getBatchSize())) {
+
+				batchNumber++;
+				String branchPath = getBatchBranch(request, batchNumber);
+
+				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+				for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
+					createConceptBatch(new HashSet<>(conceptProcessingBatch) , defaultModuleId, changes, branchPath);
+				}
+			}
+		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
+			logger.error("Failed to communicate with the terminology server.", e);
+			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+		}
+
+		return new ArrayList<>(changes);
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> createDescriptions(
@@ -105,6 +161,79 @@ public class HighLevelAuthoringService {
 		}
 
 		return new ArrayList<>(changes);
+	}
+
+	private void createConceptBatch(Set<ConceptPojo> concepts, String defaultModuleId,
+										List<ChangeResult<ConceptPojo>> changes, String branchPath) throws TimeoutException {
+		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
+		List<String> allTypeAndTargetConceptIds = new ArrayList<>();
+
+		// Assign module id to components and collect type + target concept Ids
+		concepts.forEach(conceptPojo -> {
+			conceptPojo.setModuleId(defaultModuleId);
+			conceptPojo.getDescriptions().forEach(descriptionPojo -> descriptionPojo.setModuleId(defaultModuleId));
+			conceptPojo.getClassAxioms().forEach(axiomPojo -> {
+				axiomPojo.setModuleId(defaultModuleId);
+				axiomPojo.getRelationships().forEach(relationshipPojo -> {
+					relationshipPojo.setModuleId(defaultModuleId);
+					allTypeAndTargetConceptIds.add(relationshipPojo.getType().getConceptId());
+					allTypeAndTargetConceptIds.add(relationshipPojo.getTarget().getConceptId());
+				});
+			});
+		});
+
+		// Validate relationship type and target
+		List<Concept> typeAndTargetConcepts = snowstormClient.getConcepts(branchPath, allTypeAndTargetConceptIds);
+		Map<String, Concept> typeAndTargetConceptMap = typeAndTargetConcepts.stream().collect(Collectors.toMap(Concept::getConceptId, Function.identity()));
+		for (ConceptPojo conceptPojo : concepts) {
+			String errorMsg = validateRelationshipTypeAndTarget(conceptPojo, typeAndTargetConceptMap, branchPath);
+			if (errorMsg != null) {
+				changes.stream()
+						.filter(c -> conceptPojo.getFsnTerm().equals(c.getComponent().getFsnTerm()))
+						.findFirst()
+						.ifPresent(pojo ->  pojo.fail(errorMsg));
+				conceptMap.remove(conceptPojo.getConceptId());
+			}
+		}
+
+		Set<Long> persistedConceptIds = bulkValidateThenSaveConcepts(conceptMap, branchPath, new ArrayList<>(changes));
+		if (!conceptMap.isEmpty() && !persistedConceptIds.isEmpty()) {
+			// Batch load concepts again to fetch identifiers of new components
+			List<Concept> newConcepts = snowstormClient.getConcepts(branchPath, persistedConceptIds.stream().map(String::valueOf).collect(Collectors.toList()));
+			for (Concept newConcept : newConcepts) {
+				// Set concept id from updated concept so it's in the final output
+				changes.stream()
+						.filter(c -> newConcept.getFsnTerm().equals(c.getComponent().getFsnTerm()))
+						.findFirst()
+						.ifPresent(pojo -> {
+							pojo.getComponent().setConceptId(newConcept.getConceptId());
+							pojo.success();
+				});
+			}
+		}
+	}
+
+	private String validateRelationshipTypeAndTarget(ConceptPojo conceptPojo, Map<String, Concept> typeAndTargetConceptMap, String branchPath) {
+		for (AxiomPojo axiomPojo : conceptPojo.getClassAxioms()) {
+			for (RelationshipPojo relationshipPojo : axiomPojo.getRelationships()) {
+				String typeId = relationshipPojo.getType().getConceptId();
+				if (typeAndTargetConceptMap.containsKey(typeId)) {
+					Concept concept = typeAndTargetConceptMap.get(typeId);
+					if (!concept.isActive()) return String.format("Relationship type concept with Id %s is inactive", typeId);
+				} else {
+					return String.format("Relationship type concept with Id %s does not exist on branch %s", typeId, branchPath);
+				}
+				String targetId = relationshipPojo.getTarget().getConceptId();
+				if (typeAndTargetConceptMap.containsKey(targetId)) {
+					Concept concept = typeAndTargetConceptMap.get(targetId);
+					if (!concept.isActive()) return String.format("Relationship target concept with Id %s is inactive", targetId);
+
+				} else {
+					return String.format("Relationship target concept with Id %s does not exist on branch %s", targetId, branchPath);
+				}
+			}
+		}
+		return null;
 	}
 
 	private void createDescriptionBatch(Map<String, Set<DescriptionPojo>> conceptIdToDescriptionMap, String defaultModuleId,
@@ -174,7 +303,7 @@ public class HighLevelAuthoringService {
 			}
 		}
 
-		bulkValidateThenUpdateConcepts(conceptMap, branchPath, new ArrayList<>(changes));
+		bulkValidateThenSaveConcepts(conceptMap, branchPath, new ArrayList<>(changes));
 		if (!conceptMap.isEmpty()) {
 			// Batch load concepts again to fetch identifiers of new components
 			List<ConceptPojo> updatedConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptMap.keySet()), branchPath);
@@ -543,7 +672,7 @@ public class HighLevelAuthoringService {
 		}
 
 		if (!updatedConceptMap.isEmpty()) {
-			bulkValidateThenUpdateConcepts(updatedConceptMap, branchPath, changes);
+			bulkValidateThenSaveConcepts(updatedConceptMap, branchPath, changes);
 
 			// Mark all changes which have not failed as successful
 			changes.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
@@ -633,7 +762,7 @@ public class HighLevelAuthoringService {
 		}
 
 		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-		bulkValidateThenUpdateConcepts(conceptMap, branchPath, changes);
+		bulkValidateThenSaveConcepts(conceptMap, branchPath, changes);
 	}
 
 	private void updateAxiomBatch(List<AxiomPojo> axiomBatch, List<ChangeResult<AxiomPojo>> changesBatch, String branchPath) throws BusinessServiceException, TimeoutException {
@@ -680,7 +809,7 @@ public class HighLevelAuthoringService {
 
 		if (!axiomsFound.isEmpty()) {
 			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-			bulkValidateThenUpdateConcepts(conceptMap, branchPath, changesBatch);
+			bulkValidateThenSaveConcepts(conceptMap, branchPath, changesBatch);
 			// Mark all changes which have not failed as successful
 			changesBatch.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
 		}
@@ -716,8 +845,8 @@ public class HighLevelAuthoringService {
 	 * @throws WebClientException Thrown if terminology server communication returns non 2xx status code.
 	 * @throws TimeoutException Thrown if terminology server update times out.
 	 */
-	public <T extends SnomedComponent> void bulkValidateThenUpdateConcepts(Map<String, ConceptPojo> conceptMap, String branchPath,
-			List<ChangeResult<T>> changes) throws WebClientException, TimeoutException {
+	public <T extends SnomedComponent> Set<Long> bulkValidateThenSaveConcepts(Map<String, ConceptPojo> conceptMap, String branchPath,
+																			  List<ChangeResult<T>> changes) throws WebClientException, TimeoutException {
 
 		if (!skipDroolsValidation) {
 			// Run batch validation
@@ -746,6 +875,9 @@ public class HighLevelAuthoringService {
 
 		// Remove temp description UUIDs
 		for (ConceptPojo concept : conceptMap.values()) {
+			if (concept.getConceptId().contains("-")) {
+				concept.setConceptId(null);
+			}
 			for (DescriptionPojo description : concept.getDescriptions()) {
 				if (description.getDescriptionId().contains("-")) {
 					description.setDescriptionId(null);
@@ -754,18 +886,23 @@ public class HighLevelAuthoringService {
 		}
 
 		if (conceptMap.isEmpty()) {
-			return;
+			return Collections.emptySet();
 		}
 
-		// Bulk update concepts
+		// Bulk save concepts
 		Collection<ConceptPojo> conceptPojos = conceptMap.values();
 		ConceptChangeBatchStatus status = snowstormClient.saveUpdateConceptsNoValidation(conceptPojos, branchPath);
 		if (ConceptChangeBatchStatus.Status.FAILED == status.getStatus()) {
 			failAllRemaining(changes, "Persisting concept batch failed with message: " + status.getMessage());
 			conceptMap.clear();
+			return Collections.emptySet();
 		}
+		return status.getConceptIds();
 	}
 
+	public DialectVariations getEnUsToEnGbSuggestions(Set<String> words) {
+		return authoringServicesClient.getEnUsToEnGbSuggestions(words);
+	}
 
 	private ChangeResult<DescriptionPojo> getChangeResult(List<ChangeResult<DescriptionPojo>> changeResults, DescriptionPojo description, Comparator<DescriptionPojo> comparator) throws BusinessServiceException {
 		for (ChangeResult<DescriptionPojo> changeResult : changeResults) {

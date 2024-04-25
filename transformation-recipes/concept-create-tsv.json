@@ -1,0 +1,37 @@
+{
+	"key": "concept-create-tsv",
+	"title": "Concept Additions",
+	"description": "Add new concepts in batch. Acceptability can be given for up to three language reference sets. Module will be set automatically.",
+	"source": "tsv",
+	"component": "CONCEPT",
+	"changeType": "CREATE",
+	"fieldMap": {
+		"fsn": "$tsv.0",
+		"semanticTag": "$tsv.1",
+		"fsnCaseSignificanceId": "$tsv.2|map-constant",
+		"usPreferredTerm": "$tsv.3",
+		"usCaseSignificanceId": "$tsv.4|map-constant",
+		"gbPreferredTerm": "$tsv.5",
+		"gbCaseSignificanceId": "$tsv.6|map-constant",
+		"parentConceptId": "$tsv.7",
+		"parentConceptTerm": "$tsv.8",
+		"translatedPreferredTerm": "$tsv.9",
+		"lang": "$tsv.10",
+		"caseSignificanceId": "$tsv.11|map-constant",
+		"acceptability": [
+			{
+				"langRefset1": "$tsv.12|map-constant",
+				"acceptability1": "$tsv.13|map-constant"
+			},
+			{
+				"langRefset2": "$tsv.14|map-constant",
+				"acceptability2": "$tsv.15|map-constant"
+			},
+			{
+				"langRefset3": "$tsv.16|map-constant",
+				"acceptability3": "$tsv.17|map-constant"
+			}
+		],
+		"notes": "$tsv.18"
+	}
+}
