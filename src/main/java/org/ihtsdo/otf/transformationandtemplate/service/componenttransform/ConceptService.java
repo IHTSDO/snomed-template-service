@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.CaseSignificance;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Type;
+import static org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo.Acceptability;
 import static java.lang.String.format;
 import static org.ihtsdo.otf.utils.SnomedIdentifierUtils.isValidConceptIdFormat;
 
@@ -67,68 +70,66 @@ public class ConceptService {
 				Set<DescriptionPojo> descriptions = new HashSet<>();
 
 				String fsn = componentTransformation.getValueString("fsn");
+				String semanticTag = componentTransformation.getValueString("semanticTag");
 				String usPreferredTerm = componentTransformation.getValueString("usPreferredTerm");
 				String gbPreferredTerm = componentTransformation.getValueString("gbPreferredTerm");
 				String translatedPreferredTerm = componentTransformation.getValueString("translatedPreferredTerm");
 
 				// FSN
-				Map<String, DescriptionPojo.Acceptability> acceptabilityMap = new HashMap<>();
-				acceptabilityMap.put(RF2Constants.US_ENG_LANG_REFSET, DescriptionPojo.Acceptability.PREFERRED);
+				Map<String, Acceptability> acceptabilityMap = new HashMap<>();
+				acceptabilityMap.put(RF2Constants.US_ENG_LANG_REFSET, Acceptability.PREFERRED);
 				if (translatedPreferredTerm == null || !StringUtils.hasLength(translatedPreferredTerm.trim())) {
-					acceptabilityMap.put(RF2Constants.GB_ENG_LANG_REFSET, DescriptionPojo.Acceptability.PREFERRED);
+					acceptabilityMap.put(RF2Constants.GB_ENG_LANG_REFSET, Acceptability.PREFERRED);
 				}
-				String semanticTag = componentTransformation.getValueString("semanticTag");
-				DescriptionPojo.CaseSignificance fsnCaseSignificance = DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("fsnCaseSignificanceId"));
-				DescriptionPojo fsnDescription = getNewDescription(DescriptionPojo.Type.FSN, fsn + (" (") + semanticTag + ")", "en", acceptabilityMap, fsnCaseSignificance);
+				CaseSignificance fsnCaseSignificance = CaseSignificance.fromConceptId(componentTransformation.getValueString("fsnCaseSignificanceId"));
+				DescriptionPojo fsnDescription = getNewDescription(Type.FSN, fsn + (" (") + semanticTag + ")", "en", acceptabilityMap, fsnCaseSignificance);
 				descriptions.add(fsnDescription);
 
 				// US preferred term
 				acceptabilityMap = new HashMap<>();
-				acceptabilityMap.put(RF2Constants.US_ENG_LANG_REFSET, DescriptionPojo.Acceptability.PREFERRED);
-				DescriptionPojo.CaseSignificance usCaseSignificance = DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("usCaseSignificanceId"));
-				DescriptionPojo usDescription = getNewDescription(DescriptionPojo.Type.SYNONYM, usPreferredTerm, "en", acceptabilityMap, usCaseSignificance);
+				acceptabilityMap.put(RF2Constants.US_ENG_LANG_REFSET, Acceptability.PREFERRED);
+				CaseSignificance usCaseSignificance = CaseSignificance.fromConceptId(componentTransformation.getValueString("usCaseSignificanceId"));
+				DescriptionPojo usDescription = getNewDescription(Type.SYNONYM, usPreferredTerm, "en", acceptabilityMap, usCaseSignificance);
 				descriptions.add(usDescription);
 
 				// GB preferred term
 				if (!StringUtils.hasLength(translatedPreferredTerm)) {
+					CaseSignificance gbCaseSignificance = CaseSignificance.fromConceptId(componentTransformation.getValueString("gbCaseSignificanceId"));
+					gbCaseSignificance = gbCaseSignificance != null ? gbCaseSignificance : usCaseSignificance;
 					Map<String, Object> gbTermMap = generateGBTerms(highLevelAuthoringService, usPreferredTerm, gbPreferredTerm);
 					if (!CollectionUtils.isEmpty(gbTermMap)) {
-						gbPreferredTerm = (String) gbTermMap.get("gbPreferredTerm");
+						String generatedGBPreferredTerm = (String) gbTermMap.get("gbPreferredTerm");
+						if (StringUtils.hasLength(generatedGBPreferredTerm)) {
+							if (generatedGBPreferredTerm.equals(usDescription.getTerm())) {
+								usDescription.getAcceptabilityMap().put(RF2Constants.GB_ENG_LANG_REFSET, Acceptability.PREFERRED);
+							} else {
+								acceptabilityMap = new HashMap<>();
+								acceptabilityMap.put(RF2Constants.GB_ENG_LANG_REFSET, Acceptability.PREFERRED);
+								DescriptionPojo gbDescription = getNewDescription(Type.SYNONYM, generatedGBPreferredTerm, "en", acceptabilityMap, gbCaseSignificance);
+								descriptions.add(gbDescription);
+							}
+						}
 						Set<String> gbAcceptableTerms = (Set<String>) gbTermMap.get("gbAcceptableTerms");
 						if (!CollectionUtils.isEmpty(gbAcceptableTerms)) {
 							for (String term : gbAcceptableTerms) {
 								acceptabilityMap = new HashMap<>();
-								acceptabilityMap.put(RF2Constants.GB_ENG_LANG_REFSET, DescriptionPojo.Acceptability.ACCEPTABLE);
-								DescriptionPojo.CaseSignificance gbCaseSignificance = DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("gbCaseSignificanceId"));
-								gbCaseSignificance = gbCaseSignificance != null ? gbCaseSignificance : usCaseSignificance;
-								DescriptionPojo acceptableGBDescription = getNewDescription(DescriptionPojo.Type.SYNONYM, term, "en", acceptabilityMap, gbCaseSignificance);
+								acceptabilityMap.put(RF2Constants.GB_ENG_LANG_REFSET, Acceptability.ACCEPTABLE);
+								DescriptionPojo acceptableGBDescription = getNewDescription(Type.SYNONYM, term, "en", acceptabilityMap,  gbCaseSignificance);
 								descriptions.add(acceptableGBDescription);
 							}
-						}
-					}
-					if (StringUtils.hasLength(gbPreferredTerm)) {
-						if (gbPreferredTerm.equals(usDescription.getTerm())) {
-							usDescription.getAcceptabilityMap().put(RF2Constants.GB_ENG_LANG_REFSET, DescriptionPojo.Acceptability.PREFERRED);
-						} else {
-							acceptabilityMap = new HashMap<>();
-							acceptabilityMap.put(RF2Constants.GB_ENG_LANG_REFSET, DescriptionPojo.Acceptability.PREFERRED);
-							DescriptionPojo.CaseSignificance gbCaseSignificance = DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("gbCaseSignificanceId"));
-							gbCaseSignificance = gbCaseSignificance != null ? gbCaseSignificance : usCaseSignificance;
-							DescriptionPojo gbDescription = getNewDescription(DescriptionPojo.Type.SYNONYM, gbPreferredTerm, "en", acceptabilityMap, gbCaseSignificance);
-							descriptions.add(gbDescription);
 						}
 					}
 				}
 
 				// Translated preferred term if any
 				if (StringUtils.hasLength(translatedPreferredTerm)) {
-					DescriptionPojo.CaseSignificance translatedCaseSignificance = DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("caseSignificanceId"));
+					CaseSignificance translatedCaseSignificance = CaseSignificance.fromConceptId(componentTransformation.getValueString("caseSignificanceId"));
 					acceptabilityMap = new HashMap<>();
 					Map<String, String> acceptabilityStrings = componentTransformation.getValueMap("acceptability");
 					if (acceptabilityStrings != null) {
 						acceptabilityMap = getAcceptabilityMapFromConceptIdStringMap(acceptabilityStrings);
 					}
-					DescriptionPojo translatedDescription = getNewDescription(DescriptionPojo.Type.SYNONYM, translatedPreferredTerm, componentTransformation.getValueString("lang"), acceptabilityMap, translatedCaseSignificance);
+					DescriptionPojo translatedDescription = getNewDescription(Type.SYNONYM, translatedPreferredTerm, componentTransformation.getValueString("lang"), acceptabilityMap, translatedCaseSignificance);
 					descriptions.add(translatedDescription);
 				}
 
@@ -160,19 +161,18 @@ public class ConceptService {
 		logger.info("{} of {} concepts passed simple internal checks.", concepts.size(), changes.size());
 	}
 
-	private DescriptionPojo getNewDescription(DescriptionPojo.Type type, String term, String lang, Map<String, DescriptionPojo.Acceptability> acceptabilityMap, DescriptionPojo.CaseSignificance caseSignificance) {
+	private DescriptionPojo getNewDescription(Type type, String term, String lang, Map<String, Acceptability> acceptabilityMap, CaseSignificance caseSignificance) {
 		DescriptionPojo description = new DescriptionPojo();
 		description.setType(type);
 		description.setTerm(term);
 		description.setLang(lang);
-		description.setAcceptabilityMap(acceptabilityMap);
-		description.setCaseSignificance(getCaseSignificanceOrElse(caseSignificance));
-
+		if (!CollectionUtils.isEmpty(acceptabilityMap)) {
+			description.setAcceptabilityMap(acceptabilityMap);
+		}
+		if (caseSignificance != null) {
+			description.setCaseSignificance(caseSignificance);
+		}
 		return description;
-	}
-
-	public static DescriptionPojo.CaseSignificance getCaseSignificanceOrElse(DescriptionPojo.CaseSignificance caseSignificance) {
-		return Optional.ofNullable(caseSignificance).orElse(DescriptionPojo.CaseSignificance.CASE_INSENSITIVE);
 	}
 
 	private Map<String, Object> generateGBTerms(HighLevelAuthoringService highLevelAuthoringService, String usPreferredTerm, String inputGBPreferredTerm) {
@@ -254,12 +254,12 @@ public class ConceptService {
                                             .anyMatch(entry -> !isValidConceptIdFormat(entry.getKey()) || entry.getValue() == null)) {
                                 return "At least one valid acceptability entry is required";
                             }
-							if (DescriptionPojo.Type.FSN.equals(descriptionPojo.getType())) {
+							if (Type.FSN.equals(descriptionPojo.getType())) {
 								fsnFound = true;
 							}
-							if (DescriptionPojo.Type.SYNONYM.equals(descriptionPojo.getType())
+							if (Type.SYNONYM.equals(descriptionPojo.getType())
 								&& descriptionPojo.getAcceptabilityMap().containsKey(RF2Constants.US_ENG_LANG_REFSET)
-								&& DescriptionPojo.Acceptability.PREFERRED.equals(descriptionPojo.getAcceptabilityMap().get(RF2Constants.US_ENG_LANG_REFSET))) {
+								&& Acceptability.PREFERRED.equals(descriptionPojo.getAcceptabilityMap().get(RF2Constants.US_ENG_LANG_REFSET))) {
 								usPreferredTermFound = true;
 							}
                         }
@@ -293,9 +293,9 @@ public class ConceptService {
 		return true;
 	}
 
-	public static Map<String, DescriptionPojo.Acceptability> getAcceptabilityMapFromConceptIdStringMap(Map<String, String> acceptabilityStrings) {
-		Map<String, DescriptionPojo.Acceptability> acceptabilityMap = new HashMap<>();
-		acceptabilityStrings.forEach((key, value) -> acceptabilityMap.put(key, DescriptionPojo.Acceptability.fromConceptId(value)));
+	public static Map<String, Acceptability> getAcceptabilityMapFromConceptIdStringMap(Map<String, String> acceptabilityStrings) {
+		Map<String, Acceptability> acceptabilityMap = new HashMap<>();
+		acceptabilityStrings.forEach((key, value) -> acceptabilityMap.put(key, Acceptability.fromConceptId(value)));
 		return acceptabilityMap;
 	}
 }
