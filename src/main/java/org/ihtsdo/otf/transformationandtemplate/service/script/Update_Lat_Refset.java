@@ -1,16 +1,12 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.gdata.util.common.base.Pair;
-import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.CodeSystemVersion;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
-import org.ihtsdo.otf.utils.SnomedUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.script.dao.ReportManager;
 
@@ -23,13 +19,11 @@ import java.util.stream.Stream;
  * This script will add and remove Concepts to/from 723264001 |Lateralizable body structure reference set|.
  */
 public class Update_Lat_Refset extends AuthoringPlatformScript {
-	private static final String LAT_REFSETID = "723264001";
-	private static final String ECL_ADD_BY_LATERALITY = "(<< 91723000 |Anatomical structure (body structure)| : 272741003 | Laterality (attribute) | = 182353008 |Side (qualifier value)|) MINUS ((^ 723264001) OR ( * : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|) ))";
-	private static final String ECL_ADD_BY_HIERARCHY = "((<< 91723000 |Anatomical structure (body structure)|) AND (< (^ 723264001))) MINUS ((^ 723264001) OR (* : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|)))";
-	private static final String ECL_REMOVE_BY_LATERALITY = "(^ 723264001 AND << 91723000 |Anatomical structure (body structure)|) : (272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right(qualifier value)| OR 51440002 |Right and left (qualifier value)|))";
-	private static final String ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR = "^ 723264001 MINUS << 423857001";
-
-	private static final int CHUNK_SIZE = 20;
+	private static final Logger LOGGER = LoggerFactory.getLogger(Update_Lat_Refset.class);
+	private static final String LATERALISABLE_REFERENCE_SET_ID = "723264001";
+	private static final String ECL_RULE_FOR_MEMBERSHIP = "(<< 423857001 |Structure of half of body lateral to midsagittal plane (body structure)| MINUS ( * : 272741003 | Laterality (attribute) | = (7771000 |Left (qualifier value)| OR 24028007 |Right (qualifier value)| OR 51440002 |Right and left (qualifier value)|) ))";
+	private static final String ECL_TO_ADD_MEMBERSHIP = ECL_RULE_FOR_MEMBERSHIP + " MINUS (^ 723264001)";
+	private static final String ECL_TO_REMOVE_MEMBERSHIP = "(^ 723264001) MINUS " + ECL_RULE_FOR_MEMBERSHIP;
 
 	/**
 	 * Key for accessing request parameter to control whether the script should
@@ -69,16 +63,14 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 	private int removed = 0;
 
 	/**
-	 * Counter for how many Concepts have been duplicated within the reference set.
+	 * Counter for how many Concepts have contradicting modelling.
 	 */
-	private int duplicated = 0;
+	private int contradicting = 0;
 
 	/**
-	 * A copy of the data in the spreadsheet which is analysed for duplicates.
+	 * Counter for how many updates failed to go through.
 	 */
-	private final Multimap<String, List<String>> multiMapOfAllConceptsAddedToSpreadsheet = HashMultimap.create();
-	private final HashMap<String, Concept> conceptsToAdd = new HashMap<>();
-	private final HashMap<String, Pair<Concept, RefsetMemberPojo>> conceptsToRemove = new HashMap<>();
+	private int failed = 0;
 
 	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
 		super(jobRun, mgr);
@@ -116,9 +108,9 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 	@Override
 	protected String createGoogleSheet() throws TermServerScriptException {
 		reportManager = ReportManager.create(this, reportConfiguration);
-		reportManager.setTabNames(new String[] {"Process", "Duplicates", "Summary"});
-		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Info,Detail1, Detail2, ",
-												"Task,SCTID,FSN,Semtag,Severity,Action,Info,Detail1, Detail2, ",
+		reportManager.setTabNames(new String[] {"Process", "Issues", "Summary"});
+		String[] columnHeadings = new String[] {"Task,SCTID,FSN,Semtag,Severity,Action,Info",
+												"SCTID,FSN,Issue,Info",
 												"Issue, Count"};
 		reportManager.initialiseReportFiles(columnHeadings);
 		return reportManager.getUrl();
@@ -126,59 +118,54 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 
 	@Override
 	public void runJob() throws TermServerScriptException {
+		percentageComplete(1);
 		String branchPath = jobRun.getParamValue(PARAM_BRANCH_PATH, task.getBranchPath());
 		boolean legacy = jobRun.getParamBoolean(PARAM_LEGACY);
 		boolean dryRun = jobRun.getParamBoolean(PARAM_DRY_RUN);
-		String excluded = jobRun.getParamValue(PARAM_EXCLUDE);
+		String excludedConceptIds = jobRun.getParamValue(PARAM_EXCLUDE);
+		String versionedBranchPath = getVersionedBranchPath(branchPath);
 
-		String shortName = extractShortName(branchPath);
-		CodeSystemVersion csv = tsClient.getLatestVersion(shortName, false, false);
-		String versionBranchPath = null;
-
-		if (csv != null) {
-			versionBranchPath = csv.getBranchPath();
-		}
-
-		info(String.format("Running with branchPath: %s, legacy: %b, dryRun: %b, Version Branch Path: %s",
-			branchPath, legacy, dryRun, versionBranchPath));
+		LOGGER.info("Running with branchPath: '{}', legacy: '{}', dryRun: '{}', excludedConceptIds: '{}'", branchPath, legacy, dryRun, excludedConceptIds);
 		percentageComplete(20);
 
-		collectConceptsToRemoveFromRefset(versionBranchPath, branchPath, legacy);
-		percentageComplete(50);
+		// Collect concepts
+		List<Concept> conceptsToAdd = getConceptsToAdd(branchPath, versionedBranchPath, legacy);
+		List<Concept> conceptsToRemove = getConceptsToRemove(branchPath, versionedBranchPath, legacy);
+		LOGGER.info("Found {} Concepts to add to reference set.", conceptsToAdd.size());
+		LOGGER.info("Found {} Concepts to remove from reference set.", conceptsToRemove.size());
+		percentageComplete(40);
 
-		collectConceptsToAddToRefset(versionBranchPath, branchPath, legacy);
+		// Add to reference set
+		addToReferenceSet(branchPath, dryRun, excludedConceptIds, conceptsToAdd);
 		percentageComplete(60);
 
-		writeChangesToSnowstorm(branchPath, dryRun, excluded);
-		percentageComplete(70);
+		// Remove from reference set
+		removeFromReferenceSet(branchPath, dryRun, excludedConceptIds, conceptsToRemove);
+		percentageComplete(80);
 
-		addDuplicateConceptsToRefSetDuplicatesTab();
-		percentageComplete(90);
-
-		/*
-		 * Finish
-		 * */
-		if (writes == 0) {
-			String message = String.format("Script has not found any data to action for Branch %s.", branchPath);
-			info(message);
-			report(TAB_0, message);
-		}
-
-		report(TAB_2, "Concepts added", this.added);
-		report(TAB_2, "Concepts removed", this.removed);
-		report(TAB_2, "Concepts duplicated", this.duplicated);
-
-		flushFiles(true);
+		// Finalise
+		reportRemainingChanges(branchPath, versionedBranchPath, legacy, conceptsToAdd, conceptsToRemove);
+		flushReport(branchPath);
 		percentageComplete(100);
 	}
 
-	private String extractShortName(String branchPath) {
-		if ("MAIN".equals(branchPath)) {
-			return "SNOMEDCT";
+	private String getVersionedBranchPath(String branchPath) {
+		String codeSystemShortName = extractShortName(branchPath);
+		CodeSystemVersion codeSystemVersion = tsClient.getLatestVersion(codeSystemShortName, false, false);
+		if (codeSystemVersion == null) {
+			return null;
 		}
 
-		if (StringUtils.isEmpty(branchPath)) {
+		return codeSystemVersion.getBranchPath();
+	}
+
+	private String extractShortName(String branchPath) {
+		if (branchPath == null || branchPath.isBlank()) {
 			throw new IllegalArgumentException("Branch path must contain at least MAIN");
+		}
+
+		if ("MAIN".equals(branchPath)) {
+			return "SNOMEDCT";
 		}
 
 		String[] parts = branchPath.split("/");
@@ -198,65 +185,101 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		throw new IllegalArgumentException("Branch path must contain a short name and start with MAIN");
 	}
 
-	private void collectConceptsToRemoveFromRefset(String versionBranchPath, String branchPath, boolean legacy) {
-		List<RefsetMemberPojo> rmToInactivate = new ArrayList<>();
-		Map<String, Concept> cache = new HashMap<>();
+	private List<Concept> getConceptsToAdd(String branchPath, String versionedBranchPath, boolean legacy) {
+		List<Concept> conceptsToAdd = getConceptsFromTS(branchPath, ECL_TO_ADD_MEMBERSHIP);
+		conceptsToAdd.removeIf(concept -> concept.getFsnTerm().endsWith("(cell)") || concept.getFsnTerm().endsWith("(cell structure)") || concept.getFsnTerm().endsWith("(morphologic abnormality)"));
 
-		Set<Concept> relevantConceptsToRemove = getConceptSetFromECLs(true, versionBranchPath, branchPath, legacy, ECL_REMOVE_BY_LATERALITY, ECL_REMOVE_BY_NO_PREREQUISITE_ANCESTOR);
+		if (!legacy && versionedBranchPath != null) {
+			// If Concept found in previous version with same query, then it is considered a legacy issue. Essentially,
+			// non-legacy mode only updates current authoring cycle content.
+			getConceptsFromTS(versionedBranchPath, ECL_TO_ADD_MEMBERSHIP).forEach(conceptsToAdd::remove);
+		}
 
-		// Exclude these semantic tags (cell, cell structure, morphologic abnormality) from Lateralizable reference set
-		List<Concept> allLateralizableMembers = getAllConceptsByECL(branchPath, "^" + LAT_REFSETID + "{{ M active = 1 }}");
-		relevantConceptsToRemove.addAll(allLateralizableMembers.stream()
-				.filter(c -> c.isActive() && (c.getFsnTerm().endsWith("(cell)") || c.getFsnTerm().endsWith("(cell structure)") || c.getFsnTerm().endsWith("(morphologic abnormality)")))
-				.collect(Collectors.toList()));
+		return conceptsToAdd;
+	}
 
-		chunk(relevantConceptsToRemove)
-				.forEach(chunk -> {
-					cache.putAll(mapByConceptId(chunk));
-					List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, joinByConceptId(chunk), true);
-					rmToInactivate.addAll(tscResponse);
-				});
+	private List<Concept> getConceptsToRemove(String branchPath, String versionedBranchPath, boolean legacy) {
+		List<Concept> conceptsToRemove = getConceptsFromTS(branchPath, ECL_TO_REMOVE_MEMBERSHIP);
 
-		if (rmToInactivate.isEmpty()) {
+		if (!legacy && versionedBranchPath != null) {
+			// If Concept found in last previous with same query, then it is considered a legacy issue. Essentially,
+			// non-legacy mode only updates current authoring cycle content.
+			getConceptsFromTS(versionedBranchPath, ECL_TO_REMOVE_MEMBERSHIP).forEach(conceptsToRemove::remove);
+		}
+
+		return conceptsToRemove;
+	}
+
+	private void addToReferenceSet(String branchPath, boolean dryRun, String excludedConceptIds, List<Concept> conceptsToAdd) throws TermServerScriptException {
+		if (conceptsToAdd.isEmpty()) {
+			LOGGER.info("No Concepts identified to add to reference set.");
 			return;
 		}
 
-		int x = 0;
-		int size = rmToInactivate.size();
-		for (RefsetMemberPojo rm : rmToInactivate) {
+		int x = 1;
+		int size = conceptsToAdd.size();
+		for (Concept concept : conceptsToAdd) {
+			LOGGER.info("Processing {}/{} concepts to add to reference set.", x, size);
 			x = x + 1;
-			info(String.format("Processing %d / %d Concepts to remove from Reference Set.", x, size));
-
-			String conceptId = rm.getConceptId();
-			Concept concept = cache.get(conceptId);
-			if (concept == null) {
-				warn(String.format("Can't find Concept in cache with id %s. Associated RefSet Member(s) will not be actioned.", conceptId));
+			if (excludedConceptIds != null && excludedConceptIds.contains(concept.getConceptId())) {
+				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified for addition but has been ignored.");
 				continue;
 			}
 
-			conceptsToRemove.put(concept.getConceptId(), new Pair<>(concept, rm));
+			List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LATERALISABLE_REFERENCE_SET_ID, concept.getId(), null);
+			if (tscResponse.isEmpty()) {
+				RefsetMemberPojo refsetMemberPojo = createMember(branchPath, dryRun, concept);
+				doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + refsetMemberPojo.getId());
+			} else {
+				RefsetMemberPojo refsetMemberPojo = reactivateMember(branchPath, dryRun, tscResponse.get(0));
+				doReportOrLog(concept, ReportActionType.REFSET_MEMBER_REACTIVATED, "Added by re-activating ReferenceSetMember " + refsetMemberPojo.getId());
+			}
 		}
 	}
 
-	private Set<Concept> getConceptSetFromECLs(boolean findInactivatedConcepts, String versionBranchPath, String branchPath, boolean legacy, String eclFirst, String eclSecond) {
-		Set<Concept> conceptSet = new HashSet<>();
-
-		conceptSet.addAll(getAllConceptsByECL(branchPath, eclFirst));
-		conceptSet.addAll(getAllConceptsByECL(branchPath, eclSecond));
-
-		if (!legacy && versionBranchPath != null) {
-			getAllConceptsByECL(versionBranchPath, eclFirst).forEach(conceptSet::remove);
-			getAllConceptsByECL(versionBranchPath, eclSecond).forEach(conceptSet::remove);
+	private void removeFromReferenceSet(String branchPath, boolean dryRun, String excludedConceptIds, List<Concept> conceptsToRemove) throws TermServerScriptException {
+		if (conceptsToRemove.isEmpty()) {
+			LOGGER.info("No Concepts identified to remove from reference set.");
+			return;
 		}
 
-		if (findInactivatedConcepts) {
-			conceptSet.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null, null));
+		List<RefsetMemberPojo> referenceSetMembersToInactivate = new ArrayList<>();
+		Map<String, Concept> cache = new HashMap<>();
+		chunk(new HashSet<>(conceptsToRemove))
+				.forEach(chunk -> {
+					cache.putAll(mapByConceptId(chunk));
+					List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LATERALISABLE_REFERENCE_SET_ID, joinByConceptId(chunk), true);
+					referenceSetMembersToInactivate.addAll(tscResponse);
+				});
+
+		if (referenceSetMembersToInactivate.isEmpty()) {
+			return;
 		}
 
-		return conceptSet;
+		int x = 1;
+		int size = referenceSetMembersToInactivate.size();
+		for (RefsetMemberPojo refsetMemberPojo : referenceSetMembersToInactivate) {
+			LOGGER.info("Processing {}/{} concepts to remove from reference set.", x, size);
+			x = x + 1;
+
+			Concept concept = cache.get(refsetMemberPojo.getConceptId());
+			if (excludedConceptIds != null && excludedConceptIds.contains(concept.getId())) {
+				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified for removal but has been ignored.");
+				continue;
+			}
+
+			boolean published = refsetMemberPojo.getReleasedEffectiveTime() != null && !refsetMemberPojo.getReleasedEffectiveTime().isBlank();
+			if (published) {
+				inactivateMember(branchPath, refsetMemberPojo, dryRun);
+				doReportOrLog(concept, ReportActionType.REFSET_MEMBER_INACTIVATED, "Removed by inactivating ReferenceSetMember " + refsetMemberPojo.getId());
+			} else {
+				deleteMember(branchPath, refsetMemberPojo, dryRun);
+				doReportOrLog(concept, ReportActionType.REFSET_MEMBER_DELETED, "Removed by deleting ReferenceSetMember " + refsetMemberPojo.getId());
+			}
+		}
 	}
 
-	private List<Concept> getAllConceptsByECL(String branchPath, String ecl) {
+	private List<Concept> getConceptsFromTS(String branchPath, String ecl) {
 		List<Concept> concepts = new ArrayList<>();
 		SnowstormClient.ConceptPage page = tsClient.fetchConceptPageBlocking(branchPath, null, ecl, null, null);
 		long totalExpected = page.getTotal();
@@ -281,10 +304,11 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 	private <T> Stream<List<T>> chunk(Set<T> set) {
 		List<T> list = new ArrayList<>(set);
 		int size = list.size();
+		int chunkSize = 20;
 
 		if (size > 0) {
-			int fullChunks = (size - 1) / CHUNK_SIZE;
-			return IntStream.range(0, fullChunks + 1).mapToObj(n -> list.subList(n * CHUNK_SIZE, n == fullChunks ? size : (n + 1) * CHUNK_SIZE));
+			int fullChunks = (size - 1) / chunkSize;
+			return IntStream.range(0, fullChunks + 1).mapToObj(n -> list.subList(n * chunkSize, n == fullChunks ? size : (n + 1) * chunkSize));
 		}
 
 		return Stream.empty();
@@ -303,115 +327,10 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		return concepts.stream().map(Concept::getId).collect(Collectors.joining(","));
 	}
 
-	// Remove ReferenceSetMember without reporting.
-	protected ReportActionType removeRefsetMemberSilently(String branchPath, RefsetMemberPojo refsetMemberPojo, boolean dryRun) throws TermServerScriptException {
-		this.removed = this.removed + 1;
-		if (isPublished(refsetMemberPojo)) {
-			info("Inactivating " + refsetMemberPojo);
-			refsetMemberPojo.setActive(false);
-
-			if (!dryRun) {
-				tsClient.updateRefsetMember(branchPath, refsetMemberPojo);
-			}
-
-			return ReportActionType.REFSET_MEMBER_INACTIVATED;
-		} else {
-			info("Deleting " + refsetMemberPojo);
-
-			if (!dryRun) {
-				tsClient.deleteRefsetMember(branchPath, refsetMemberPojo);
-			}
-
-			return ReportActionType.REFSET_MEMBER_DELETED;
-		}
-	}
-
-	protected boolean isPublished(RefsetMemberPojo refsetMemberPojo) {
-		if (refsetMemberPojo == null) {
-			return false;
-		}
-
-		return !StringUtils.isEmpty(refsetMemberPojo.getReleasedEffectiveTime());
-	}
-
-	private void doReportOrLog(Concept concept, ReportActionType reportActionType, String details) throws TermServerScriptException {
-		String semTag = null;
-
-		try {
-			semTag = SnomedUtils.deconstructFSN(concept.getFsnTerm(), true)[1];
-		} catch (Exception e) {
-			debug("FSN related exception while trying to report for " + concept.getConceptId() + ": " + e);
-		}
-
-		multiMapOfAllConceptsAddedToSpreadsheet.put(concept.getConceptId(), Lists.newArrayList(task.getKey(), concept.getConceptId(), concept.getFsnTerm(), semTag, Severity.LOW.name(), reportActionType.name(), details));
-
-		boolean success = report(concept, Severity.LOW, reportActionType, details);
-		if (!success) {
-			warn(String.format("Failed to write row: %s, %s, %s, %s", concept, Severity.LOW, reportActionType, details));
-			return;
-		}
-
-		this.writes = this.writes + 1;
-	}
-
-	private void collectConceptsToAddToRefset(String versionBranchPath, String branchPath, boolean legacy) {
-		Set<Concept> setOfConceptsToAdd = getConceptSetFromECLs(false, versionBranchPath, branchPath, legacy, ECL_ADD_BY_LATERALITY, ECL_ADD_BY_HIERARCHY);
-
-		if (!setOfConceptsToAdd.isEmpty()) {
-			int x = 0;
-			int size = setOfConceptsToAdd.size();
-
-			for (Concept concept : setOfConceptsToAdd) {
-				x++;
-				info(String.format("Processing %d / %d Concepts to add to Reference Set.", x, size));
-
-				if (conceptsToRemove.containsKey(concept.getConceptId())) {
-					conceptsToRemove.remove(concept.getConceptId());
-					multiMapOfAllConceptsAddedToSpreadsheet.removeAll(concept.getConceptId());
-				} else {
-					conceptsToAdd.put(concept.getConceptId(), concept);
-				}
-			}
-		}
-	}
-
-	private void addDuplicateConceptsToRefSetDuplicatesTab() {
-		for (String sctid : multiMapOfAllConceptsAddedToSpreadsheet.keySet()) {
-			info("Writing information about duplicate records");
-			Collection<List<String>> items = multiMapOfAllConceptsAddedToSpreadsheet.get(sctid);
-
-			if (items.size() > 1) {
-				duplicated++;
-
-				for (List<String> item : items) {
-					try {
-						boolean success = report(TAB_1, item.toArray());
-
-						if (!success) {
-							warn(String.format("Failed to write duplicate row: %s", sctid));
-							return;
-						}
-					} catch (TermServerScriptException e) {
-						error(String.format("Failed to write duplicate row: %s", sctid), e);
-						return;
-					}
-				}
-			}
-		}
-
-		if (duplicated == 0) {
-			try {
-				report(TAB_1, "No duplicates found");
-			} catch (TermServerScriptException e) {
-				warn("Failed to write to spreadsheet");
-			}
-		}
-	}
-
-	private RefsetMemberPojo createRefSetMember(String branchPath, Concept concept, boolean dryRun) {
+	private RefsetMemberPojo createMember(String branchPath, boolean dryRun, Concept concept) {
 		this.added = this.added + 1;
 		RefsetMemberPojo rm = new RefsetMemberPojo()
-				.withRefsetId(LAT_REFSETID)
+				.withRefsetId(LATERALISABLE_REFERENCE_SET_ID)
 				.withActive(true)
 				.withModuleId(SCTID_CORE_MODULE)
 				.withReferencedComponentId(concept.getId());
@@ -424,34 +343,108 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 		return tsClient.createRefsetMember(branchPath, rm);
 	}
 
-	private void writeChangesToSnowstorm(String branchPath, boolean dryRun, String excluded) throws TermServerScriptException {
-		for (Concept concept : conceptsToAdd.values()) {
-			if (excluded != null && excluded.contains(concept.getConceptId())) {
-				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified but has been ignored.");
-			} else {
-				List<RefsetMemberPojo> tscResponse = tsClient.findRefsetMemberByReferencedComponentId(branchPath, LAT_REFSETID, concept.getId(), false);
-				if(tscResponse.isEmpty()){
-					RefsetMemberPojo newRefSetMember = createRefSetMember(branchPath, concept, dryRun);
-					doReportOrLog(concept, ReportActionType.REFSET_MEMBER_ADDED, "Added by creating ReferenceSetMember " + newRefSetMember.getId());
+	private RefsetMemberPojo reactivateMember(String branchPath, boolean dryRun, RefsetMemberPojo refsetMemberPojo) throws TermServerScriptException {
+		this.added = this.added + 1;
+		refsetMemberPojo.setActive(true);
+		refsetMemberPojo.setEffectiveTime(null);
+
+		if (!dryRun) {
+			return tsClient.updateRefsetMember(branchPath, refsetMemberPojo);
+		}
+
+		return refsetMemberPojo;
+	}
+
+	protected void inactivateMember(String branchPath, RefsetMemberPojo refsetMemberPojo, boolean dryRun) throws TermServerScriptException {
+		this.removed = this.removed + 1;
+		boolean published = refsetMemberPojo.getReleasedEffectiveTime() != null && !refsetMemberPojo.getReleasedEffectiveTime().isBlank();
+		if (published) {
+			LOGGER.info("Inactivating {}", refsetMemberPojo.getMemberId());
+			refsetMemberPojo.setActive(false);
+
+			if (!dryRun) {
+				tsClient.updateRefsetMember(branchPath, refsetMemberPojo);
+			}
+		}
+	}
+
+	protected void deleteMember(String branchPath, RefsetMemberPojo refsetMemberPojo, boolean dryRun) throws TermServerScriptException {
+		this.removed = this.removed + 1;
+		boolean published = refsetMemberPojo.getReleasedEffectiveTime() != null && !refsetMemberPojo.getReleasedEffectiveTime().isBlank();
+		if (!published) {
+			LOGGER.info("Deleting {}", refsetMemberPojo.getMemberId());
+
+			if (!dryRun) {
+				tsClient.deleteRefsetMember(branchPath, refsetMemberPojo);
+			}
+		}
+	}
+
+	private void doReportOrLog(Concept concept, ReportActionType reportActionType, String details) throws TermServerScriptException {
+		boolean success = report(concept, Severity.LOW, reportActionType, details);
+		if (!success) {
+			LOGGER.warn(String.format("Failed to write row: %s, %s, %s, %s", concept, Severity.LOW, reportActionType, details));
+			return;
+		}
+
+		this.writes = this.writes + 1;
+	}
+
+	private void reportRemainingChanges(String branchPath, String versionedBranchPath, boolean legacy, List<Concept> conceptsToAdd, List<Concept> conceptsToRemove) throws TermServerScriptException {
+		LOGGER.info("Reporting remaining changes.");
+		if (legacy) {
+			return;
+		}
+
+		List<Concept> secondConceptsToAdd = getConceptsToAdd(branchPath, versionedBranchPath, legacy);
+		if (!secondConceptsToAdd.isEmpty()) {
+			LOGGER.info("Despite initial run, {} Concepts need to be added to reference set.", secondConceptsToAdd.size());
+			List<String> removedConceptIds = conceptsToRemove.stream().map(Concept::getId).toList();
+			for (Concept concept : secondConceptsToAdd) {
+				if (removedConceptIds.contains(concept.getConceptId())) {
+					this.contradicting = this.contradicting + 1;
+					report(TAB_1, concept.getConceptId(), concept.getFsnTerm(), "CONTRADICTING", "Concept was removed by this script, but it is now suggested it should be added again. This suggests the modelling is contradicting/ambiguous.");
 				} else {
-					RefsetMemberPojo existingRefSetMember = tscResponse.get(0);
-					existingRefSetMember.setActive(true);
-					existingRefSetMember.setEffectiveTime(null);
-					tsClient.updateRefsetMember(branchPath, existingRefSetMember);
-					doReportOrLog(concept, ReportActionType.REFSET_MEMBER_REACTIVATED, "Added by re-activating ReferenceSetMember " + existingRefSetMember.getId());
+					this.failed = this.failed + 1;
+					report(TAB_1, concept.getConceptId(), concept.getFsnTerm(), "FAILED", "First run identified Concept for addition to reference set; second run also identifies Concept for addition. This suggests the initial update failed.");
 				}
 			}
 		}
 
-		for (Pair<Concept, RefsetMemberPojo> pair : conceptsToRemove.values()) {
-			Concept concept = pair.getFirst();
-			if (excluded != null && excluded.contains(concept.getConceptId())) {
-				doReportOrLog(concept, ReportActionType.SKIPPING, "Concept has been identified but has been ignored.");
-			} else {
-				RefsetMemberPojo rm = pair.getSecond();
-				ReportActionType reportActionType = removeRefsetMemberSilently(branchPath, rm, dryRun);
-				doReportOrLog(concept, reportActionType, "Removed by removing ReferenceSetMember " + rm.getId());
+		List<Concept> secondConceptsToRemove = getConceptsToRemove(branchPath, versionedBranchPath, legacy);
+		if (!secondConceptsToRemove.isEmpty()) {
+			LOGGER.info("Despite initial run, {} Concepts need to be removed from reference set.", secondConceptsToRemove.size());
+			List<String> addedConceptIds = conceptsToAdd.stream().map(Concept::getId).toList();
+			for (Concept concept : secondConceptsToRemove) {
+				if (addedConceptIds.contains(concept.getConceptId())) {
+					this.contradicting = this.contradicting + 1;
+					report(TAB_1, concept.getConceptId(), concept.getFsnTerm(), "CONTRADICTING", "Concept was added by this script, but it is now suggested it should be removed again. This suggests the modelling is contradicting/ambiguous.");
+				} else {
+					this.failed = this.failed + 1;
+					report(TAB_1, concept.getConceptId(), concept.getFsnTerm(), "FAILED", "First run identified Concept for removal from reference set; second run also identifies Concept for removal. This suggests the initial update failed.");
+				}
 			}
 		}
+
+		LOGGER.info("Remaining changes reported.");
+	}
+
+	private void flushReport(String branchPath) throws TermServerScriptException {
+		if (writes == 0) {
+			String message = String.format("Script has not found any data to action for Branch %s.", branchPath);
+			LOGGER.info(message);
+			report(TAB_0, message);
+		}
+
+		if (this.contradicting == 0 && this.failed == 0) {
+			report(TAB_1, "No content issues have been identified.");
+		}
+
+		report(TAB_2, "Added to reference set", this.added);
+		report(TAB_2, "Removed from reference set", this.removed);
+		report(TAB_2, "Contradicting modelling", this.contradicting);
+		report(TAB_2, "Updates failed", this.failed);
+
+		flushFiles(true);
 	}
 }
