@@ -200,6 +200,7 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 
 	private List<Concept> getConceptsToRemove(String branchPath, String versionedBranchPath, boolean legacy) {
 		List<Concept> conceptsToRemove = getConceptsFromTS(branchPath, ECL_TO_REMOVE_MEMBERSHIP);
+		conceptsToRemove.addAll(tsClient.findUpdatedConcepts(branchPath, false, null, null, null));
 
 		if (!legacy && versionedBranchPath != null) {
 			// If Concept found in last previous with same query, then it is considered a legacy issue. Essentially,
