@@ -10,7 +10,7 @@ import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient.ConceptPage;
 import org.ihtsdo.otf.transformationandtemplate.service.script.ScriptManager.ConfigItem;
 import org.ihtsdo.otf.utils.ExceptionUtils;
-import org.ihtsdo.otf.utils.SnomedUtils;
+import org.ihtsdo.otf.utils.SnomedUtilsBase;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
 import org.snomed.otf.scheduler.domain.JobParameter.Type;
@@ -388,7 +388,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		}
 		//Find the parent which is the structure. Use the FSN with the semtag stripped
 		List<Concept> structureParents = parents.stream()
-				.filter(p -> SnomedUtils.deconstructFSN(p.getFsnTerm())[0].toLowerCase().contains("structure"))
+				.filter(p -> SnomedUtilsBase.deconstructFSN(p.getFsnTerm())[0].toLowerCase().contains("structure"))
 				.collect(Collectors.toList());
 		if (structureParents.size() != 1) {
 			report(c, Severity.MEDIUM, ReportActionType.VALIDATION_ERROR, "Concept has " + structureParents.size() + " structure parents.");

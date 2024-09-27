@@ -8,7 +8,7 @@ import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.ihtsdo.otf.utils.ExceptionUtils;
-import org.ihtsdo.otf.utils.SnomedUtils;
+import org.ihtsdo.otf.utils.SnomedUtilsBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.JobRun;
@@ -93,7 +93,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	}
 	
 	public void run() {
-		info ("Running " + this.getClass().getSimpleName());
+		logger.info ("Running {}", this.getClass().getSimpleName());
 		updateTaskTitleState("Running");
 		String branchPath = task.getBranchPath();
 		//Do we need to create this branch?
@@ -198,7 +198,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	protected boolean report(IConcept c, Severity severity, ReportActionType action, Object... details) throws TermServerScriptException {
 		String semTag = null;
 		try {
-			semTag = SnomedUtils.deconstructFSN(c.getFsnTerm(), true)[1];
+			semTag = SnomedUtilsBase.deconstructFSN(c.getFsnTerm(), true)[1];
 		} catch (Exception e) {
 			//Allow for some issue with FSN
 			debug("FSN related exception while trying to report for " + c.getConceptId() + ": " + e);
