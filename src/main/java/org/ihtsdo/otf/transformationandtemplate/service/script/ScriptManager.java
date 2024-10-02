@@ -1,21 +1,12 @@
 package org.ihtsdo.otf.transformationandtemplate.service.script;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import jakarta.annotation.PostConstruct;
-
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.AuthoringServicesClientFactory;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient;
-import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClientFactory;
+import org.ihtsdo.otf.transformationandtemplate.service.PermissionService;
+import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.ihtsdo.otf.utils.ExceptionUtils;
+import org.ihtsdo.sso.integration.SecurityUtil;
 import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
@@ -23,12 +14,20 @@ import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.Job;
 import org.snomed.otf.scheduler.domain.JobRun;
 import org.snomed.otf.scheduler.domain.JobStatus;
-import org.snomed.otf.script.Script;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import static org.snomed.otf.script.Script.info;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class ScriptManager {
@@ -40,9 +39,15 @@ public class ScriptManager {
 
 	@Autowired
 	private AuthoringServicesClientFactory authoringServicesClientFactory;
+
+	@Autowired
+	private PermissionService permissionService;
 	
 	@Value("${template-service.script.SEP.out-of-scope}")
 	private String SEPOutOfScope;
+
+	@Value("${batch-jobs.required.roles}")
+	private Set<String> requiredRoles;
 	
 	public enum ConfigItem { SEP_OUT_OF_SCOPE }
 	
@@ -71,7 +76,7 @@ public class ScriptManager {
 	}
 
 	private void populateKnownJobs() {
-		Script.info("Script Manager Initialising");
+		logger.info("Script Manager Initialising");
 		knownJobMap = new HashMap<>();
 		knownJobs = new HashSet<>();
 		
@@ -84,7 +89,7 @@ public class ScriptManager {
 			if (!Modifier.isAbstract(jobClass.getModifiers())) {
 				try {
 						Job thisJob = instantiate(jobClass, null).getJob();
-						info("Registering known job: " + thisJob.getName());
+						logger.info("Registering known job: {}", thisJob.getName());
 						knownJobMap.put(thisJob.getName(), jobClass);
 						knownJobs.add(thisJob);
 				} catch (Exception e) {
@@ -95,8 +100,10 @@ public class ScriptManager {
 	}
 
 	public JobRun runJob(JobRun jobRun) {
+		checkPermissionOrThrow(jobRun);
+
 		//Create a task before running the task in another thread and returning
-		info ("Received request to run " + jobRun);
+		logger.info ("Received request to run {}", jobRun);
 		try {
 			if (StringUtils.isEmpty(jobRun.getJobName())) {
 				throw new TermServerScriptException("Job run request did not specify job name");
@@ -115,13 +122,29 @@ public class ScriptManager {
 		return jobRun;
 	}
 
+	private void checkPermissionOrThrow(JobRun jobRun) {
+		if (requiredRoles.isEmpty()) return;
+		if (StringUtils.isEmpty(jobRun.getProject())) {
+			throw new IllegalArgumentException("Project key must be provided");
+		}
+		AuthoringServicesClient asClient = getASClient();
+		AuthoringProject project = asClient.retrieveProject(jobRun.getProject());
+		boolean hasPermission = false;
+		for (String role : requiredRoles) {
+			if (permissionService.userHasRoleOnBranch(role, project.getBranchPath(), SecurityUtil.getAuthentication())) {
+				hasPermission = true;
+				break;
+			}
+		}
+		if (!hasPermission) {
+			throw new AccessDeniedException("You are not allowed to run this job");
+		}
+	}
+
 	private JobClass instantiate(Class<? extends JobClass> jobClass, JobRun jobRun) throws TermServerScriptException {
 		try {
 			Constructor<? extends JobClass> constructor = jobClass.getDeclaredConstructor(JobRun.class, this.getClass());
-			if (constructor == null) {
-				throw new TermServerScriptException(jobClass.getName() + " does not provide a (jobRun, ScriptManager) constructor");
-			}
-			return constructor.newInstance(jobRun, this);
+            return constructor.newInstance(jobRun, this);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new TermServerScriptException("Failed to instantiate " + jobClass.getName(), e);
