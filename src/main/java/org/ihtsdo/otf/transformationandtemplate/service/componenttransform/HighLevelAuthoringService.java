@@ -353,42 +353,7 @@ public class HighLevelAuthoringService {
 			List<String> optionalLanguageRefsets = snowstormClient.getOptionalLanguageRefsets(request.getBranchPath());
 
 			// retrieve all concepts before processing update
-			List<ConceptPojo> concepts = new ArrayList <>();
-			for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
-				if (ChangeType.INACTIVATE.equals(recipe.getChangeType())) {
-					Set<DescriptionPojo> descriptionsWithTermOnly =  descriptionProcessingBatch.stream().filter(item -> item.getDescriptionId() == null && item.getTerm() != null).collect(Collectors.toSet());
-					for (DescriptionPojo description : descriptionsWithTermOnly) {
-						SnowstormClient.ConceptPage conceptPage = snowstormClient.fetchConceptPage(projectBranchPath, true, null, null, null, description.getTerm(), null).block();
-						if (conceptPage != null) {
-							boolean found = false;
-							for (Concept concept : conceptPage.getItems()) {
-								ConceptPojo fullConcept = snowstormClient.getFullConcept(projectBranchPath, concept.getConceptId());
-								for (DescriptionPojo des : fullConcept.getDescriptions()) {
-									if (des.isActive() && des.isReleased() && des.getTerm().equalsIgnoreCase(description.getTerm()) && des.getLang().equals(description.getLang())) {
-										description.setDescriptionId(des.getDescriptionId());
-										found = true;
-										logger.info("Found description ID {} for term '{}'", des.getDescriptionId(), description.getTerm());
-										break;
-									}
-								}
-								if (found) break;
-							}
-							if (!found) {
-								getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Description term '%s' not found.", description.getTerm()));
-							}
-						} else {
-							getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Description term '%s' not found.", description.getTerm()));
-						}
-					}
-				}
-
-				Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).filter(Objects::nonNull).collect(Collectors.toSet());
-				List<ConceptPojo> fullConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath);
-				concepts.addAll(fullConcepts.stream()
-								.filter(c1 -> concepts.stream().noneMatch(c1::equals))
-								.toList()
-				);
-			}
+			List<ConceptPojo> concepts = retrieveAllConcepts(recipe, descriptions, changes, projectBranchPath);
 
 			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
 			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().filter(des -> des.getId() != null).collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
@@ -396,26 +361,7 @@ public class HighLevelAuthoringService {
 			Map<String, String > descriptionsFound = new HashMap <>();
 			Map<String, String > invalidModuleDescriptions = new HashMap <>();
 			for (ConceptPojo loadedConcept : concepts) {
-				for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
-					DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
-					if (descriptionUpdate != null) {
-						if (defaultModuleId == null || defaultModuleId.equals(loadedDescription.getModuleId())) {
-							descriptionsFound.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
-						} else {
-							invalidModuleDescriptions.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
-						}
-
-						if (!optionalLanguageRefsets.isEmpty() && loadedDescription.isActive() && !descriptionUpdate.isActive()) {
-							Set<String> intersectedLanguageRefsets = optionalLanguageRefsets.stream()
-									.distinct()
-									.filter(loadedDescription.getAcceptabilityMap().keySet()::contains)
-									.collect(Collectors.toSet());
-							if (!intersectedLanguageRefsets.isEmpty()) {
-								getChangeResult(changes, descriptionUpdate, DESCRIPTION_WITH_ID_COMPARATOR).addWarning("The description is referenced in following context based language reference set " + intersectedLanguageRefsets);
-							}
-						}
-					}
-				}
+				detectMatchingDescriptions(changes, loadedConcept, descriptionIdMap, defaultModuleId, descriptionsFound, invalidModuleDescriptions, optionalLanguageRefsets);
 			}
 			Set<String> descriptionIdsFound = new HashSet <>();
 			descriptionIdsFound.addAll(descriptionsFound.keySet());
@@ -443,16 +389,7 @@ public class HighLevelAuthoringService {
 
 			if(!descriptionIdMap.keySet().isEmpty()) {
 				// Split into batches
-				int batchNumber = 0;
-				for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(conceptMap.values(), request.getBatchSize())) {
-					batchNumber++;
-					String branchPath = getBatchBranch(request, batchNumber);
-
-					// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
-					for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
-						updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath);
-					}
-				}
+				processUpdateDescriptionBatch(request, changes, conceptMap, descriptionIdMap);
 			}
 
 			// Mark all changes which have not failed as successful
@@ -463,6 +400,88 @@ public class HighLevelAuthoringService {
 		}
 
 		return new ArrayList<>(changes);
+	}
+
+	private void processUpdateDescriptionBatch(ComponentTransformationRequest request, List<ChangeResult<DescriptionPojo>> changes, Map<String, ConceptPojo> conceptMap, Map<String, DescriptionPojo> descriptionIdMap) throws TimeoutException {
+		int batchNumber = 0;
+		for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(conceptMap.values(), request.getBatchSize())) {
+			batchNumber++;
+			String branchPath = getBatchBranch(request, batchNumber);
+
+			// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+			for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
+				updateDescriptionBatch(conceptProcessingBatch, descriptionIdMap, changes, branchPath);
+			}
+		}
+	}
+
+	private void detectMatchingDescriptions(List<ChangeResult<DescriptionPojo>> changes, ConceptPojo loadedConcept, Map<String, DescriptionPojo> descriptionIdMap, String defaultModuleId, Map<String, String> descriptionsFound, Map<String, String> invalidModuleDescriptions, List<String> optionalLanguageRefsets) throws BusinessServiceException {
+		for (DescriptionPojo loadedDescription : loadedConcept.getDescriptions()) {
+			DescriptionPojo descriptionUpdate = descriptionIdMap.get(loadedDescription.getDescriptionId());
+			if (descriptionUpdate == null) continue;
+			if (defaultModuleId == null || defaultModuleId.equals(loadedDescription.getModuleId())) {
+				descriptionsFound.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+			} else {
+				invalidModuleDescriptions.put(descriptionUpdate.getDescriptionId(), loadedDescription.getConceptId());
+			}
+
+			if (!optionalLanguageRefsets.isEmpty() && loadedDescription.isActive() && !descriptionUpdate.isActive()) {
+				Set<String> intersectedLanguageRefsets = optionalLanguageRefsets.stream()
+						.distinct()
+						.filter(loadedDescription.getAcceptabilityMap().keySet()::contains)
+						.collect(Collectors.toSet());
+				if (!intersectedLanguageRefsets.isEmpty()) {
+					getChangeResult(changes, descriptionUpdate, DESCRIPTION_WITH_ID_COMPARATOR).addWarning("The description is referenced in following context based language reference set " + intersectedLanguageRefsets);
+				}
+			}
+	}
+	}
+
+	private List<ConceptPojo> retrieveAllConcepts(TransformationRecipe recipe, List<DescriptionPojo> descriptions, List<ChangeResult<DescriptionPojo>> changes, String projectBranchPath) throws BusinessServiceException {
+		List<ConceptPojo> concepts = new ArrayList <>();
+		for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
+			findAndSetDescriptionIdForInactiveDescriptions(recipe, changes, descriptionProcessingBatch, projectBranchPath);
+
+			Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).filter(Objects::nonNull).collect(Collectors.toSet());
+			List<ConceptPojo> fullConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath);
+			concepts.addAll(fullConcepts.stream()
+							.filter(c1 -> concepts.stream().noneMatch(c1::equals))
+							.toList()
+			);
+		}
+		return concepts;
+	}
+
+	private void findAndSetDescriptionIdForInactiveDescriptions(TransformationRecipe recipe, List<ChangeResult<DescriptionPojo>> changes, List<DescriptionPojo> descriptionProcessingBatch, String projectBranchPath) throws BusinessServiceException {
+		if (ChangeType.INACTIVATE.equals(recipe.getChangeType())) {
+			Set<DescriptionPojo> descriptionsWithTermOnly =  descriptionProcessingBatch.stream().filter(item -> item.getDescriptionId() == null && item.getTerm() != null).collect(Collectors.toSet());
+			for (DescriptionPojo description : descriptionsWithTermOnly) {
+				findAndSetDescriptionIdForInactiveDescription(changes, projectBranchPath, description);
+			}
+		}
+	}
+
+	private void findAndSetDescriptionIdForInactiveDescription(List<ChangeResult<DescriptionPojo>> changes, String projectBranchPath, DescriptionPojo description) throws BusinessServiceException {
+		SnowstormClient.ConceptPage conceptPage = snowstormClient.fetchConceptPage(projectBranchPath, true, null, null, null, description.getTerm(), null).block();
+		if (conceptPage == null) {
+			getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Description term '%s' not found.", description.getTerm()));
+			return;
+		}
+		boolean found = false;
+		for (Concept concept : conceptPage.getItems()) {
+			ConceptPojo fullConcept = snowstormClient.getFullConcept(projectBranchPath, concept.getConceptId());
+			for (DescriptionPojo des : fullConcept.getDescriptions()) {
+				if (des.isActive() && des.isReleased() && des.getTerm().equalsIgnoreCase(description.getTerm()) && des.getLang().equals(description.getLang())) {
+					description.setDescriptionId(des.getDescriptionId());
+					found = true;
+					break;
+				}
+			}
+			if (found) break;
+		}
+		if (!found) {
+			getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Description term '%s' not found.", description.getTerm()));
+		}
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> replaceDescriptions(
