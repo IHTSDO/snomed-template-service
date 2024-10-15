@@ -4,8 +4,10 @@ import com.google.common.collect.Iterables;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.snomedboot.domain.ConceptConstants;
+import org.ihtsdo.otf.transformationandtemplate.domain.ChangeType;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
+import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.slf4j.Logger;
@@ -325,7 +327,7 @@ public class HighLevelAuthoringService {
 		}
 	}
 
-	public List<ChangeResult<? extends SnomedComponent>> updateDescriptions(
+	public List<ChangeResult<? extends SnomedComponent>> updateDescriptions(TransformationRecipe recipe,
 			ComponentTransformationRequest request, List<DescriptionPojo> descriptions, List<ChangeResult<DescriptionPojo>> changes) throws BusinessServiceException {
 
 		if (descriptions.isEmpty()) {
@@ -353,7 +355,34 @@ public class HighLevelAuthoringService {
 			// retrieve all concepts before processing update
 			List<ConceptPojo> concepts = new ArrayList <>();
 			for (List<DescriptionPojo> descriptionProcessingBatch : Iterables.partition(descriptions, processingBatchMaxSize)) {
-				Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).collect(Collectors.toSet());
+				if (ChangeType.INACTIVATE.equals(recipe.getChangeType())) {
+					Set<DescriptionPojo> descriptionsWithTermOnly =  descriptionProcessingBatch.stream().filter(item -> item.getDescriptionId() == null && item.getTerm() != null).collect(Collectors.toSet());
+					for (DescriptionPojo description : descriptionsWithTermOnly) {
+						SnowstormClient.ConceptPage conceptPage = snowstormClient.fetchConceptPage(projectBranchPath, true, null, null, null, description.getTerm(), null).block();
+						if (conceptPage != null) {
+							boolean found = false;
+							for (Concept concept : conceptPage.getItems()) {
+								ConceptPojo fullConcept = snowstormClient.getFullConcept(projectBranchPath, concept.getConceptId());
+								for (DescriptionPojo des : fullConcept.getDescriptions()) {
+									if (des.isActive() && des.isReleased() && des.getTerm().equalsIgnoreCase(description.getTerm()) && des.getLang().equals(description.getLang())) {
+										description.setDescriptionId(des.getDescriptionId());
+										found = true;
+										logger.info("Found description ID {} for term '{}'", des.getDescriptionId(), description.getTerm());
+										break;
+									}
+								}
+								if (found) break;
+							}
+							if (!found) {
+								getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Description term '%s' not found.", description.getTerm()));
+							}
+						} else {
+							getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Description term '%s' not found.", description.getTerm()));
+						}
+					}
+				}
+
+				Set<String> descriptionIds = descriptionProcessingBatch.stream().map(DescriptionPojo::getDescriptionId).filter(Objects::nonNull).collect(Collectors.toSet());
 				List<ConceptPojo> fullConcepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byDescriptionId(descriptionIds), projectBranchPath);
 				concepts.addAll(fullConcepts.stream()
 								.filter(c1 -> concepts.stream().noneMatch(c1::equals))
@@ -362,7 +391,7 @@ public class HighLevelAuthoringService {
 			}
 
 			Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
-			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
+			Map<String, DescriptionPojo> descriptionIdMap = descriptions.stream().filter(des -> des.getId() != null).collect(Collectors.toMap(DescriptionPojo::getDescriptionId, Function.identity()));
 
 			Map<String, String > descriptionsFound = new HashMap <>();
 			Map<String, String > invalidModuleDescriptions = new HashMap <>();

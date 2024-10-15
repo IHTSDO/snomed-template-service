@@ -70,7 +70,7 @@ public class DescriptionService {
 		List<ChangeResult<DescriptionPojo>> changes = new ArrayList<>();
 		List<DescriptionPojo> descriptions = new ArrayList<>();
 		readDescriptionChanges(request, recipe, changes, descriptions);
-		return authoringServiceForCurrentUser.updateDescriptions(request, descriptions, changes);
+		return authoringServiceForCurrentUser.updateDescriptions(recipe, request, descriptions, changes);
 	}
 
 	private void readDescriptionReplacementChanges(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<DescriptionReplacementPojo>> changes, List<DescriptionPojo> descriptions) throws BusinessServiceException {
@@ -147,9 +147,8 @@ public class DescriptionService {
 				ChangeResult<DescriptionPojo> changeResult = new ChangeResult<>(description);
 				changes.add(changeResult);
 
-				description.setDescriptionId(componentTransformation.getValueString("descriptionId"));
+				readDescriptionIdAndTerm(recipe, componentTransformation, description);
 				description.setConceptId(componentTransformation.getValueString("conceptId"));
-				description.setTerm(componentTransformation.getValueString("term"));
 				description.setLang(componentTransformation.getValueString("lang"));
 				description.setCaseSignificance(DescriptionPojo.CaseSignificance.fromConceptId(componentTransformation.getValueString("caseSignificanceId")));
 				description.setType(DescriptionPojo.Type.fromConceptId(componentTransformation.getValueString("typeId")));
@@ -183,6 +182,20 @@ public class DescriptionService {
 			throw new BusinessServiceException("Failed to read transformation stream.", e);
 		}
 		logger.info("{} of {} descriptions passed simple internal checks.", descriptions.size(), changes.size());
+	}
+
+	private void readDescriptionIdAndTerm(TransformationRecipe recipe, ComponentTransformation componentTransformation, DescriptionPojo description) {
+		if (recipe.getChangeType() == ChangeType.INACTIVATE) {
+			String descriptionIdOrTerm = componentTransformation.getValueString("descriptionIdOrTerm");
+			if (isValidDescriptionIdFormat(descriptionIdOrTerm)) {
+				description.setDescriptionId(descriptionIdOrTerm);
+			} else {
+				description.setTerm(descriptionIdOrTerm);
+			}
+		} else {
+			description.setDescriptionId(componentTransformation.getValueString("descriptionId"));
+			description.setTerm(componentTransformation.getValueString("term"));
+		}
 	}
 
 	// Some basic validation like identifier formats
