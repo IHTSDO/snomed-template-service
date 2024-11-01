@@ -11,6 +11,8 @@ import org.ihtsdo.otf.transformationandtemplate.service.client.SnowstormClient.C
 import org.ihtsdo.otf.transformationandtemplate.service.script.ScriptManager.ConfigItem;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.ihtsdo.otf.utils.SnomedUtilsBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.scheduler.domain.Job.ProductionStatus;
 import org.snomed.otf.scheduler.domain.JobParameter.Type;
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
  * which will check every 'Entire' (or 'All') and 'Part' BodyStructure to see if they're in the refset.
  */
 public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements JobClass {
+
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 	
 	public static final String SCTID_SE_REFSETID = "734138000";
 	public static final String SCTID_SP_REFSETID = "734139008";
@@ -132,13 +136,13 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		populateScopeExclusions();
 		//Firstly see if any inactivated concepts need to be removed,
 		//To ensure the path is clear for any new members to be added
-		info("Checking for body structure concepts recently inactivated");
+		logger.info("Checking for body structure concepts recently inactivated");
 		List<Concept> inactivatedConcepts = tsClient.findUpdatedConcepts(task.getBranchPath(), false, true, "(body structure)", null); //inactive and published
 		boolean legacy = jobRun.getParamBoolean(LEGACY);
 		
 		percentageComplete(legacy ?1:10);
-		
-		info("Checking " + inactivatedConcepts.size() + " inactive body structure concepts");
+
+		logger.info("Checking {} inactive body structure concepts", inactivatedConcepts.size());
 		removeInvalidEntries(SCTID_SE_REFSETID, inactivatedConcepts);
 		percentageComplete(legacy ?2:30);
 		
@@ -178,13 +182,13 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 	
 	private void populateScopeExclusions() throws TermServerScriptException {
-		info("Populate scope exclusions");
+		logger.info("Populate scope exclusions");
 		try {
 			List<Concept> conceptOOS = tsClient.conceptsByECL(task.getBranchPath(), mgr.getConfig(ConfigItem.SEP_OUT_OF_SCOPE));
 			outOfScope = conceptOOS.stream()
 					.map(ConceptMiniPojo::getConceptId)
 					.collect(Collectors.toSet());
-			info ("Cached " + outOfScope.size() + " concepts as being out of scope");
+			logger.info ("Cached {} concepts as being out of scope", outOfScope.size());
 		} catch (Exception e) {
 			String msg = "ECL for scope exclusion failed.  Check template-service.script.SEP.out-of-scope in application.properties";
 			throw new TermServerScriptException(msg, e);
@@ -271,7 +275,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	private void updateRefset(CacheType cacheType, String refsetId, String termFilter) throws TermServerScriptException {
 		String eclFilter = "< 123037004 |Body structure (body structure)|";
 		List<Concept> newConcepts = tsClient.findNewConcepts(task.getBranchPath(), eclFilter, termFilter);
-		info("Recovered " + newConcepts.size() + " new " + termFilter + " concepts");
+		logger.info("Recovered {} new {} concepts", newConcepts.size(), termFilter);
 		if (newConcepts.size() > 0) {
 			updateRefset(cacheType, refsetId, termFilter, newConcepts);
 		}
@@ -284,7 +288,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				.filter(this::isStructure)
 				.collect(Collectors.toSet());
 		populateMemberCache(CacheType.ReferencedComponent, newSConcepts, false);
-		info("Recovered " + newSConcepts.size() + " new structure concepts");
+		logger.info("Recovered {} new structure concepts", newSConcepts.size());
 		
 		//Also search for active, published concepts with a null effective time to identify re-activations.
 		//Note will also pick up changes to definition status, so we might see some false positives 
@@ -294,10 +298,10 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				.filter(this::isStructure)
 				.collect(Collectors.toSet());
 		populateMemberCache(CacheType.ReferencedComponent, newSConcepts, false);
-		info("Recovered " + reactivatedSConcepts.size() + " reactivated structure concepts");
+		logger.info("Recovered {} reactivated structure concepts", reactivatedSConcepts.size());
 		
 		newSConcepts.addAll(reactivatedSConcepts);
-		info("Recovered " + newSConcepts.size() + " unique new or reactivated structure concepts");
+		logger.info("Recovered {} unique new or reactivated structure concepts", newSConcepts.size());
 		
 		for (Concept c : newSConcepts) {
 			final List<Concept> children = tsClient.getChildren(task.getBranchPath(), c.getConceptId());
@@ -355,7 +359,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			//If it's not a body structure, don't even mention it
 			//And I'm not sure why we're seeing these with that eclFilter above!
 			if (!c.getFsnTerm().contains("(body structure)")) {
-				debug("ECL filter for Body Structure is not doing it's job: " + c);
+				logger.debug("ECL filter for Body Structure is not doing it's job: {}", c);
 				continue nextNewConcept;
 			}
 			//Ensure the FSN starts with the term filter
@@ -456,7 +460,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		for (Concept c : inactivatedConcepts) {
 			try {
 			List<RefsetMemberPojo> rmToInactivate = null;
-				debug ("Checking for existing SEP refset entries for " + c);
+				logger.debug ("Checking for existing SEP refset entries for {}", c);
 				if (isStructure(c)) {
 					rmToInactivate = getRefsetMembers(CacheType.ReferencedComponent, refsetId, c.getId(), true);
 				} else if (isPart(c) || isEntire(c)) {
@@ -494,7 +498,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				}
 			} catch (Exception e) {
 				String msg = ExceptionUtils.getExceptionCause("Failed to inactivate any refset entries relating to " + c, e);
-				error(msg, e);
+				logger.error(msg, e);
 				report(c, Severity.HIGH, ReportActionType.API_ERROR, msg);
 			}
 		}
@@ -518,7 +522,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 		
 		if (!missedCache.isEmpty()) {
 			String missedCacheStr = missedCache.stream().collect(Collectors.joining(", "));
-			warn(cacheType + " refset cache miss for " + missedCacheStr);
+			logger.warn("{} refset cache miss for {}", cacheType, missedCacheStr);
 			populateMemberCache(cacheType, missedCache, false);
 		}
 		
@@ -590,7 +594,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	}
 
 	private void checkAllConcepts(int startingPercentage, CacheType cacheType, String refsetId, String termFilter) throws TermServerScriptException {
-		info ("Checking all legacy '" + termFilter + "' concepts for potential inclusion");
+		logger.info("Checking all legacy '{}' concepts for potential inclusion", termFilter);
 		//Loop through all Body Structures containing 'termFilter' text
 		//Get published concepts because new ones will already have been examined
 		ConceptPage page = tsClient.fetchConceptPageBlocking(task.getBranchPath(), true, BODY_STRUCTURE_ECL, termFilter, null);
@@ -609,7 +613,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			//Do we already have refset members for these concepts?
 			//List<RefsetMemberPojo> existing = tsClient.findRefsetMemberByTargetComponentIds(task.getBranchPath(), refsetId, conceptMap.keySet(), true);
 			List<RefsetMemberPojo> existing =  getRefsetMembers(CacheType.TargetConcept, refsetId, conceptMap.keySet(), true);
-			info (existing.size() + " / " + conceptMap.size() + " '" + termFilter + "' already have refset entries");
+			logger.info("{} / {} '{}' already have refset entries", existing.size(), conceptMap.size(), termFilter);
 			existing.forEach(rm -> conceptMap.remove(rm.getAdditionalFields().getTargetComponentId()));
 			
 			//Attempt to add these 
@@ -662,7 +666,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 			sctIds.removeAll(cachedMembers);
 		} else {
 			String sctIdsStr = sctIds.stream().collect(Collectors.joining(", "));
-			warn (cacheType + " forced refresh of " + sctIdsStr + " requires investigation");
+			logger.warn("{} forced refresh of {} requires investigation", cacheType, sctIdsStr);
 		}
 		
 		//If we've no sctIds left to find, then job done!
@@ -697,7 +701,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				miniConceptCache.put(member.getReferencedComponentId(), member.getReferencedComponent());
 			}
 		}
-		debug("Populated caches with " + members.size() + " refset members");
+		logger.debug("Populated caches with {} refset members",  members.size());
 	}
 
 	private void prePopulateMemberCaches(Map<String, Map<String, Set<RefsetMemberPojo>>> caches, Set<String> sctIds) {
@@ -732,7 +736,7 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 
 	private IConcept getConcept(String sctId) {
 		if (!miniConceptCache.containsKey(sctId)) {
-			warn ("Cache miss for " + sctId);
+			logger.warn("Cache miss for {}", sctId);
 			populateConceptCache(sctId);
 		}
 		return miniConceptCache.get(sctId);

@@ -82,10 +82,10 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 				task = asClient.createTask(jobRun.getProject(), taskTitle, "Report in progress");
 				jobRun.setStatus(JobStatus.Scheduled);
 				jobRun.setResultUrl(task.getKey());
-				logger.info("Created task " + task.getKey());
+				logger.info("Created task {}", task.getKey());
 			} else {
 				task = asClient.getTask(jobRun.getProject(), jobRun.getTask());
-				logger.info("Running in existing task " + task.getKey());
+				logger.info("Running in existing task {}", task.getKey());
 			}
 		} catch (Exception e) {
 			throw new TermServerScriptException("Unable to establish task in " + jobRun.getProject(), e);
@@ -104,31 +104,31 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		try {
 			String url = createGoogleSheet();
 			updateTaskDescription(getLink(url), false);
-			info ("Updated task with result sheet url");
+			logger.info("Updated task with result sheet url");
 			runJob();
-			info (this.getClass().getName() + " processing complete.  Updating task " + task.getKey());
+			logger.info("{} processing complete.  Updating task {}", this.getClass().getName(), task.getKey());
 			updateTaskTitleState("Complete");
-			info (task.getKey() + " " + this.getClass().getSimpleName() + " batch job completed successfully");
+			logger.info("{} {} batch job completed successfully", task.getKey(), this.getClass().getSimpleName());
 		} catch (Exception e) {
 			String msg = ExceptionUtils.getExceptionCause("Batch job " + task.getKey() + " failed", e);
-			error(msg,e);
+			logger.error(msg,e);
 			try {
 				updateTaskTitleState("Failed");
 				updateTaskDescription(msg, true);
 			} catch (Exception e2) {
-				error("Failure during processing (see above) coupled with failure to update task to indicate failure", e2);
+				logger.error("Failure during processing (see above) coupled with failure to update task to indicate failure", e2);
 			} finally {
 				try {
 					reportManager.flushFiles(true);
 				} catch (Exception e3) {
-					error("Failure during cleanup", e3);
+					logger.error("Failure during cleanup", e3);
 				}
 			}
 		}
 	}
 	
 	protected void percentageComplete(int i) {
-		info (i + "% complete");
+		logger.info ("{}% complete", i);
 		updateTaskTitleState("Running - " + i + "%");
 	}
 
@@ -176,12 +176,12 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		//Has this rm been published?
 		try {
 			if (StringUtils.isEmpty(rm.getReleasedEffectiveTime())) {
-				info("Deleting " + rm);
+				logger.info("Deleting {}", rm);
 				tsClient.deleteRefsetMember(task.getBranchPath(), rm);
 				report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_DELETED, "", rm);
 				rm = null;
 			} else {
-				info("Inactivating " + rm);
+				logger.info("Inactivating {}", rm);
 				rm.setActive(false);
 				tsClient.updateRefsetMember(task.getBranchPath(), rm);
 				report(c, Severity.LOW, ReportActionType.REFSET_MEMBER_INACTIVATED, "", rm);
@@ -201,7 +201,7 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 			semTag = SnomedUtilsBase.deconstructFSN(c.getFsnTerm(), true)[1];
 		} catch (Exception e) {
 			//Allow for some issue with FSN
-			debug("FSN related exception while trying to report for " + c.getConceptId() + ": " + e);
+			logger.debug("FSN related exception while trying to report for {}: {}",  c.getConceptId(), e.getMessage());
 		}
 		return report(TAB_0, task, c.getConceptId(), c.getFsnTerm(), semTag, severity, action, details);
 	}
