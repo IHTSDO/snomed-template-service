@@ -8,10 +8,11 @@
 	"fieldMap": {
 		"descriptionIdOrTerm": "$tsv.0",
 		"lang": "$tsv.1",
-		"preferredTerm": "$tsv.2",
-		"term": "$tsv.3",
-		"inactivationIndicator": "$tsv.4|map-constant",
-		"associationTargets": ["$tsv.5", "$tsv.6", "$tsv.7", "$tsv.8"],
-		"notes": "$tsv.9"
+		"conceptId": "$tsv.2",
+		"preferredTerm": "$tsv.3",
+		"term": "$tsv.4",
+		"inactivationIndicator": "$tsv.5|map-constant",
+		"associationTargets": ["$tsv.6", "$tsv.7", "$tsv.8", "$tsv.9"],
+		"notes": "$tsv.10"
 	}
 }

@@ -12,6 +12,7 @@ import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClientException;
 
 import java.util.*;
@@ -471,7 +472,8 @@ public class HighLevelAuthoringService {
 		for (Concept concept : conceptPage.getItems()) {
 			ConceptPojo fullConcept = snowstormClient.getFullConcept(projectBranchPath, concept.getConceptId());
 			for (DescriptionPojo des : fullConcept.getDescriptions()) {
-				if (des.isActive() && des.isReleased() && des.getTerm().equalsIgnoreCase(description.getTerm()) && des.getLang().equals(description.getLang())) {
+				if (des.isActive() && des.isReleased() && des.getTerm().equalsIgnoreCase(description.getTerm()) && des.getLang().equals(description.getLang())
+					&& (!StringUtils.hasLength(description.getConceptId()) || description.getConceptId().equals(des.getConceptId()))) {
 					description.setDescriptionId(des.getDescriptionId());
 					found = true;
 					break;
