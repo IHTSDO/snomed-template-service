@@ -230,7 +230,7 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
-	public void testUpdateDesriptionAgainstInvalidModule() throws BusinessServiceException, InterruptedException, TimeoutException {
+	public void testUpdateDescriptionAgainstInvalidModule() throws BusinessServiceException, InterruptedException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-101";
 
 		DescriptionPojo enDescription = new DescriptionPojo("Test").setDescriptionId("2148514019");
