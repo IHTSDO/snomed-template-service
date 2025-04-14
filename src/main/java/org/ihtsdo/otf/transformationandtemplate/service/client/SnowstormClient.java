@@ -4,12 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Branch;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptChangeBatchStatus;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.CodeSystemVersion;
-import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ItemsPage;
+import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.utils.ExceptionUtils;
 import org.slf4j.Logger;
@@ -84,11 +79,26 @@ public class SnowstormClient {
 				.body(BodyInserters.fromValue(conceptPojos))
 				.exchange()
 				.block();
-		String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
-		logger.info("Bulk update job url: {}", locationHeader);
 
-		int maxWaitSeconds = conceptPojos.size() * 10_000;
-		return getBatchStatus(locationHeader, maxWaitSeconds);
+		if (bulkUpdateResponse != null) {
+            bulkUpdateResponse.statusCode();
+            if (bulkUpdateResponse.statusCode().is2xxSuccessful()) {
+                String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
+                logger.info("Bulk update job url: {}", locationHeader);
+
+                int maxWaitSeconds = conceptPojos.size() * 10_000;
+                return getBatchStatus(locationHeader, maxWaitSeconds);
+            } else {
+				try {
+					bulkUpdateResponse.createException().flatMap(Mono::error).block();
+					return null;
+				} catch (Exception e) {
+					return new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.FAILED, e.getMessage());
+				}
+			}
+        } else {
+			return new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.FAILED, "Could not get the Header Location as response is null");
+		}
 	}
 
 	public String getDefaultModuleId(String branchPath) {
