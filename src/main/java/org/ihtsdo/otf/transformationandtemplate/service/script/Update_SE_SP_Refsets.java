@@ -363,7 +363,9 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 				continue nextNewConcept;
 			}
 			//Ensure the FSN starts with the term filter
-			if (!c.getFsnTerm().startsWith(termFilter + " ")) {
+			boolean startsWith = c.getFsnTerm().startsWith(termFilter + " ");
+			boolean endsWith = c.getFsnTerm().replace(" (body structure)", "").endsWith(termFilter.toLowerCase());
+			if (!startsWith && !endsWith) {
 				report(c, Severity.HIGH, ReportActionType.VALIDATION_CHECK, "FSN did not start with expected '" + termFilter + "'");
 				continue nextNewConcept;
 			}
