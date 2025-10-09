@@ -290,10 +290,7 @@ public class HighLevelAuthoringService {
 			// Set the existing PT automatically to acceptable if any
 			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty() && !updatedDescriptionTypes.isEmpty()) {
 				for (DescriptionPojo description : conceptPojo.getDescriptions()) {
-					if (description.isActive() &&
-						(defaultModuleId == null || defaultModuleId.equals(description.getModuleId())) &&
-						!description.getDescriptionId().contains("-") &&
-						updatedDescriptionTypes.contains(description.getType())) {
+					if (description.isActive() && !description.getDescriptionId().contains("-") && updatedDescriptionTypes.contains(description.getType())) {
 						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
 						for (String languageRefset : acceptabilityMap.keySet()) {
 							if (PREFERRED.equals(acceptabilityMap.get(languageRefset)) && preferredLanguageRefsets.contains(languageRefset)) {
