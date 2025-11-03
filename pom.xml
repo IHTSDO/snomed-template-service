@@ -238,6 +238,15 @@
                                             </mapper>
                                         </data>
                                         <data>
+                                            <src>${basedir}/transformation-templates</src>
+                                            <dst>transformation-templates</dst>
+                                            <type>directory</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/opt/${project.artifactId}/transformation-templates</prefix>
+                                            </mapper>
+                                        </data>
+                                        <data>
                                             <src>${basedir}/src/deb/supervisor.conf</src>
                                             <dst>/etc/supervisor/conf.d/${project.artifactId}.conf</dst>
                                             <type>file</type>

@@ -10,16 +10,24 @@ import org.ihtsdo.otf.transformationandtemplate.domain.*;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.DescriptionReplacementPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.ComponentTransformService;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static java.lang.String.format;
@@ -30,6 +38,86 @@ public class TransformationController {
 	public static final String TAB = "\t";
 	@Autowired
 	private ComponentTransformService componentTransformService;
+
+	@Value("${transfromationTemplateStorePath}")
+	private String transformationTemplateStorePath;
+
+	private volatile String cachedLatestVersion = null;
+
+	@GetMapping(value = "/transformation/template/download", produces = "application/octet-stream")
+	public void downloadTransformationTemplate(HttpServletResponse response) throws IOException, ResourceNotFoundException {
+		String latestVersion = getLatestTransformationTemplateVersion();
+		if (latestVersion == null || latestVersion.isEmpty()) {
+			throw new ResourceNotFoundException("Transformation template", "No version found");
+		}
+
+		File templateDir = new File(transformationTemplateStorePath, latestVersion);
+		if (!templateDir.exists() || !templateDir.isDirectory()) {
+			throw new ResourceNotFoundException("Transformation template", "Version directory: " + latestVersion);
+		}
+
+		// Find the Excel file in the version directory
+		File[] files = templateDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".xlsx") || name.toLowerCase().endsWith(".xls"));
+		if (files == null || files.length == 0) {
+			throw new ResourceNotFoundException("Transformation template", "Excel file not found in version: " + latestVersion);
+		}
+
+		// Use the first Excel file found (assuming there's only one)
+		File templateFile = files[0];
+
+		// Set response headers
+		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		response.setHeader("Content-Disposition", format("attachment; filename=\"%s\"", templateFile.getName()));
+		response.setContentLengthLong(templateFile.length());
+
+		// Stream the file to the response
+		try (InputStream inputStream = new FileInputStream(templateFile);
+			 OutputStream outputStream = response.getOutputStream()) {
+			byte[] buffer = new byte[8192];
+			int bytesRead;
+			while ((bytesRead = inputStream.read(buffer)) != -1) {
+				outputStream.write(buffer, 0, bytesRead);
+			}
+			outputStream.flush();
+		}
+	}
+
+	@GetMapping(value = "/transformation/template/version")
+	public String getLatestTransformationTemplateVersion() {
+		// Return cached version if available
+		String cached = cachedLatestVersion;
+		if (cached != null) {
+			return cached;
+		}
+
+		// Compute and cache the latest version (thread-safe)
+		synchronized (this) {
+			// Double-check after acquiring lock
+			if (cachedLatestVersion != null) {
+				return cachedLatestVersion;
+			}
+
+			File templateStoreDir = new File(transformationTemplateStorePath);
+			if (!templateStoreDir.exists() || !templateStoreDir.isDirectory()) {
+				return null;
+			}
+
+			File[] versionDirs = templateStoreDir.listFiles(File::isDirectory);
+			if (versionDirs == null || versionDirs.length == 0) {
+				return null;
+			}
+
+			// Find the latest version by comparing version numbers
+			Optional<String> latestVersion = Arrays.stream(versionDirs)
+					.map(File::getName)
+					.filter(this::isValidVersionFormat)
+					.max(this::compareVersions);
+
+			cachedLatestVersion = latestVersion.orElse(null);
+			return cachedLatestVersion;
+		}
+	}
+	
 
 	@RequestMapping(value = "/{branchPath}/recipes", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
@@ -208,6 +296,26 @@ public class TransformationController {
 				));
 			}
 		}
+	}
+
+	private boolean isValidVersionFormat(String version) {
+		// Version format should be like "2.20", "1.0", etc. (numeric with dots)
+		return version.matches("^\\d+(\\.\\d+)*$");
+	}
+
+	private int compareVersions(String v1, String v2) {
+		String[] parts1 = v1.split("\\.");
+		String[] parts2 = v2.split("\\.");
+		int maxLength = Math.max(parts1.length, parts2.length);
+
+		for (int i = 0; i < maxLength; i++) {
+			int part1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+			int part2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+			if (part1 != part2) {
+				return Integer.compare(part1, part2);
+			}
+		}
+		return 0;
 	}
 
 }
