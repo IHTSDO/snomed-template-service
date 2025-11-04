@@ -6,7 +6,7 @@ BRANCH='main'
 TRANSFORMATION_TEMPLATE_DIR=snomed-international-resources
 
 # Remove the directory if it exists
-rm -rf TRANSFORMATION_TEMPLATE_DIR
+rm -rf $TRANSFORMATION_TEMPLATE_DIR
 
 
 # Clone the repository containing the resources
