@@ -192,6 +192,27 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Exec Maven Plugin to run Git commands -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>git-checkout-resources</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <arguments>
+                                <argument>checkout-resources.sh</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -238,7 +259,7 @@
                                             </mapper>
                                         </data>
                                         <data>
-                                            <src>${basedir}/transformation-templates</src>
+                                            <src>${basedir}/snomed-international-resources/static/batch/authoring-platform</src>
                                             <dst>transformation-templates</dst>
                                             <type>directory</type>
                                             <mapper>

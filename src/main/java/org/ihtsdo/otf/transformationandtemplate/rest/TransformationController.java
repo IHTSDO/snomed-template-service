@@ -2,15 +2,16 @@ package org.ihtsdo.otf.transformationandtemplate.rest;
 
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.AxiomPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.DescriptionPojo;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
+import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.ihtsdo.otf.transformationandtemplate.domain.*;
 import org.ihtsdo.otf.transformationandtemplate.service.client.ChangeResult;
 import org.ihtsdo.otf.transformationandtemplate.service.client.DescriptionReplacementPojo;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.ComponentTransformService;
-import org.ihtsdo.otf.rest.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -18,16 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.util.Arrays;
+import java.io.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static java.lang.String.format;
@@ -39,27 +32,28 @@ public class TransformationController {
 	@Autowired
 	private ComponentTransformService componentTransformService;
 
-	@Value("${transfromationTemplateStorePath}")
+	@Value("${transformationTemplateStorePath}")
 	private String transformationTemplateStorePath;
 
-	private volatile String cachedLatestVersion = null;
+	@Value("${transformationTemplateFilenamePrefix}")
+	private String transformationTemplateFilenamePrefix;
+
+	@Value("${transformationTemplateVersion}")
+	private String transformationTemplateVersion;
 
 	@GetMapping(value = "/transformation/template/download", produces = "application/octet-stream")
 	public void downloadTransformationTemplate(HttpServletResponse response) throws IOException, ResourceNotFoundException {
-		String latestVersion = getLatestTransformationTemplateVersion();
-		if (latestVersion == null || latestVersion.isEmpty()) {
-			throw new ResourceNotFoundException("Transformation template", "No version found");
-		}
 
-		File templateDir = new File(transformationTemplateStorePath, latestVersion);
+		File templateDir = new File(transformationTemplateStorePath);
 		if (!templateDir.exists() || !templateDir.isDirectory()) {
-			throw new ResourceNotFoundException("Transformation template", "Version directory: " + latestVersion);
+			throw new ResourceNotFoundException("No transformation template found");
 		}
 
 		// Find the Excel file in the version directory
-		File[] files = templateDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".xlsx") || name.toLowerCase().endsWith(".xls"));
+		String transformationTemplateFilename = transformationTemplateFilenamePrefix + "_v" + transformationTemplateVersion;
+		File[] files = templateDir.listFiles((dir, name) -> name.equalsIgnoreCase(transformationTemplateFilename + ".xlsx") || name.equalsIgnoreCase(transformationTemplateFilename + ".xls"));
 		if (files == null || files.length == 0) {
-			throw new ResourceNotFoundException("Transformation template", "Excel file not found in version: " + latestVersion);
+			throw new ResourceNotFoundException("Transformation template", "Excel file not found in version: " + transformationTemplateVersion);
 		}
 
 		// Use the first Excel file found (assuming there's only one)
@@ -83,39 +77,8 @@ public class TransformationController {
 	}
 
 	@GetMapping(value = "/transformation/template/version")
-	public String getLatestTransformationTemplateVersion() {
-		// Return cached version if available
-		String cached = cachedLatestVersion;
-		if (cached != null) {
-			return cached;
-		}
-
-		// Compute and cache the latest version (thread-safe)
-		synchronized (this) {
-			// Double-check after acquiring lock
-			if (cachedLatestVersion != null) {
-				return cachedLatestVersion;
-			}
-
-			File templateStoreDir = new File(transformationTemplateStorePath);
-			if (!templateStoreDir.exists() || !templateStoreDir.isDirectory()) {
-				return null;
-			}
-
-			File[] versionDirs = templateStoreDir.listFiles(File::isDirectory);
-			if (versionDirs == null || versionDirs.length == 0) {
-				return null;
-			}
-
-			// Find the latest version by comparing version numbers
-			Optional<String> latestVersion = Arrays.stream(versionDirs)
-					.map(File::getName)
-					.filter(this::isValidVersionFormat)
-					.max(this::compareVersions);
-
-			cachedLatestVersion = latestVersion.orElse(null);
-			return cachedLatestVersion;
-		}
+	public String getTransformationTemplateVersion() {
+		return transformationTemplateVersion;
 	}
 	
 
@@ -300,7 +263,32 @@ public class TransformationController {
 
 	private boolean isValidVersionFormat(String version) {
 		// Version format should be like "2.20", "1.0", etc. (numeric with dots)
-		return version.matches("^\\d+(\\.\\d+)*$");
+		if (version == null || version.isEmpty()) {
+			return false;
+		}
+		// Avoid regex to prevent stack overflow - validate manually
+		String[] parts = version.split("\\.");
+		if (parts.length == 0) {
+			return false;
+		}
+		for (String part : parts) {
+			if (part.isEmpty() || !isNumeric(part)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isNumeric(String str) {
+		if (str == null || str.isEmpty()) {
+			return false;
+		}
+		for (char c : str.toCharArray()) {
+			if (!Character.isDigit(c)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private int compareVersions(String v1, String v2) {
