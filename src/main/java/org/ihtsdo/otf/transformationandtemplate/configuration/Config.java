@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import jakarta.servlet.http.HttpServletResponse;
 import org.ihtsdo.otf.rest.client.terminologyserver.SnowstormRestClientFactory;
 import org.ihtsdo.otf.transformationandtemplate.service.JsonStore;
 import org.ihtsdo.otf.transformationandtemplate.service.componenttransform.valueprovider.ValueProviderFactory;
@@ -29,7 +30,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
-import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.web.client.RestTemplate;
@@ -37,8 +37,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @EnableWebSecurity
 @Configuration
@@ -141,9 +139,19 @@ public class Config {
 						.anyRequest()
 						.authenticated()
 		);
-		http.httpBasic(withDefaults());
 		http.csrf(AbstractHttpConfigurer::disable);
 		http.addFilterBefore(new RequestHeaderAuthenticationDecorator(), AuthorizationFilter.class);
+
+		// Configure exception handling to prevent Basic Auth popup
+		// Returns JSON response instead of triggering browser Basic Auth popup
+		http.exceptionHandling(exceptions -> exceptions
+				.authenticationEntryPoint((request, response, authException) -> {
+					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+					response.setContentType("application/json;charset=UTF-8");
+					String message = authException.getMessage() != null ? authException.getMessage().replace("\"", "\\\"") : "Authentication required";
+					response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + message + "\"}");
+				})
+		);
 
 		return http.build();
 	}
