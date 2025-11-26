@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.otf.scheduler.domain.*;
 import org.snomed.otf.script.dao.ReportManager;
+import org.springframework.context.ApplicationContext;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -72,8 +73,8 @@ public class Update_Lat_Refset extends AuthoringPlatformScript {
 	 */
 	private int failed = 0;
 
-	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr) {
-		super(jobRun, mgr);
+	public Update_Lat_Refset(JobRun jobRun, ScriptManager mgr, ApplicationContext appContext) {
+		super(jobRun, mgr, appContext);
 	}
 
 	@Override

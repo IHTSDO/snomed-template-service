@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import org.springframework.context.ApplicationContext;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -42,6 +44,9 @@ public class ScriptManager {
 
 	@Autowired
 	private PermissionService permissionService;
+
+	@Autowired
+	private ApplicationContext applicationContext;
 	
 	@Value("${template-service.script.SEP.out-of-scope}")
 	private String SEPOutOfScope;
@@ -88,7 +93,7 @@ public class ScriptManager {
 		for (Class<? extends JobClass> jobClass : jobClasses) {
 			if (!Modifier.isAbstract(jobClass.getModifiers())) {
 				try {
-						Job thisJob = instantiate(jobClass, null).getJob();
+						Job thisJob = instantiate(jobClass, null, null).getJob();
 						logger.info("Registering known job: {}", thisJob.getName());
 						knownJobMap.put(thisJob.getName(), jobClass);
 						knownJobs.add(thisJob);
@@ -110,7 +115,7 @@ public class ScriptManager {
 			} else if (!knownJobMap.containsKey(jobRun.getJobName())) {
 				throw new TermServerScriptException("Unable to run unknown job '" + jobRun.getJobName() + "'");
 			}
-			JobClass jobInstance = instantiate(knownJobMap.get(jobRun.getJobName()), jobRun);
+			JobClass jobInstance = instantiate(knownJobMap.get(jobRun.getJobName()), jobRun, applicationContext);
 			jobInstance.initialise();
 			executor.execute(jobInstance);
 		} catch (Exception e) {
@@ -141,10 +146,10 @@ public class ScriptManager {
 		}
 	}
 
-	private JobClass instantiate(Class<? extends JobClass> jobClass, JobRun jobRun) throws TermServerScriptException {
+	private JobClass instantiate(Class<? extends JobClass> jobClass, JobRun jobRun, ApplicationContext appContext) throws TermServerScriptException {
 		try {
-			Constructor<? extends JobClass> constructor = jobClass.getDeclaredConstructor(JobRun.class, this.getClass());
-            return constructor.newInstance(jobRun, this);
+			Constructor<? extends JobClass> constructor = jobClass.getDeclaredConstructor(JobRun.class, this.getClass(), ApplicationContext.class);
+            return constructor.newInstance(jobRun, this, appContext);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			throw new TermServerScriptException("Failed to instantiate " + jobClass.getName(), e);

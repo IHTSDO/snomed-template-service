@@ -19,6 +19,7 @@ import org.snomed.otf.scheduler.domain.JobParameter.Type;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import org.springframework.context.ApplicationContext;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -112,8 +113,8 @@ public class Update_SE_SP_Refsets extends AuthoringPlatformScript implements Job
 	
 	private final HistoricalAssociation[] associationTypes = new HistoricalAssociation[] { HistoricalAssociation.SAME_AS, HistoricalAssociation.REPLACED_BY, HistoricalAssociation.ALTERNATIVE, HistoricalAssociation.POSSIBLY_EQUIVALENT_TO };
 
-	public Update_SE_SP_Refsets(JobRun jobRun, ScriptManager mgr) {
-		super(jobRun, mgr);
+	public Update_SE_SP_Refsets(JobRun jobRun, ScriptManager mgr, ApplicationContext appContext) {
+		super(jobRun, mgr, appContext);
 	}
 
 	@Override

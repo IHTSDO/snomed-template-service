@@ -5,7 +5,7 @@ import spock.lang.Specification
 class Update_Lat_RefsetTest extends Specification {
     def "test extractShortName valid input : #input"() {
         given: "A branchPath"
-            Update_Lat_Refset updateLatRefset = new Update_Lat_Refset(null, null)
+            Update_Lat_Refset updateLatRefset = new Update_Lat_Refset(null, null, null)
 
         expect:
             output == updateLatRefset.extractShortName(input)
@@ -23,7 +23,7 @@ class Update_Lat_RefsetTest extends Specification {
 
     def "test extractShortName invalid input : #input"() {
         given: "A branchPath"
-            Update_Lat_Refset updateLatRefset = new Update_Lat_Refset(null, null)
+            Update_Lat_Refset updateLatRefset = new Update_Lat_Refset(null, null, null)
 
         when:
             updateLatRefset.extractShortName(input)

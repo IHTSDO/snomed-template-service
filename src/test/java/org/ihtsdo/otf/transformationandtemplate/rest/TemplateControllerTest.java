@@ -17,9 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.snomed.authoringtemplate.domain.ConceptOutline;
 import org.snomed.authoringtemplate.domain.ConceptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
+@ComponentScan(basePackages = "org.ihtsdo.otf.transformationandtemplate")
 public class TemplateControllerTest extends AbstractTest {
 
 	@Autowired

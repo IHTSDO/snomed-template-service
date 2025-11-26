@@ -15,6 +15,7 @@ import org.snomed.otf.scheduler.domain.JobRun;
 import org.snomed.otf.scheduler.domain.JobStatus;
 import org.snomed.otf.script.Script;
 import org.snomed.otf.script.dao.*;
+import org.springframework.context.ApplicationContext;
 
 public abstract class AuthoringPlatformScript extends Script implements JobClass {
 	
@@ -28,9 +29,10 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 	protected SnowstormClient tsClient;
 	protected AuthoringServicesClient asClient;
 	
-	AuthoringPlatformScript (JobRun jobRun, ScriptManager mgr) {
+	AuthoringPlatformScript (JobRun jobRun, ScriptManager mgr, ApplicationContext appContext) {
 		this.jobRun = jobRun;
 		this.mgr = mgr;
+		this.appContext = appContext;
 	}
 	
 	@Override
