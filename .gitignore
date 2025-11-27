@@ -6,3 +6,4 @@ application-*.properties
 *.sh
 store
 secure/
+snomed-international-resources/
