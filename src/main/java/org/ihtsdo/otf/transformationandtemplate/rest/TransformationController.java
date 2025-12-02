@@ -137,7 +137,7 @@ public class TransformationController {
 		return componentTransformService.loadTransformationJob(branchPath, jobId);
 	}
 
-	@RequestMapping(value = "/{branchPath}/recipes/{recipe}/jobs/{jobId}/result-tsv", method = RequestMethod.GET, produces = "text/csv")
+	@RequestMapping(value = "/{branchPath}/recipes/{recipe}/jobs/{jobId}/result-tsv", method = RequestMethod.GET)
 	@ResponseBody
 	public void getTransformationJobResultAsTsv(
 			@PathVariable String branchPath,
