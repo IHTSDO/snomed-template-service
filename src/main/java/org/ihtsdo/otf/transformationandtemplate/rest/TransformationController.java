@@ -150,28 +150,33 @@ public class TransformationController {
 
 		TransformationRecipe transformationRecipe = componentTransformService.loadRecipeOrThrow(branchPath, recipe);
 		ComponentType componentType = transformationRecipe.getComponent();
-		ChangeType chanageType = transformationRecipe.getChangeType();
+		ChangeType changeType = transformationRecipe.getChangeType();
+
+		// Validate component type before setting headers to avoid content type conflicts
+		if (componentType != ComponentType.DESCRIPTION && 
+			componentType != ComponentType.AXIOM && 
+			componentType != ComponentType.CONCEPT) {
+			throw new BusinessServiceException(format("Writing TSV for type %s is not yet implemented.", componentType));
+		}
 
 		if (componentType == ComponentType.DESCRIPTION) {
-			setTSVHeaders(jobId, servletResponse);
-			if (ChangeType.REPLACE == chanageType) {
+			if (ChangeType.REPLACE == changeType) {
 				List<ChangeResult<DescriptionReplacementPojo>> changeResults = componentTransformService.loadDescriptionReplacementTransformationJobResults(branchPath, jobId);
+				setTSVHeaders(jobId, servletResponse);
 				writeDescriptionReplacementResults(changeResults, servletResponse);
 			} else {
 				List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, jobId);
+				setTSVHeaders(jobId, servletResponse);
 				writeDescriptionResults(changeResults, servletResponse);
 			}
-
 		} else if (componentType == ComponentType.AXIOM) {
 			List<ChangeResult<AxiomPojo>> changeResults = componentTransformService.loadAxiomTransformationJobResults(branchPath, jobId);
 			setTSVHeaders(jobId, servletResponse);
 			writeAxiomResults(changeResults, servletResponse);
-		} else if (componentType == ComponentType.CONCEPT) {
+		} else {
 			List<ChangeResult<ConceptPojo>> changeResults = componentTransformService.loadConceptTransformationJobResults(branchPath, jobId);
 			setTSVHeaders(jobId, servletResponse);
 			writeConceptResults(changeResults, servletResponse);
-		} else {
-			throw new BusinessServiceException(format("Writing TSV for type %s is not yet implemented.", componentType));
 		}
 	}
 
