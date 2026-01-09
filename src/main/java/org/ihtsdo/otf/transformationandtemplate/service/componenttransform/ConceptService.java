@@ -44,6 +44,9 @@ public class ConceptService {
         if (ChangeType.CREATE.equals(recipe.getChangeType())) {
 			return createConcepts(recipe, request);
 		}
+		if (ChangeType.EDIT.equals(recipe.getChangeType())) {
+			return addConceptsToEdit(recipe, request);
+		}
 		throw new ProcessingException(format("Change type %s for component %s is not implemented.", recipe.getChangeType(), recipe.getChangeType()));
 	}
 
@@ -55,6 +58,31 @@ public class ConceptService {
 		return authoringServiceForCurrentUser.createConcepts(request, concepts, changes);
 	}
 
+	private List<ChangeResult<? extends SnomedComponent>> addConceptsToEdit(TransformationRecipe recipe, ComponentTransformationRequest request) throws BusinessServiceException {
+		HighLevelAuthoringService authoringServiceForCurrentUser = authoringServiceFactory.createServiceForCurrentUser(request.isSkipDroolsValidation());
+		List<ChangeResult<ConceptPojo>> changes = new ArrayList<>();
+		List<ConceptPojo> concepts = new ArrayList<>();
+		readConceptsToEdit(request, recipe, changes, concepts);
+		return authoringServiceForCurrentUser.addConceptsToEdit(request, concepts, changes);
+    }
+
+
+	private void readConceptsToEdit(ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<ConceptPojo>> changes, List<ConceptPojo> concepts) throws BusinessServiceException {
+		try (TransformationStream transformationStream = transformationStreamFactory.createTransformationStream(recipe, request)) {
+			ComponentTransformation componentTransformation;
+			while ((componentTransformation = transformationStream.next()) != null) {
+				String conceptId = componentTransformation.getValueString("conceptId");
+				ConceptPojo concept = new ConceptPojo();
+				concept.setConceptId(conceptId);
+				concepts.add(concept);
+
+				ChangeResult<ConceptPojo> changeResult = new ChangeResult<>(concept);
+				changes.add(changeResult);
+			}
+		} catch (IOException e) {
+			throw new BusinessServiceException("Failed to read transformation stream.", e);
+		}
+	}
 
 	private void readNewConceptChanges(HighLevelAuthoringService highLevelAuthoringService, ComponentTransformationRequest request, TransformationRecipe recipe, List<ChangeResult<ConceptPojo>> changes, List<ConceptPojo> concepts) throws BusinessServiceException {
 		try (TransformationStream transformationStream = transformationStreamFactory.createTransformationStream(recipe, request)) {

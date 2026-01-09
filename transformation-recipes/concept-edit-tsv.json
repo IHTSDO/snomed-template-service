@@ -1,0 +1,12 @@
+{
+	"key": "concept-edit-tsv",
+	"title": "Concept Edits",
+	"description": "Edit concepts in batch.",
+	"source": "tsv",
+	"component": "CONCEPT",
+	"changeType": "EDIT",
+	"fieldMap": {
+		"conceptId": "$tsv.0",
+		"notes": "$tsv.1"
+	}
+}

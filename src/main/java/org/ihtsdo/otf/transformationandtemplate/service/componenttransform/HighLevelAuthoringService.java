@@ -1,6 +1,8 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
 import com.google.common.collect.Iterables;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.*;
 import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.snomedboot.domain.ConceptConstants;
@@ -33,6 +35,7 @@ import static org.ihtsdo.otf.utils.StringUtils.isEmpty;
  */
 public class HighLevelAuthoringService {
 
+	public static final String TERM_SERVER_COMMUNICATION_ERROR_MSG = "Failed to communicate with the terminology server.";
 	private final SnowstormClient snowstormClient;
 
 	private final AuthoringServicesClient authoringServicesClient;
@@ -53,6 +56,35 @@ public class HighLevelAuthoringService {
 		this.authoringServicesClient = authoringServicesClient;
 		this.processingBatchMaxSize = processingBatchMaxSize;
 		this.skipDroolsValidation = skipDroolsValidation;
+	}
+
+	public List<ChangeResult<? extends SnomedComponent>> addConceptsToEdit(ComponentTransformationRequest request, List<ConceptPojo> concepts, List<ChangeResult<ConceptPojo>> changes) {
+		if (concepts.isEmpty()) {
+			return new ArrayList<>(changes);
+		}
+		logger.info("Starting process to add {} concepts to edit.", concepts.size());
+
+		try {
+			// Initial terminology server communication check
+			snowstormClient.getBranch("MAIN");
+
+			// Split into batches of how many changes per branch / task
+			int batchNumber = 0;
+			for (List<ConceptPojo> conceptTaskBatch : Iterables.partition(concepts, request.getBatchSize())) {
+				batchNumber++;
+				AuthoringTask authoringTask = createAuthoringTask(request, batchNumber);
+
+				// Split into smaller batches if the number of per branch changes exceeds the number of concepts which should be processed at a time.
+				for (List<ConceptPojo> conceptProcessingBatch : Iterables.partition(conceptTaskBatch, processingBatchMaxSize)) {
+					editConceptBatch(new HashSet<>(conceptProcessingBatch) , changes, authoringTask);
+				}
+			}
+		} catch (WebClientException e) {// This RuntimeException is thrown by WebClient
+			logger.error(TERM_SERVER_COMMUNICATION_ERROR_MSG, e);
+			failAllRemaining(changes, TERM_SERVER_COMMUNICATION_ERROR_MSG);
+		}
+
+		return new ArrayList<>(changes);
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> createConcepts(ComponentTransformationRequest request, List<ConceptPojo> concepts, List<ChangeResult<ConceptPojo>> changes) throws BusinessServiceException {
@@ -102,8 +134,8 @@ public class HighLevelAuthoringService {
 				}
 			}
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
-			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+			logger.error(TERM_SERVER_COMMUNICATION_ERROR_MSG, e);
+			failAllRemaining(changes, TERM_SERVER_COMMUNICATION_ERROR_MSG);
 		}
 
 		return new ArrayList<>(changes);
@@ -159,8 +191,8 @@ public class HighLevelAuthoringService {
 			}
 
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
-			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+			logger.error(TERM_SERVER_COMMUNICATION_ERROR_MSG, e);
+			failAllRemaining(changes, TERM_SERVER_COMMUNICATION_ERROR_MSG);
 		}
 
 		return new ArrayList<>(changes);
@@ -213,6 +245,52 @@ public class HighLevelAuthoringService {
 							pojo.success();
 				});
 			}
+		}
+	}
+
+	private void editConceptBatch(HashSet<ConceptPojo> conceptPojos, List<ChangeResult<ConceptPojo>> changes, AuthoringTask task) {
+		List<Concept> concepts = snowstormClient.getConcepts(task.getBranchPath(), conceptPojos.stream().map(ConceptPojo::getConceptId).toList());
+		JsonArray items = new JsonArray();
+		for (ConceptPojo conceptPojo : conceptPojos) {
+			concepts.stream()
+				.filter(c -> conceptPojo.getConceptId().equals(c.getConceptId()))
+				.findFirst()
+				.ifPresent(concept -> {
+					JsonObject conceptJsonObject = new JsonObject();
+					conceptJsonObject.addProperty("active", concept.isActive());
+					conceptJsonObject.addProperty("conceptId", concept.getConceptId());
+					conceptJsonObject.addProperty("definitionStatus", concept.getDefinitionStatus());
+					conceptJsonObject.addProperty("fsn", concept.getFsnTerm());
+					conceptJsonObject.addProperty("moduleId", concept.getModuleId());
+					conceptJsonObject.addProperty("preferredSynonym", concept.getPt().getTerm());
+					conceptJsonObject.addProperty("term", concept.getPt().getTerm());
+
+					JsonObject jsonObject = new JsonObject();
+					jsonObject.addProperty("active", concept.isActive());
+					jsonObject.add("concept", conceptJsonObject);
+					items.add(jsonObject);
+				});
+		}
+		if (!items.isEmpty()) {
+			JsonObject request = new JsonObject();
+			request.add("items", items);
+			authoringServicesClient.addConceptsToSavedList(task, request);
+		}
+		for (Concept concept : concepts) {
+			// Set concept id from updated concept so it's in the final output
+			changes.stream()
+				.filter(c -> concept.getConceptId().equals(c.getComponent().getId()))
+				.findFirst()
+				.ifPresent(pojo -> {
+					DescriptionPojo descriptionPojo = new DescriptionPojo();
+					descriptionPojo.setActive(true);
+					descriptionPojo.setTerm(concept.getFsn().getTerm());
+					descriptionPojo.setLang(concept.getFsn().getLang());
+
+					pojo.getComponent().setConceptId(concept.getConceptId());
+					pojo.getComponent().add(descriptionPojo);
+					pojo.success();
+				});
 		}
 	}
 
@@ -393,8 +471,8 @@ public class HighLevelAuthoringService {
 			// Mark all changes which have not failed as successful
 			changes.stream().filter(change -> change.getSuccess() == null).forEach(ChangeResult::success);
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
-			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+			logger.error(TERM_SERVER_COMMUNICATION_ERROR_MSG, e);
+			failAllRemaining(changes, TERM_SERVER_COMMUNICATION_ERROR_MSG);
 		}
 
 		return new ArrayList<>(changes);
@@ -537,8 +615,8 @@ public class HighLevelAuthoringService {
 			}
 
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
-			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+			logger.error(TERM_SERVER_COMMUNICATION_ERROR_MSG, e);
+			failAllRemaining(changes, TERM_SERVER_COMMUNICATION_ERROR_MSG);
 		}
 
 		return new ArrayList<>(changes);
@@ -753,8 +831,8 @@ public class HighLevelAuthoringService {
 				}
 			}
 		} catch (WebClientException | TimeoutException e) {// This RuntimeException is thrown by WebClient
-			logger.error("Failed to communicate with the terminology server.", e);
-			failAllRemaining(changes, "Failed to communicate with the terminology server.");
+			logger.error(TERM_SERVER_COMMUNICATION_ERROR_MSG, e);
+			failAllRemaining(changes, TERM_SERVER_COMMUNICATION_ERROR_MSG);
 		}
 
 		return new ArrayList<>(changes);
@@ -867,11 +945,19 @@ public class HighLevelAuthoringService {
 
 		String projectKey = request.getProjectKey();
 		if (!isEmpty(projectKey)) {
+			AuthoringTask task = createAuthoringTask(request, batchNumber);
+			branchPath = task.getBranchPath();
+			snowstormClient.setAuthorFlag(branchPath, ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
+		}
+		return branchPath;
+	}
+
+	private AuthoringTask createAuthoringTask(ComponentTransformationRequest request, int batchNumber) {
+		String projectKey = request.getProjectKey();
+		if (!isEmpty(projectKey)) {
 			AuthoringTask task = authoringServicesClient.createTask(projectKey,
 					format("%s - Batch #%s", request.getTaskTitle(), batchNumber), "Created automatically by the batch processing function.");
-			branchPath = task.getBranchPath();
-			snowstormClient.createBranch(branchPath);
-			snowstormClient.setAuthorFlag(branchPath, ConstantStrings.AUTHOR_FLAG_BATCH_CHANGE, "true");
+			snowstormClient.createBranch(task.getBranchPath());
 			task.setStatus("IN_PROGRESS");
 			if (request.getTaskAssignee() != null) {
 				task.setAssignee(new TaskUser(request.getTaskAssignee()));
@@ -880,8 +966,9 @@ public class HighLevelAuthoringService {
 				task.setReviewers(Collections.singleton(new TaskUser(request.getTaskReviewer())));
 			}
 			authoringServicesClient.updateAuthoringTaskNotNullFieldsAreSet(task);
+			return task;
 		}
-		return branchPath;
+		throw new IllegalArgumentException("Project key must be provided.");
 	}
 
 	/**
