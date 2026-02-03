@@ -2,6 +2,6 @@ package org.ihtsdo.otf.transformationandtemplate.domain;
 
 public enum ChangeType {
 
-	CREATE, UPDATE, DELETE, INACTIVATE, REPLACE
+	CREATE, UPDATE, DELETE, INACTIVATE, REPLACE, EDIT
 
 }

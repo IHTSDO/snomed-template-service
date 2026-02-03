@@ -1,0 +1,12 @@
+{
+	"key": "concept-bookmark-tsv",
+	"title": "Bookmark Concepts",
+	"description": "Add the bookmark concepts to the saved list of an authoring task.",
+	"source": "tsv",
+	"component": "CONCEPT",
+	"changeType": "EDIT",
+	"fieldMap": {
+		"conceptId": "$tsv.0",
+		"notes": "$tsv.1"
+	}
+}
