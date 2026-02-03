@@ -12,6 +12,7 @@ import org.ihtsdo.otf.transformationandtemplate.domain.Concept;
 import org.ihtsdo.otf.transformationandtemplate.domain.TransformationRecipe;
 import org.ihtsdo.otf.transformationandtemplate.service.ConstantStrings;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
+import org.ihtsdo.otf.transformationandtemplate.service.client.TaskUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
