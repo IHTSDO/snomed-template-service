@@ -853,9 +853,9 @@ public class HighLevelAuthoringService {
 						loadedDescription.setModuleId(descriptionUpdate.getModuleId());
 					}
 					if (descriptionUpdate.getAcceptabilityMap() != null) {
-						if (loadedDescription.getAcceptabilityMap() == null) {
-							descriptionUpdate.getAcceptabilityMap().values().removeAll(Collections.singleton(null));
-							loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+						if (loadedDescription.getAcceptabilityMap() == null || loadedDescription.getAcceptabilityMap().isEmpty()) {
+							descriptionUpdate.getAcceptabilityMap().entrySet().removeIf(entry -> entry.getValue() == null || NOT_ACCEPTABLE.equals(entry.getValue()));
+							updateAcceptabilityForInactiveDescription(loadedConcept, loadedDescription, descriptionUpdate);
 						} else {
 							Map<String, DescriptionPojo.Acceptability> updateAcceptabilityMap = descriptionUpdate.getAcceptabilityMap();
 							Map<String, DescriptionPojo.Acceptability> loadedAcceptabilityMap = loadedDescription.getAcceptabilityMap();
@@ -876,6 +876,7 @@ public class HighLevelAuthoringService {
 									loadedDescription.getAcceptabilityMap().put(languageRefset, updateAcceptabilityMap.get(languageRefset));
 								}
 							});
+							updatePreferredTermForDescription(loadedConcept, loadedDescription, descriptionUpdate);
 						}
 					}
 					if (!descriptionUpdate.isActive()) {
@@ -889,6 +890,29 @@ public class HighLevelAuthoringService {
 
 		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
 		bulkValidateThenSaveConcepts(conceptMap, branchPath, changes);
+	}
+
+	private void updateAcceptabilityForInactiveDescription(ConceptPojo loadedConcept, DescriptionPojo loadedDescription, DescriptionPojo descriptionUpdate) {
+		if (descriptionUpdate.getAcceptabilityMap().isEmpty()) return;
+		loadedDescription.setAcceptabilityMap(descriptionUpdate.getAcceptabilityMap());
+		loadedDescription.setActive(true);
+		loadedDescription.setInactivationIndicator(null);
+		loadedDescription.setAssociationTargets(null);
+		updatePreferredTermForDescription(loadedConcept, loadedDescription, descriptionUpdate);
+	}
+
+	private void updatePreferredTermForDescription(ConceptPojo loadedConcept, DescriptionPojo loadedDescription, DescriptionPojo descriptionUpdate) {
+		loadedDescription.getAcceptabilityMap().forEach((key, value) -> {
+			if (PREFERRED.equals(value)) {
+				for (DescriptionPojo otherDescription : loadedConcept.getDescriptions()) {
+					if (!otherDescription.getDescriptionId().equals(descriptionUpdate.getDescriptionId())
+						&& (descriptionUpdate.getType().equals(otherDescription.getType()) || loadedDescription.getType().equals(otherDescription.getType()))
+						&& PREFERRED.equals(otherDescription.getAcceptabilityMap().get(key))) {
+						otherDescription.getAcceptabilityMap().put(key, ACCEPTABLE);
+					}
+				}
+			}
+		});
 	}
 
 	private void updateAxiomBatch(List<AxiomPojo> axiomBatch, List<ChangeResult<AxiomPojo>> changesBatch, String branchPath) throws BusinessServiceException, TimeoutException {
