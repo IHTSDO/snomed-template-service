@@ -445,7 +445,7 @@ public class HighLevelAuthoringService {
 			descriptionIdsFound.addAll(invalidModuleDescriptions.keySet());
 
 			// Fail all descriptions which were not found to update
-			for (String notFoundDescriptionId : difference(descriptionIdMap.keySet(), descriptionIdsFound)) {
+			for (String notFoundDescriptionId : new HashSet<>(difference(descriptionIdMap.keySet(), descriptionIdsFound))) {
 				getChangeResult(changes, descriptionIdMap.get(notFoundDescriptionId), DESCRIPTION_WITH_ID_COMPARATOR).fail("Description not found on the specified branch.");
 				descriptionIdMap.remove(notFoundDescriptionId);
 			}
