@@ -2,6 +2,7 @@ package org.ihtsdo.otf.transformationandtemplate.service.script;
 
 import org.apache.commons.lang3.StringUtils;
 import org.ihtsdo.otf.exception.TermServerScriptException;
+import org.snomed.otf.Environment;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.IConcept;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Project;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.RefsetMemberPojo;
@@ -45,20 +46,19 @@ public abstract class AuthoringPlatformScript extends Script implements JobClass
 		return jobRun;
 	}
 
-	@Override
 	public String detectReleaseBranch() {
 		return null;  //AP Scripts don't run against release branch
 	}
 
 	@Override
-	public String getEnv() {
+	public Environment getEnv() {
 		String apiURL = SnowstormClientFactory.instance().getApiUrl();
 		if (apiURL.contains("dev-")) {
-			return "DEV";
+			return Environment.DEV;
 		} else if (apiURL.contains("uat-")) {
-			return "UAT";
+			return Environment.UAT;
 		}
-		return "PROD";
+		return Environment.PROD;
 	}
 	
 	@Override
