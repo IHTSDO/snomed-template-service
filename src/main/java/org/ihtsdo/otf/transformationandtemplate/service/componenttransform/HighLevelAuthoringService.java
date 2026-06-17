@@ -852,7 +852,7 @@ public class HighLevelAuthoringService {
 					if (!isEmpty(descriptionUpdate.getModuleId())) {
 						loadedDescription.setModuleId(descriptionUpdate.getModuleId());
 					}
-					if (descriptionUpdate.getAcceptabilityMap() != null) {
+					if (descriptionUpdate.getAcceptabilityMap() != null && !descriptionUpdate.getAcceptabilityMap().isEmpty()) {
 						if (loadedDescription.getAcceptabilityMap() == null || loadedDescription.getAcceptabilityMap().isEmpty()) {
 							descriptionUpdate.getAcceptabilityMap().entrySet().removeIf(entry -> entry.getValue() == null || NOT_ACCEPTABLE.equals(entry.getValue()));
 							updateAcceptabilityForInactiveDescription(loadedConcept, loadedDescription, descriptionUpdate);
@@ -906,7 +906,7 @@ public class HighLevelAuthoringService {
 			if (PREFERRED.equals(value)) {
 				for (DescriptionPojo otherDescription : loadedConcept.getDescriptions()) {
 					if (!otherDescription.getDescriptionId().equals(descriptionUpdate.getDescriptionId())
-						&& (descriptionUpdate.getType().equals(otherDescription.getType()) || loadedDescription.getType().equals(otherDescription.getType()))
+						&& ((descriptionUpdate.getType() != null && Objects.equals(descriptionUpdate.getType(), otherDescription.getType())) || (loadedDescription.getType() != null && Objects.equals(loadedDescription.getType(), otherDescription.getType())))
 						&& PREFERRED.equals(otherDescription.getAcceptabilityMap().get(key))) {
 						otherDescription.getAcceptabilityMap().put(key, ACCEPTABLE);
 					}
