@@ -46,11 +46,20 @@ public class HighLevelAuthoringService {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	private static final Comparator<DescriptionPojo> DESCRIPTION_WITHOUT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang, String.CASE_INSENSITIVE_ORDER);
-	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getDescriptionId);
-	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionPojo::getTerm).thenComparing(DescriptionPojo::getLang, String.CASE_INSENSITIVE_ORDER).thenComparing(DescriptionPojo::getConceptId);
-	private static final Comparator<DescriptionReplacementPojo> DESCRIPTION_REPLACEMENT_WITH_CONCEPT_ID_COMPARATOR = Comparator.comparing(DescriptionReplacementPojo::getId).thenComparing(DescriptionReplacementPojo::getConceptId);
-	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR = Comparator.comparing(ConceptValidationResult::getSeverity);
+	private static final Comparator<DescriptionPojo> DESCRIPTION_WITHOUT_ID_COMPARATOR = Comparator
+			.comparing(DescriptionPojo::getTerm, Comparator.nullsFirst(String::compareTo))
+			.thenComparing(DescriptionPojo::getLang, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER));
+	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_ID_COMPARATOR =
+			Comparator.comparing(DescriptionPojo::getDescriptionId, Comparator.nullsFirst(String::compareTo));
+	private static final Comparator<DescriptionPojo> DESCRIPTION_WITH_CONCEPT_ID_COMPARATOR = Comparator
+			.comparing(DescriptionPojo::getTerm, Comparator.nullsFirst(String::compareTo))
+			.thenComparing(DescriptionPojo::getLang, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+			.thenComparing(DescriptionPojo::getConceptId, Comparator.nullsFirst(String::compareTo));
+	private static final Comparator<DescriptionReplacementPojo> DESCRIPTION_REPLACEMENT_WITH_CONCEPT_ID_COMPARATOR = Comparator
+			.comparing(DescriptionReplacementPojo::getId, Comparator.nullsFirst(String::compareTo))
+			.thenComparing(DescriptionReplacementPojo::getConceptId, Comparator.nullsFirst(String::compareTo));
+	private static final Comparator<ConceptValidationResult> CONCEPT_VALIDATION_RESULT_COMPARATOR =
+			Comparator.comparing(ConceptValidationResult::getSeverity, Comparator.nullsFirst(Comparator.naturalOrder()));
 
 	public HighLevelAuthoringService(SnowstormClient snowstormClient, AuthoringServicesClient authoringServicesClient, int processingBatchMaxSize, boolean skipDroolsValidation) {
 		this.snowstormClient = snowstormClient;
