@@ -451,14 +451,15 @@ public class SnowstormClient {
 	
 	public List<Concept> findNewConcepts(String branchPath, String ecl, String termFilter) {
 		String searchAfter = null;
+		AtomicInteger totalReceived = new AtomicInteger(0);
 		return fetchConceptPage(branchPath, true, null, false, ecl, termFilter, searchAfter)
 				.expand(response -> {
+					totalReceived.addAndGet(response.getItems().size());
 					long expected = response.getTotal();
-					long totalReceived = response.getOffset() + response.getItems().size();
-					if (totalReceived >= expected) {
+					if (totalReceived.get() >= expected) {
 						return Mono.empty();
 					}
-					return fetchConceptPage(branchPath, true, null, false, ecl, termFilter, null);
+					return fetchConceptPage(branchPath, true, null, false, ecl, termFilter, response.getSearchAfter());
 				}).flatMap(response -> Flux.fromIterable(response.getItems())).collectList()
 				.block(Duration.of(DEFAULT_TIMEOUT, ChronoUnit.SECONDS));
 	}
