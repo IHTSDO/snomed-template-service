@@ -1,7 +1,7 @@
 {
 	"key": "description-create-tsv",
 	"title": "Description Additions",
-	"description": "Add descriptions to existing concepts in batch. Acceptability can be given for up to three language reference sets. Module will be set automatically.",
+	"description": "Add descriptions to existing concepts in batch, or add existing descriptions (including international) to a language reference set when the term already exists on the concept. Case significance and type are used only when creating a new description. Acceptability can be given for up to five language reference sets. Module will be set automatically for new descriptions.",
 	"source": "tsv",
 	"component": "DESCRIPTION",
 	"changeType": "CREATE",

@@ -333,36 +333,39 @@ public class HighLevelAuthoringService {
 		// Batch load concepts
 		List<ConceptPojo> concepts = snowstormClient.getFullConcepts(SnowstormClient.ConceptBulkLoadRequest.byConceptId(conceptIdToDescriptionMap.keySet()), branchPath);
 
-		// Join new descriptions to concepts
+		// Join new descriptions to concepts, or add LRS membership to matching existing descriptions
 		Map<String, ConceptPojo> conceptMap = concepts.stream().collect(Collectors.toMap(ConceptPojo::getConceptId, Function.identity()));
 		for (String conceptId : conceptIdToDescriptionMap.keySet()) {
 			ConceptPojo conceptPojo = conceptMap.get(conceptId);
-			List<String> preferredLanguageRefsets = new ArrayList<>();
-			List<DescriptionPojo.Type> updatedDescriptionTypes = new ArrayList<>();
 			for (DescriptionPojo description : conceptIdToDescriptionMap.get(conceptId)) {
 				if (conceptPojo != null) {
-					conceptPojo.add(description);
+					DescriptionPojo existingDescription = findMatchingActiveDescription(conceptPojo, description);
+					if (existingDescription != null) {
+						// Term already exists — reuse it and only update language reference set membership.
+						// This supports selecting an international description as an extension LRS preferred synonym
+						// without attempting to modify the description in the core module.
+						description.setDescriptionId(existingDescription.getDescriptionId());
+						description.setType(existingDescription.getType());
+						description.setCaseSignificance(existingDescription.getCaseSignificance());
+						description.setModuleId(existingDescription.getModuleId());
+						mergeAcceptabilityMap(existingDescription, description.getAcceptabilityMap());
+					} else {
+						conceptPojo.add(description);
 
-					// Assign description module
-					if (description.getModuleId() == null) {
-						if (defaultModuleId != null) {
-							description.setModuleId(defaultModuleId);
-						} else {
-							description.setModuleId(conceptPojo.getModuleId());
+						// Assign description module for newly created descriptions only
+						if (description.getModuleId() == null) {
+							if (defaultModuleId != null) {
+								description.setModuleId(defaultModuleId);
+							} else {
+								description.setModuleId(conceptPojo.getModuleId());
+							}
 						}
 					}
 
-					// Get preferred language refset within new description
+					// If this description is preferred for an LRS, demote any other preferred description
+					// of the same type on this concept for that LRS to acceptable.
 					if (description.getAcceptabilityMap() != null) {
-						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
-						for (String languageRefset : acceptabilityMap.keySet()) {
-							if (PREFERRED.equals(acceptabilityMap.get(languageRefset))) {
-								preferredLanguageRefsets.add(languageRefset);
-								if (!updatedDescriptionTypes.contains(description.getType())) {
-									updatedDescriptionTypes.add(description.getType());
-								}
-							}
-						}
+						updatePreferredTermForDescription(conceptPojo, description, description);
 					}
 
 					if (!conceptPojo.isActive()) {
@@ -372,21 +375,6 @@ public class HighLevelAuthoringService {
 				} else {
 					// Description not joined to any concept so will not appear in the update request
 					getChangeResult(changes, description, DESCRIPTION_WITHOUT_ID_COMPARATOR).fail(format("Concept %s not found.", description.getConceptId()));
-				}
-			}
-
-			// Set the existing PT automatically to acceptable if any
-			if (conceptPojo != null && !preferredLanguageRefsets.isEmpty() && !updatedDescriptionTypes.isEmpty()) {
-				for (DescriptionPojo description : conceptPojo.getDescriptions()) {
-					if (description.isActive() && !description.getDescriptionId().contains("-") && updatedDescriptionTypes.contains(description.getType())) {
-						Map<String, DescriptionPojo.Acceptability> acceptabilityMap = description.getAcceptabilityMap();
-						for (String languageRefset : acceptabilityMap.keySet()) {
-							if (PREFERRED.equals(acceptabilityMap.get(languageRefset)) && preferredLanguageRefsets.contains(languageRefset)) {
-								acceptabilityMap.put(languageRefset, ACCEPTABLE);
-							}
-						}
-						description.setAcceptabilityMap(acceptabilityMap);
-					}
 				}
 			}
 		}
@@ -400,7 +388,7 @@ public class HighLevelAuthoringService {
 				final Set<DescriptionPojo> savedDescriptions = updatedConcept.getDescriptions();
 				Set<DescriptionPojo> descriptionPojos = conceptIdToDescriptionMap.get(updatedConcept.getConceptId());
 				for (DescriptionPojo descriptionPojo : descriptionPojos) {
-					if (descriptionPojo.getDescriptionId() == null) {
+					if (descriptionPojo.getDescriptionId() == null || descriptionPojo.getDescriptionId().contains("-")) {
 						// Set description id from updated concept so it's in the final output
 						savedDescriptions.stream()
 								.filter(d -> DESCRIPTION_WITHOUT_ID_COMPARATOR.compare(descriptionPojo, d) == 0)
@@ -411,6 +399,49 @@ public class HighLevelAuthoringService {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Find an active description on the concept with the same term and language.
+	 * Prefers a match with the same description type when the incoming type is set.
+	 */
+	private DescriptionPojo findMatchingActiveDescription(ConceptPojo concept, DescriptionPojo incoming) {
+		if (incoming.getTerm() == null || incoming.getLang() == null || concept.getDescriptions() == null) {
+			return null;
+		}
+		DescriptionPojo typeMatch = null;
+		DescriptionPojo anyMatch = null;
+		for (DescriptionPojo candidate : concept.getDescriptions()) {
+			if (!candidate.isActive()) {
+				continue;
+			}
+			if (!incoming.getTerm().equals(candidate.getTerm())) {
+				continue;
+			}
+			if (candidate.getLang() == null || !incoming.getLang().equalsIgnoreCase(candidate.getLang())) {
+				continue;
+			}
+			if (incoming.getType() != null && incoming.getType().equals(candidate.getType())) {
+				typeMatch = candidate;
+				break;
+			}
+			if (anyMatch == null) {
+				anyMatch = candidate;
+			}
+		}
+		return typeMatch != null ? typeMatch : anyMatch;
+	}
+
+	private void mergeAcceptabilityMap(DescriptionPojo existingDescription, Map<String, DescriptionPojo.Acceptability> incomingAcceptability) {
+		if (incomingAcceptability == null || incomingAcceptability.isEmpty()) {
+			return;
+		}
+		Map<String, DescriptionPojo.Acceptability> existingMap = existingDescription.getAcceptabilityMap();
+		if (existingMap == null) {
+			existingMap = new HashMap<>();
+			existingDescription.setAcceptabilityMap(existingMap);
+		}
+		existingMap.putAll(incomingAcceptability);
 	}
 
 	public List<ChangeResult<? extends SnomedComponent>> updateDescriptions(TransformationRecipe recipe,
@@ -914,8 +945,10 @@ public class HighLevelAuthoringService {
 		loadedDescription.getAcceptabilityMap().forEach((key, value) -> {
 			if (PREFERRED.equals(value)) {
 				for (DescriptionPojo otherDescription : loadedConcept.getDescriptions()) {
-					if (!otherDescription.getDescriptionId().equals(descriptionUpdate.getDescriptionId())
+					if (otherDescription.getDescriptionId() != null
+						&& !otherDescription.getDescriptionId().equals(descriptionUpdate.getDescriptionId())
 						&& ((descriptionUpdate.getType() != null && Objects.equals(descriptionUpdate.getType(), otherDescription.getType())) || (loadedDescription.getType() != null && Objects.equals(loadedDescription.getType(), otherDescription.getType())))
+						&& otherDescription.getAcceptabilityMap() != null
 						&& PREFERRED.equals(otherDescription.getAcceptabilityMap().get(key))) {
 						otherDescription.getAcceptabilityMap().put(key, ACCEPTABLE);
 					}
