@@ -409,27 +409,21 @@ public class HighLevelAuthoringService {
 		if (incoming.getTerm() == null || incoming.getLang() == null || concept.getDescriptions() == null) {
 			return null;
 		}
-		DescriptionPojo typeMatch = null;
-		DescriptionPojo anyMatch = null;
-		for (DescriptionPojo candidate : concept.getDescriptions()) {
-			if (!candidate.isActive()) {
-				continue;
-			}
-			if (!incoming.getTerm().equals(candidate.getTerm())) {
-				continue;
-			}
-			if (candidate.getLang() == null || !incoming.getLang().equalsIgnoreCase(candidate.getLang())) {
-				continue;
-			}
-			if (incoming.getType() != null && incoming.getType().equals(candidate.getType())) {
-				typeMatch = candidate;
-				break;
-			}
-			if (anyMatch == null) {
-				anyMatch = candidate;
-			}
-		}
-		return typeMatch != null ? typeMatch : anyMatch;
+		List<DescriptionPojo> matches = concept.getDescriptions().stream()
+				.filter(candidate -> isMatchingActiveDescription(incoming, candidate))
+				.toList();
+		return matches.stream()
+				.filter(candidate -> incoming.getType() == null || incoming.getType().equals(candidate.getType()))
+				.findFirst()
+				.or(() -> matches.stream().findFirst())
+				.orElse(null);
+	}
+
+	private boolean isMatchingActiveDescription(DescriptionPojo incoming, DescriptionPojo candidate) {
+		return candidate.isActive()
+				&& incoming.getTerm().equals(candidate.getTerm())
+				&& candidate.getLang() != null
+				&& incoming.getLang().equalsIgnoreCase(candidate.getLang());
 	}
 
 	private void mergeAcceptabilityMap(DescriptionPojo existingDescription, Map<String, DescriptionPojo.Acceptability> incomingAcceptability) {
