@@ -272,6 +272,199 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
+	public void testCreateAddsExistingInternationalDescriptionToLanguageRefset() throws BusinessServiceException, InterruptedException, TimeoutException {
+		String branchPath = "MAIN/CANSHARE/CANSHARE-100";
+		String canshareLangRefset = "231621000210105";
+
+		DescriptionPojo internationalDescription = new DescriptionPojo("Event").setDescriptionId("123456789012");
+		internationalDescription.setLang("en");
+		internationalDescription.setType(DescriptionPojo.Type.SYNONYM);
+		internationalDescription.setModuleId("900000000000207008"); // core module
+		Map<String, DescriptionPojo.Acceptability> internationalAcceptability = new HashMap<>();
+		internationalAcceptability.put("900000000000509007", PREFERRED);
+		internationalDescription.setAcceptabilityMap(internationalAcceptability);
+
+		DescriptionPojo previousCansharePreferred = new DescriptionPojo("Occurrence").setDescriptionId("987654321098");
+		previousCansharePreferred.setLang("en");
+		previousCansharePreferred.setType(DescriptionPojo.Type.SYNONYM);
+		previousCansharePreferred.setModuleId("21000220103");
+		Map<String, DescriptionPojo.Acceptability> previousAcceptability = new HashMap<>();
+		previousAcceptability.put(canshareLangRefset, PREFERRED);
+		previousCansharePreferred.setAcceptabilityMap(previousAcceptability);
+
+		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("21000220103");
+		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Collections.singletonList(
+				new ConceptPojo("272379006").add(internationalDescription).add(previousCansharePreferred)
+		));
+		Mockito.when(snowstormClientMock.runValidation(any(), any())).thenReturn(new ArrayList<>());
+		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
+
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-create-tsv", branchPath, null, null, null, null, 100,
+				getClass().getResourceAsStream("description-create-lrs-existing-tsv-test.tsv"), false));
+
+		int maxWait = 10;
+		int wait = 0;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
+		Mockito.verify(snowstormClientMock).saveUpdateConceptsNoValidation(conceptsSavedCaptor.capture(), any());
+
+		ConceptPojo savedConcept = conceptsSavedCaptor.getValue().iterator().next();
+		long eventDescriptionCount = savedConcept.getDescriptions().stream()
+				.filter(d -> "Event".equals(d.getTerm()))
+				.count();
+		assertEquals(1, eventDescriptionCount, "Existing international description should be reused, not duplicated");
+
+		DescriptionPojo eventDescription = savedConcept.getDescriptions().stream()
+				.filter(d -> "Event".equals(d.getTerm()))
+				.findFirst()
+				.orElse(null);
+		assertNotNull(eventDescription);
+		assertEquals("123456789012", eventDescription.getDescriptionId());
+		assertEquals("900000000000207008", eventDescription.getModuleId(), "Core module description must not be reassigned");
+		assertEquals(PREFERRED, eventDescription.getAcceptabilityMap().get(canshareLangRefset));
+		assertEquals(PREFERRED, eventDescription.getAcceptabilityMap().get("900000000000509007"));
+
+		DescriptionPojo demotedDescription = savedConcept.getDescriptions().stream()
+				.filter(d -> "Occurrence".equals(d.getTerm()))
+				.findFirst()
+				.orElse(null);
+		assertNotNull(demotedDescription);
+		assertEquals(ACCEPTABLE, demotedDescription.getAcceptabilityMap().get(canshareLangRefset));
+
+		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
+		assertEquals(1, changeResults.size());
+		assertEquals(TRUE, changeResults.get(0).getSuccess());
+		assertEquals("123456789012", changeResults.get(0).getComponent().getDescriptionId());
+	}
+
+	@Test
+	public void testCreateMixedNewAndExistingDescriptionsForLanguageRefset() throws BusinessServiceException, InterruptedException, TimeoutException {
+		String branchPath = "MAIN/CANSHARE/CANSHARE-101";
+		String canshareLangRefset = "231621000210105";
+
+		DescriptionPojo internationalDescription = new DescriptionPojo("Event").setDescriptionId("123456789012");
+		internationalDescription.setLang("en");
+		internationalDescription.setType(DescriptionPojo.Type.SYNONYM);
+		internationalDescription.setModuleId("900000000000207008");
+		Map<String, DescriptionPojo.Acceptability> internationalAcceptability = new HashMap<>();
+		internationalAcceptability.put("900000000000509007", PREFERRED);
+		internationalDescription.setAcceptabilityMap(internationalAcceptability);
+
+		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("21000220103");
+		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Collections.singletonList(
+				new ConceptPojo("272379006").add(internationalDescription)
+		));
+		Mockito.when(snowstormClientMock.runValidation(any(), any())).thenReturn(new ArrayList<>());
+		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
+
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-create-tsv", branchPath, null, null, null, null, 100,
+				getClass().getResourceAsStream("description-create-lrs-mixed-tsv-test.tsv"), false));
+
+		int maxWait = 10;
+		int wait = 0;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
+		Mockito.verify(snowstormClientMock).saveUpdateConceptsNoValidation(conceptsSavedCaptor.capture(), any());
+
+		ConceptPojo savedConcept = conceptsSavedCaptor.getValue().iterator().next();
+
+		DescriptionPojo eventDescription = savedConcept.getDescriptions().stream()
+				.filter(d -> "Event".equals(d.getTerm()))
+				.findFirst()
+				.orElse(null);
+		assertNotNull(eventDescription);
+		assertEquals("123456789012", eventDescription.getDescriptionId());
+		assertEquals(PREFERRED, eventDescription.getAcceptabilityMap().get(canshareLangRefset));
+
+		DescriptionPojo newDescription = savedConcept.getDescriptions().stream()
+				.filter(d -> "CanShare event synonym".equals(d.getTerm()))
+				.findFirst()
+				.orElse(null);
+		assertNotNull(newDescription);
+		assertEquals("21000220103", newDescription.getModuleId());
+		assertEquals(ACCEPTABLE, newDescription.getAcceptabilityMap().get(canshareLangRefset));
+
+		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
+		assertEquals(2, changeResults.size());
+		assertEquals(TRUE, changeResults.get(0).getSuccess());
+		assertEquals(TRUE, changeResults.get(1).getSuccess());
+	}
+
+	@Test
+	public void testCreateNewPreferredDemotesExistingPreferredOfSameType() throws BusinessServiceException, InterruptedException, TimeoutException {
+		String branchPath = "MAIN/CANSHARE/CANSHARE-102";
+		String canshareLangRefset = "231621000210105";
+
+		DescriptionPojo existingPreferred = new DescriptionPojo("Event").setDescriptionId("123456789012");
+		existingPreferred.setLang("en");
+		existingPreferred.setType(DescriptionPojo.Type.SYNONYM);
+		existingPreferred.setModuleId("900000000000207008");
+		Map<String, DescriptionPojo.Acceptability> existingAcceptability = new HashMap<>();
+		existingAcceptability.put("900000000000509007", PREFERRED);
+		existingAcceptability.put(canshareLangRefset, PREFERRED);
+		existingPreferred.setAcceptabilityMap(existingAcceptability);
+
+		Mockito.when(snowstormClientMock.getBranch(any())).thenReturn(new Branch());
+		Mockito.when(snowstormClientMock.getDefaultModuleId(branchPath)).thenReturn("21000220103");
+		Mockito.when(snowstormClientMock.getFullConcepts(any(), any())).thenReturn(Collections.singletonList(
+				new ConceptPojo("272379006").add(existingPreferred)
+		));
+		Mockito.when(snowstormClientMock.runValidation(any(), any())).thenReturn(new ArrayList<>());
+		Mockito.when(snowstormClientMock.saveUpdateConceptsNoValidation(any(), any())).thenReturn(new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.COMPLETED));
+
+		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
+				"description-create-tsv", branchPath, null, null, null, null, 100,
+				getClass().getResourceAsStream("description-create-lrs-new-preferred-tsv-test.tsv"), false));
+
+		int maxWait = 10;
+		int wait = 0;
+		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
+			Thread.sleep(1_000);
+			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
+		}
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
+		Mockito.verify(snowstormClientMock).saveUpdateConceptsNoValidation(conceptsSavedCaptor.capture(), any());
+
+		ConceptPojo savedConcept = conceptsSavedCaptor.getValue().iterator().next();
+
+		DescriptionPojo newPreferred = savedConcept.getDescriptions().stream()
+				.filter(d -> "CanShare preferred term".equals(d.getTerm()))
+				.findFirst()
+				.orElse(null);
+		assertNotNull(newPreferred);
+		assertEquals(PREFERRED, newPreferred.getAcceptabilityMap().get(canshareLangRefset));
+
+		DescriptionPojo demoted = savedConcept.getDescriptions().stream()
+				.filter(d -> "Event".equals(d.getTerm()))
+				.findFirst()
+				.orElse(null);
+		assertNotNull(demoted);
+		assertEquals(ACCEPTABLE, demoted.getAcceptabilityMap().get(canshareLangRefset));
+		assertEquals(PREFERRED, demoted.getAcceptabilityMap().get("900000000000509007"),
+				"Preferred membership in other language refsets must be left unchanged");
+
+		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
+		assertEquals(1, changeResults.size());
+		assertEquals(TRUE, changeResults.get(0).getSuccess());
+	}
+
+	@Test
 	public void testDescriptionReplacements() throws BusinessServiceException, InterruptedException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-100";
 
