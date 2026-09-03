@@ -1,5 +1,6 @@
 package org.ihtsdo.otf.transformationandtemplate.service.componenttransform;
 
+import org.awaitility.Awaitility;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.Branch;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptChangeBatchStatus;
 import org.ihtsdo.otf.rest.client.terminologyserver.pojo.ConceptPojo;
@@ -8,7 +9,6 @@ import org.ihtsdo.otf.rest.exception.BusinessServiceException;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationJob;
 import org.ihtsdo.otf.transformationandtemplate.domain.ComponentTransformationRequest;
 import org.ihtsdo.otf.transformationandtemplate.service.client.*;
-import org.ihtsdo.otf.transformationandtemplate.service.template.TemplateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -20,7 +20,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -32,7 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 @SpringBootTest(properties = "application.properties")
 @ComponentScan(basePackages = "org.ihtsdo.otf.transformationandtemplate")
 @Import(ComponentTransformService.class)
-public class TransformationIntegrationTest {
+class TransformationIntegrationTest {
 
 	@Autowired
 	private ComponentTransformService componentTransformService;
@@ -54,13 +56,26 @@ public class TransformationIntegrationTest {
 
 
 	@BeforeEach
-	public void before() {
+	void before() {
 		Mockito.when(snowstormClientFactory.getClientForCurrentUser()).thenReturn(snowstormClientMock);
 		Mockito.when(authoringServicesClientFactory.getClientForCurrentUser()).thenReturn(authoringServicesClientMock);
 	}
 
+	private ComponentTransformationJob awaitJobCompletion(String branchPath, ComponentTransformationJob job) throws BusinessServiceException {
+		AtomicReference<ComponentTransformationJob> currentJob = new AtomicReference<>(job);
+		Awaitility.await()
+				.atMost(10, TimeUnit.SECONDS)
+				.pollInterval(200, TimeUnit.MILLISECONDS)
+				.until(() -> {
+					ComponentTransformationJob updated = componentTransformService.loadTransformationJob(branchPath, currentJob.get().getId());
+					currentJob.set(updated);
+					return updated.getStatus().getStatus().isEndState();
+				});
+		return currentJob.get();
+	}
+
 	@Test
-	public void test() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void test() throws BusinessServiceException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-100";
 
 		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå").setDescriptionId("789");
@@ -86,12 +101,7 @@ public class TransformationIntegrationTest {
 		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
 				"description-create-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-create-tsv-test.tsv"), false));
 
-		int maxWait = 10;// seconds
-		int wait = 0;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
+		job = awaitJobCompletion(branchPath, job);
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -101,81 +111,36 @@ public class TransformationIntegrationTest {
 
 		assertEquals(branchPath, stringArgumentCaptor.getValue());
 
-		DescriptionPojo descriptionEvent = null;
-		DescriptionPojo descriptionBite = null;
-		DescriptionPojo descriptionFracture = null;
-		DescriptionPojo descriptionFractureSV = null;
+		Map<String, DescriptionPojo> savedByTerm = new HashMap<>();
 		for (ConceptPojo conceptPojo : conceptsSavedCaptor.getValue()) {
 			for (DescriptionPojo description : conceptPojo.getDescriptions()) {
-				if ("The event".equals(description.getTerm())) {
-					descriptionEvent = description;
-				}
-				if ("A human bite".equals(description.getTerm())) {
-					descriptionBite = description;
-				}
-				if ("följdtillstånd efter fraktur på handleds- och/eller handnivå".equals(description.getTerm())) {
-					descriptionFracture = description;
-				}
-				if ("följdtillstånd efter fraktur på handleds- och handnivå".equals(description.getTerm())) {
-					descriptionFractureSV = description;
-				}
+				savedByTerm.put(description.getTerm(), description);
 			}
 		}
-		assertNotNull(descriptionEvent);
-		assertNotNull(descriptionBite);
-		assertNotNull(descriptionFracture);
-		assertNotNull(descriptionFractureSV);
+		assertTrue(savedByTerm.keySet().containsAll(Arrays.asList(
+				"The event",
+				"A human bite",
+				"följdtillstånd efter fraktur på handleds- och/eller handnivå",
+				"följdtillstånd efter fraktur på handleds- och handnivå")));
 
-		assertEquals("272379006", descriptionEvent.getConceptId());
-		assertEquals("The event", descriptionEvent.getTerm());
-		assertEquals("en", descriptionEvent.getLang());
-		assertEquals("900000000000448009", descriptionEvent.getCaseSignificance().getConceptId());
-		assertEquals("900000000000013009", descriptionEvent.getType().getConceptId());
-		Map<String, DescriptionPojo.Acceptability> acceptabilityMap = descriptionEvent.getAcceptabilityMap();
-		assertEquals(1, acceptabilityMap.size());
-		assertTrue(acceptabilityMap.containsKey("900000000000508004"));
-		assertEquals(ACCEPTABLE, acceptabilityMap.get("900000000000508004"));
-
-		assertEquals("242605002", descriptionBite.getConceptId());
-		assertEquals("A human bite", descriptionBite.getTerm());
-		assertEquals("en", descriptionBite.getLang());
-		assertEquals("900000000000448009", descriptionBite.getCaseSignificance().getConceptId());
-		assertEquals("900000000000013009", descriptionBite.getType().getConceptId());
-		acceptabilityMap = descriptionBite.getAcceptabilityMap();
-		assertEquals(1, acceptabilityMap.size());
-		assertTrue(acceptabilityMap.containsKey("900000000000509007"));
-		assertEquals(ACCEPTABLE, acceptabilityMap.get("900000000000509007"));
-
-		// 210958007	Disorder due to and following fracture at wrist and/or hand level (disorder)	följdtillstånd efter fraktur på handleds- och/eller handnivå	sv	ci	SYNONYM	Swedish	PREFERRED
-		assertEquals("210958007", descriptionFracture.getConceptId());
-		assertEquals("följdtillstånd efter fraktur på handleds- och/eller handnivå", descriptionFracture.getTerm());
-		assertEquals("sv", descriptionFracture.getLang());
-		assertEquals("900000000000448009", descriptionFracture.getCaseSignificance().getConceptId());
-		assertEquals("900000000000013009", descriptionFracture.getType().getConceptId());
-		acceptabilityMap = descriptionFracture.getAcceptabilityMap();
-		assertEquals(1, acceptabilityMap.size());
-		assertTrue(acceptabilityMap.containsKey("46011000052107"));
-		assertEquals(PREFERRED, acceptabilityMap.get("46011000052107"));
-
-		assertEquals("följdtillstånd efter fraktur på handleds- och handnivå", descriptionFractureSV.getTerm());
-		assertEquals("sv", descriptionFractureSV.getLang());
-		acceptabilityMap = descriptionFractureSV.getAcceptabilityMap();
-		assertEquals(1, acceptabilityMap.size());
-		assertTrue(acceptabilityMap.containsKey("46011000052107"));
-		assertEquals(ACCEPTABLE, acceptabilityMap.get("46011000052107"));
+		assertDescription(savedByTerm.get("The event"), "272379006", "en",
+				"900000000000448009", "900000000000013009", Map.of("900000000000508004", ACCEPTABLE));
+		assertDescription(savedByTerm.get("A human bite"), "242605002", "en",
+				"900000000000448009", "900000000000013009", Map.of("900000000000509007", ACCEPTABLE));
+		// 210958007 Disorder due to and following fracture... — new Swedish preferred demotes existing preferred
+		assertDescription(savedByTerm.get("följdtillstånd efter fraktur på handleds- och/eller handnivå"), "210958007", "sv",
+				"900000000000448009", "900000000000013009", Map.of("46011000052107", PREFERRED));
+		assertEquals(Map.of("46011000052107", ACCEPTABLE),
+				savedByTerm.get("följdtillstånd efter fraktur på handleds- och handnivå").getAcceptabilityMap());
 
 		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
-		assertEquals(5, changeResults.size());
-		assertEquals(TRUE, changeResults.get(0).getSuccess());
-		assertEquals(TRUE, changeResults.get(1).getSuccess());
-		assertEquals(FALSE, changeResults.get(2).getSuccess());
-		assertEquals(TRUE, changeResults.get(3).getSuccess());
-		assertEquals(TRUE, changeResults.get(4).getSuccess());
+		assertEquals(Arrays.asList(TRUE, TRUE, FALSE, TRUE, TRUE),
+				changeResults.stream().map(ChangeResult::getSuccess).toList());
 		assertEquals("Simple validation failed: At least one valid acceptability entry is required.", changeResults.get(2).getMessage());
 	}
 
 	@Test
-	public void testUpdateAcceptability() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void testUpdateAcceptability() throws BusinessServiceException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-103";
 
 		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå").setDescriptionId("2148514019");
@@ -198,12 +163,7 @@ public class TransformationIntegrationTest {
 		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
 				"description-update-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-update-tsv-test.tsv"), false));
 
-		int wait = 0;
-		int maxWait = 10;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
+		job = awaitJobCompletion(branchPath, job);
 
 		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
 		assertEquals(1, changeResults.size());
@@ -235,7 +195,7 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
-	public void testUpdateDescriptionAgainstInvalidModule() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void testUpdateDescriptionAgainstInvalidModule() throws BusinessServiceException {
 		String branchPath = "MAIN/KAITEST/KAITEST-101";
 
 		DescriptionPojo enDescription = new DescriptionPojo("Test").setDescriptionId("2148514019");
@@ -257,13 +217,7 @@ public class TransformationIntegrationTest {
 		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
 				"description-inactivate-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-inactivate-tsv-test.tsv"), false));
 
-		int maxWait = 10;// seconds
-		int wait = 0;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
-
+		job = awaitJobCompletion(branchPath, job);
 
 		List<ChangeResult<DescriptionPojo>> changeResults = componentTransformService.loadDescriptionTransformationJobResults(branchPath, job.getId());
 		assertEquals(1, changeResults.size());
@@ -272,7 +226,7 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
-	public void testCreateAddsExistingInternationalDescriptionToLanguageRefset() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void testCreateAddsExistingInternationalDescriptionToLanguageRefset() throws BusinessServiceException, TimeoutException {
 		String branchPath = "MAIN/CANSHARE/CANSHARE-100";
 		String canshareLangRefset = "231621000210105";
 
@@ -304,12 +258,7 @@ public class TransformationIntegrationTest {
 				"description-create-tsv", branchPath, null, null, null, null, 100,
 				getClass().getResourceAsStream("description-create-lrs-existing-tsv-test.tsv"), false));
 
-		int maxWait = 10;
-		int wait = 0;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
+		job = awaitJobCompletion(branchPath, job);
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -345,7 +294,7 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
-	public void testCreateMixedNewAndExistingDescriptionsForLanguageRefset() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void testCreateMixedNewAndExistingDescriptionsForLanguageRefset() throws BusinessServiceException, TimeoutException {
 		String branchPath = "MAIN/CANSHARE/CANSHARE-101";
 		String canshareLangRefset = "231621000210105";
 
@@ -369,12 +318,7 @@ public class TransformationIntegrationTest {
 				"description-create-tsv", branchPath, null, null, null, null, 100,
 				getClass().getResourceAsStream("description-create-lrs-mixed-tsv-test.tsv"), false));
 
-		int maxWait = 10;
-		int wait = 0;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
+		job = awaitJobCompletion(branchPath, job);
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -405,7 +349,7 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
-	public void testCreateNewPreferredDemotesExistingPreferredOfSameType() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void testCreateNewPreferredDemotesExistingPreferredOfSameType() throws BusinessServiceException, TimeoutException {
 		String branchPath = "MAIN/CANSHARE/CANSHARE-102";
 		String canshareLangRefset = "231621000210105";
 
@@ -430,12 +374,7 @@ public class TransformationIntegrationTest {
 				"description-create-tsv", branchPath, null, null, null, null, 100,
 				getClass().getResourceAsStream("description-create-lrs-new-preferred-tsv-test.tsv"), false));
 
-		int maxWait = 10;
-		int wait = 0;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
+		job = awaitJobCompletion(branchPath, job);
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -465,7 +404,7 @@ public class TransformationIntegrationTest {
 	}
 
 	@Test
-	public void testDescriptionReplacements() throws BusinessServiceException, InterruptedException, TimeoutException {
+	void testDescriptionReplacements() throws BusinessServiceException, TimeoutException {
 		String branchPath = "MAIN/KAITEST/KAITEST-100";
 
 		DescriptionPojo svDescription = new DescriptionPojo("följdtillstånd efter fraktur på handleds- och handnivå");
@@ -509,12 +448,7 @@ public class TransformationIntegrationTest {
 		ComponentTransformationJob job = componentTransformService.queueBatchTransformation(new ComponentTransformationRequest(
 				"description-replacement-tsv", branchPath, null, null, null, null, 100, getClass().getResourceAsStream("description-replacement-tsv-test.tsv"), false));
 
-		int maxWait = 10;// seconds
-		int wait = 0;
-		while (!job.getStatus().getStatus().isEndState() && wait++ < maxWait) {
-			Thread.sleep(1_000);
-			job = componentTransformService.loadTransformationJob(branchPath, job.getId());
-		}
+		job = awaitJobCompletion(branchPath, job);
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Collection<ConceptPojo>> conceptsSavedCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -571,5 +505,11 @@ public class TransformationIntegrationTest {
 		assertEquals(TRUE, changeResults.get(1).getSuccess());
 	}
 
-
+	private void assertDescription(DescriptionPojo description, String conceptId, String lang,
+			String caseSignificanceId, String typeId, Map<String, DescriptionPojo.Acceptability> acceptability) {
+		assertEquals(conceptId + "|" + lang + "|" + caseSignificanceId + "|" + typeId,
+				description.getConceptId() + "|" + description.getLang() + "|"
+						+ description.getCaseSignificance().getConceptId() + "|" + description.getType().getConceptId());
+		assertEquals(acceptability, description.getAcceptabilityMap());
+	}
 }
