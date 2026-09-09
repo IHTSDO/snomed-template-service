@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class SnowstormClient {
 	
-	public static final long DEFAULT_TIMEOUT = 180; //seconds
+	public static final long DEFAULT_TIMEOUT = 1800; //seconds
 	public static final long DEFAULT_PAGESIZE = 500;
 
 	private static final String DEFAULT_MODULE_ID_METADATA_KEY = "defaultModuleId";
