@@ -17,7 +17,7 @@ import org.snomed.authoringtemplate.domain.DescriptionType;
 import org.snomed.authoringtemplate.domain.LexicalTemplate;
 import org.snomed.authoringtemplate.domain.Relationship;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
@@ -26,10 +26,10 @@ public abstract class AbstractServiceTest extends AbstractTest {
 	@Autowired
 	protected TemplateService templateService;
 
-	@MockBean
+	@MockitoBean
 	protected SnowstormRestClientFactory clientFactory;
 
-	@MockBean
+	@MockitoBean
 	protected SnowstormRestClient terminologyServerClient;
 	
 	public void createCtGuidedProcedureOfX() throws IOException, ServiceException {

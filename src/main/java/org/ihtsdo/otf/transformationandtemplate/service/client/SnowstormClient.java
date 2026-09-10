@@ -14,7 +14,6 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -72,33 +71,32 @@ public class SnowstormClient {
 	
 	public ConceptChangeBatchStatus saveUpdateConceptsNoValidation(Collection<ConceptPojo> conceptPojos, String branchPath) throws TimeoutException {
 		logger.info("Saving {} concepts.", conceptPojos.size());
-		ClientResponse bulkUpdateResponse = webClient.post()
-				.uri(uriBuilder -> uriBuilder
-						.path("/browser/{branch}/concepts/bulk")
-						.build(branchPath))
-				.body(BodyInserters.fromValue(conceptPojos))
-				.exchange()
-				.block();
+		String locationHeader;
+		try {
+			locationHeader = webClient.post()
+					.uri(uriBuilder -> uriBuilder
+							.path("/browser/{branch}/concepts/bulk")
+							.build(branchPath))
+					.body(BodyInserters.fromValue(conceptPojos))
+					.exchangeToMono(response -> {
+						if (response.statusCode().is2xxSuccessful()) {
+							List<String> locationHeaders = response.headers().header("Location");
+							String location = (locationHeaders != null && !locationHeaders.isEmpty()) ? locationHeaders.get(0) : null;
+							return response.releaseBody().thenReturn(location);
+						}
+						return response.createException().flatMap(Mono::error);
+					})
+					.block();
+		} catch (Exception e) {
+			return new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.FAILED, e.getMessage());
+		}
 
-		if (bulkUpdateResponse != null) {
-            bulkUpdateResponse.statusCode();
-            if (bulkUpdateResponse.statusCode().is2xxSuccessful()) {
-                String locationHeader = bulkUpdateResponse.headers().header("Location").get(0);
-                logger.info("Bulk update job url: {}", locationHeader);
-
-                int maxWaitSeconds = conceptPojos.size() * 10_000;
-                return getBatchStatus(locationHeader, maxWaitSeconds);
-            } else {
-				try {
-					bulkUpdateResponse.createException().flatMap(Mono::error).block();
-					return null;
-				} catch (Exception e) {
-					return new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.FAILED, e.getMessage());
-				}
-			}
-        } else {
+		if (locationHeader == null) {
 			return new ConceptChangeBatchStatus(ConceptChangeBatchStatus.Status.FAILED, "Could not get the Header Location as response is null");
 		}
+		logger.info("Bulk update job url: {}", locationHeader);
+		int maxWaitSeconds = conceptPojos.size() * 10_000;
+		return getBatchStatus(locationHeader, maxWaitSeconds);
 	}
 
 	public String getDefaultModuleId(String branchPath) {

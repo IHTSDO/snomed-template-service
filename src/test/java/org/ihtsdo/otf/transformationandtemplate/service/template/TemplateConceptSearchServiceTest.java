@@ -19,7 +19,7 @@ import org.snomed.authoringtemplate.domain.logical.AttributeGroup;
 import org.snomed.authoringtemplate.domain.logical.LogicalTemplate;
 import org.snomed.authoringtemplate.service.LogicalTemplateParserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +40,7 @@ public class TemplateConceptSearchServiceTest extends AbstractServiceTest {
 	@Autowired
 	private TemplateConceptSearchService searchService;
 	
-	@MockBean
+	@MockitoBean
 	private TemplateService templateService;
 	
 	@Autowired
