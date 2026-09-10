@@ -1,6 +1,7 @@
 package org.ihtsdo.otf.transformationandtemplate.configuration;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriRewriteFilter;
 import io.swagger.v3.oas.models.ExternalDocumentation;
@@ -22,7 +23,6 @@ import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
@@ -47,11 +47,12 @@ public class Config {
 	
 	@Bean
 	public ObjectMapper getGeneralMapper() {
-		return Jackson2ObjectMapperBuilder
-				.json()
-				.serializationInclusion(JsonInclude.Include.NON_NULL)
-				.dateFormat((new SimpleDateFormat("dd-MM-yyyy hh:mm:ss")))
-				.build();
+		ObjectMapper objectMapper = new ObjectMapper();
+		objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+		objectMapper.setDateFormat(new SimpleDateFormat("dd-MM-yyyy hh:mm:ss"));
+		// Match former Jackson2ObjectMapperBuilder defaults used across template/recipe JSON
+		objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+		return objectMapper;
 	}
 
 	@Bean("templateJsonStore")
@@ -126,7 +127,7 @@ public class Config {
 
 	// Security
 	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain filterChain(HttpSecurity http) {
 		http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 		http.authorizeHttpRequests((authorize) ->
 				authorize.requestMatchers(new String[]{
