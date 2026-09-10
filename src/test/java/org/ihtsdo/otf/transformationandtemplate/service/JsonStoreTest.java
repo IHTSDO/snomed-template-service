@@ -37,7 +37,7 @@ public class JsonStoreTest extends AbstractServiceTest {
 	@Test
 	public void testUriEncoding() {
 		
-		UriComponentsBuilder queryBuilder = UriComponentsBuilder.fromHttpUrl("http://localhost:8080/snowstorm/snomed-ct/v2/MAIN/STORMTEST1/STORMTEST1-183/concepts")
+		UriComponentsBuilder queryBuilder = UriComponentsBuilder.fromUriString("http://localhost:8080/snowstorm/snomed-ct/v2/MAIN/STORMTEST1/STORMTEST1-183/concepts")
 				.queryParam("active", true)
 				.queryParam("offset", 0)
 				.queryParam("limit", 10);
