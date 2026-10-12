@@ -74,6 +74,10 @@ public class ConceptService {
 				String conceptId = componentTransformation.getValueString("conceptId");
 				ConceptPojo concept = new ConceptPojo();
 				concept.setConceptId(conceptId);
+				concept.setDescriptions(new HashSet<>());
+				concept.setRelationships(Collections.emptySet());
+				concept.setClassAxioms(Collections.emptySet());
+				concept.setGciAxioms(Collections.emptySet());
 				concepts.add(concept);
 
 				ChangeResult<ConceptPojo> changeResult = new ChangeResult<>(concept);
