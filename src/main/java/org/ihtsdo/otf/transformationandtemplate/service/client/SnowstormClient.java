@@ -658,6 +658,7 @@ public class SnowstormClient {
 				.uri(uriBuilder -> uriBuilder
 					.path("/{branch}/concepts")
 					.queryParam("conceptIds", sctIds)
+					.queryParam("limit", sctIds.size())
 					.build(branchPath))
 				.retrieve()
 				.onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)

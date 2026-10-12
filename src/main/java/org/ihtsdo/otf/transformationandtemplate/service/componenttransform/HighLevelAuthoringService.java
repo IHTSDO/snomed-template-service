@@ -302,6 +302,15 @@ public class HighLevelAuthoringService {
 					pojo.success();
 				});
 		}
+		Set<String> foundConceptIds = concepts.stream().map(Concept::getConceptId).collect(Collectors.toSet());
+		for (ConceptPojo conceptPojo : conceptPojos) {
+			if (!foundConceptIds.contains(conceptPojo.getConceptId())) {
+				changes.stream()
+					.filter(c -> conceptPojo.getConceptId().equals(c.getComponent().getId()))
+					.findFirst()
+					.ifPresent(c -> c.fail(format("Concept %s not found on branch %s.", conceptPojo.getConceptId(), task.getBranchPath())));
+			}
+		}
 	}
 
 	private String validateRelationshipTypeAndTarget(ConceptPojo conceptPojo, Map<String, Concept> typeAndTargetConceptMap, String branchPath) {
